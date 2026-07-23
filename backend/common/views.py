@@ -22,3 +22,15 @@ class HealthView(APIView):
     )
     def get(self, request) -> Response:
         return Response({"status": "ok", "service": "NexaPOS API"})
+
+
+def success_response(
+    message: str,
+    data=None,
+    *,
+    status_code: int = 200,
+) -> Response:
+    return Response(
+        {"success": True, "message": message, "data": data},
+        status=status_code,
+    )

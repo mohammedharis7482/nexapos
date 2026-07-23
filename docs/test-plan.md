@@ -1,9 +1,11 @@
 # Test plan
 
-Foundation tests cover public health access, Shop creation and defaults, owner
-and cashier creation, role values, password hashing, shop relationships, required
-shop assignment, duplicate username rejection within a shop, and reuse of a
-username across shops.
+Foundation tests cover Shop/User models plus session authentication, CSRF cookie
+initialization and enforcement, owner/cashier login, invalid and cross-shop
+credentials, inactive users and shops, username reuse across shops, session
+creation and rotation, current-user access, logout invalidation, password
+validation and session preservation, safe response fields, reusable permissions,
+and transactional shop bootstrap behavior.
 
 Run checks without changing the database:
 
@@ -14,13 +16,21 @@ cd backend
   --settings=config.settings.development
 ```
 
-After PostgreSQL exists and initial migrations have been reviewed and applied:
+Run the PostgreSQL-backed suite:
 
 ```bash
 .venv/bin/python manage.py test --settings=config.settings.development
 ```
 
-Database tests cannot honestly pass until a PostgreSQL role can create or access
-the Django test database. Future protected API endpoints must add an explicit
-unauthenticated-access test; no sample business endpoint was created solely to
-satisfy that optional test.
+The PostgreSQL role must be able to create and destroy Django's temporary test
+database. CSRF tests use Django's enforcement mode; CSRF is never disabled to
+make tests pass.
+
+Validate the documented schema:
+
+```bash
+.venv/bin/python manage.py spectacular \
+  --validate \
+  --file /tmp/nexapos-auth-schema.yml \
+  --settings=config.settings.development
+```

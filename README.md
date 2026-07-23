@@ -46,9 +46,40 @@ fallback. Never change `AUTH_USER_MODEL` after the first migration.
 API discovery is available at `/api/schema/`, `/api/docs/`, and `/api/redoc/`.
 The unauthenticated liveness endpoint is `/api/v1/health/`.
 
-## Authentication status
+## Session authentication
 
-JWT authentication is intentionally not configured. Stable Simple JWT 5.5.1
-metadata supports Python 3.13 but lists Django support only through 5.2, not
-Django 6.0. Choose a supported Django version before first migrations, wait for
-confirmed support, or approve another maintained authentication implementation.
+NexaPOS uses Django server-side sessions with an HttpOnly session cookie and
+CSRF protection. JWT and Simple JWT are intentionally not installed.
+
+Cookies explicitly use `SameSite=Lax`; production additionally uses `Secure`.
+Because `localhost` and `127.0.0.1` are different browser cookie sites, expose
+the backend through a same-origin Next.js development rewrite/proxy when the
+browser page is `http://localhost:3000`. Django may continue listening on
+`http://127.0.0.1:8000`.
+
+To connect the Next.js development frontend through that proxy:
+
+1. Fetch `GET /api/v1/auth/csrf/` with `credentials: "include"`.
+2. Read the non-HttpOnly `csrftoken` cookie.
+3. Send it as `X-CSRFToken` on every unsafe request.
+4. Use `credentials: "include"` on every authenticated request.
+5. Treat HTTP 401 as an expired or missing session and redirect to login.
+
+Login requires a shop UUID, username, and password. It returns safe user/shop
+profile data; it never returns the server-side session identifier.
+
+Create the first shop and owner interactively:
+
+```bash
+cd backend
+python manage.py bootstrap_shop \
+  --shop-name "Al Noor Grocery" \
+  --address "Doha, Qatar" \
+  --phone "+974 5555 0101" \
+  --username "owner" \
+  --full-name "Shop Owner" \
+  --email "owner@example.com"
+```
+
+The command prompts for the password without echoing it and refuses duplicate
+shop names.

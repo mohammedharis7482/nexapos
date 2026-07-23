@@ -3,6 +3,20 @@ from typing import Any
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth import get_user_model
+from rest_framework.authentication import SessionAuthentication
+
+
+class ApiSessionAuthentication(SessionAuthentication):
+    """Django session authentication with API-appropriate 401 responses."""
+
+    def authenticate_header(self, request) -> str:
+        return "Session"
+
+
+def enforce_csrf(request) -> None:
+    """Enforce CSRF for unsafe public views such as session login."""
+
+    SessionAuthentication().enforce_csrf(request)
 
 
 class ShopModelBackend(ModelBackend):

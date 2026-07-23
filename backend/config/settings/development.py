@@ -13,6 +13,8 @@ CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS", cast=Csv(), default="http://localhost:3000"
 )
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 LOGGING["root"]["level"] = "DEBUG"  # noqa: F405
 LOGGING["loggers"]["django"]["level"] = "INFO"  # noqa: F405
