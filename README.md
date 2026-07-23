@@ -18,11 +18,27 @@ billing, or a multi-tenant SaaS control plane.
 ```bash
 cd frontend
 npm install
+npm test
+npm run lint
 npm run dev
 ```
 
-The frontend runs at `http://localhost:3000`. No dashboard or business feature
-was added as part of the foundation work.
+Create `frontend/.env.local` from the example when direct API requests are
+required:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+This is the only public frontend environment value. It contains no backend
+secret. The frontend defaults to the same URL when the variable is omitted.
+Use `localhost` consistently for both applications so `SameSite=Lax` session
+cookies work across development ports without a proxy or redirect.
+
+The frontend includes a real session login, protected client boundary,
+responsive application shell, role-aware navigation, and password-change flow.
+Dashboard and business destinations remain explicit placeholders without fake
+data or workflows.
 
 ## Local backend
 
@@ -52,12 +68,11 @@ NexaPOS uses Django server-side sessions with an HttpOnly session cookie and
 CSRF protection. JWT and Simple JWT are intentionally not installed.
 
 Cookies explicitly use `SameSite=Lax`; production additionally uses `Secure`.
-Because `localhost` and `127.0.0.1` are different browser cookie sites, expose
-the backend through a same-origin Next.js development rewrite/proxy when the
-browser page is `http://localhost:3000`. Django may continue listening on
-`http://127.0.0.1:8000`.
+Local development uses `http://localhost:3000` for Next.js and
+`http://localhost:8000` for Django. Do not mix `localhost` with `127.0.0.1`;
+they are different browser cookie sites.
 
-To connect the Next.js development frontend through that proxy:
+The frontend authentication flow is:
 
 1. Fetch `GET /api/v1/auth/csrf/` with `credentials: "include"`.
 2. Read the non-HttpOnly `csrftoken` cookie.
@@ -67,6 +82,11 @@ To connect the Next.js development frontend through that proxy:
 
 Login requires a shop UUID, username, and password. It returns safe user/shop
 profile data; it never returns the server-side session identifier.
+
+After authentication, `/auth/me/` restores the in-memory user state on browser
+refresh. The session cookie remains the source of truth; neither sessions nor
+authentication tokens are stored in localStorage. Logout calls the Django
+endpoint, clears in-memory state, and returns to `/login`.
 
 Create the first shop and owner interactively:
 

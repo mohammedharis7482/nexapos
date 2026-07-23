@@ -96,16 +96,37 @@ server-side authenticated session and returns a success envelope.
 
 ### Next.js request flow
 
-Use a same-origin Next.js development proxy/rewrite from `localhost:3000` to
-Django at `127.0.0.1:8000`. Those hostnames are different cookie sites, and the
-proxy preserves secure `SameSite=Lax` behavior without requiring unsafe
-cross-site HTTP cookie settings.
+Use `http://localhost:3000` for Next.js and `http://localhost:8000` for Django.
+Keeping the hostname identical allows `SameSite=Lax` cookies across ports.
+Do not mix `localhost` and `127.0.0.1`, and do not proxy auth requests through
+Next.js because its URL normalization can redirect Django's slash-terminated
+routes.
 
 1. Request `/api/v1/auth/csrf/` with `credentials: "include"`.
 2. Read the `csrftoken` cookie.
 3. Send `X-CSRFToken` on POST, PUT, PATCH, and DELETE requests.
 4. Always set `credentials: "include"`.
 5. Redirect to login after HTTP 401.
+
+The typed frontend API client performs this sequence automatically for POST,
+PUT, PATCH, and DELETE requests. It parses both the success and error envelopes,
+maps backend field errors to forms, and converts transport failures into a
+user-facing network message. Password values are never logged, and authentication
+tokens or session IDs are never copied into application storage.
+
+The frontend authentication provider requests `/auth/me/` once during
+initialization. Protected routes render a deliberate loading state until that
+request resolves, then either render the application shell or redirect to
+`/login`. Successful login redirects to `/dashboard`; logout invalidates the
+backend session before clearing frontend user state.
+
+Navigation uses the backend role:
+
+- OWNER: Dashboard, New Bill, Products, Inventory, Sales, Reports, Settings.
+- CASHIER: Dashboard, New Bill, Products, and limited Sales navigation.
+
+Navigation visibility is only presentation. Backend permissions remain
+authoritative.
 
 ## Documentation
 

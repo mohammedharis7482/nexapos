@@ -87,6 +87,22 @@ class SessionAuthenticationApiTests(TestCase):
             },
         )
 
+    def test_auth_routes_use_exact_trailing_slashes_without_redirects(self):
+        expected_paths = {
+            "csrf": "/api/v1/auth/csrf/",
+            "login": "/api/v1/auth/login/",
+            "logout": "/api/v1/auth/logout/",
+            "me": "/api/v1/auth/me/",
+            "change-password": "/api/v1/auth/change-password/",
+        }
+        for name, path in expected_paths.items():
+            with self.subTest(name=name):
+                self.assertEqual(reverse(f"accounts_api:{name}"), path)
+
+        response = self.client.get("/api/v1/auth/me/", follow=False)
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn(response.status_code, (301, 308))
+
     def test_successful_owner_login_creates_session_and_safe_response(self):
         pre_login_session = self.client.session
         pre_login_session["pre_login"] = True

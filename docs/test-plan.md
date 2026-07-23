@@ -34,3 +34,23 @@ Validate the documented schema:
   --file /tmp/nexapos-auth-schema.yml \
   --settings=config.settings.development
 ```
+
+## Frontend authentication and shell
+
+The frontend uses Vitest with jsdom and Testing Library matchers. Tests cover
+login and password schemas, credentials inclusion, CSRF initialization and
+headers, backend error parsing, authentication state initialization, successful
+login state, logout clearing, protected loading and redirect decisions, and
+OWNER/CASHIER navigation.
+
+```bash
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
+The production build provides the TypeScript and App Router integration check.
+No browser end-to-end suite is introduced in this phase; live Django/Next.js
+interaction should be exercised when frontend deployment infrastructure is
+defined.
