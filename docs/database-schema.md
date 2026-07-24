@@ -68,6 +68,26 @@ Same-shop relationships are validated by transactional services because
 portable SQL constraints cannot compare foreign-table Shop values without a
 database trigger. No triggers are used.
 
+## Sale
+
+`sales.Sale` is a draft-billing aggregate with protected Shop, creator, and
+optional cancelling-user relationships. Its state is limited to `DRAFT` and
+`CANCELLED`. Subtotal, tax, discount, and grand total are nonnegative
+`DecimalField(..., decimal_places=2)` values calculated by the server. It has no
+payment, receipt number, completion state, or revenue-posting fields.
+
+## SaleItem
+
+`sales.SaleItem` belongs to a protected Sale and Product and snapshots product
+identity, unit, price, tax rate, and tax-inclusive state. Quantity uses three
+decimal places; monetary values use two. A sale/product uniqueness constraint
+supports quantity accumulation instead of duplicate rows. Database constraints
+enforce positive quantity, nonnegative price/amounts, and a 0–100 tax rate.
+
+Availability is checked against a locked InventoryBalance during draft
+mutations, but no inventory foreign key, reservation, or stock movement is
+created.
+
 ## Migration precaution
 
 Create the Shop migration before or together with the initial User migration.

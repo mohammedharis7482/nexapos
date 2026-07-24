@@ -63,5 +63,24 @@
     and creator relationships use protected deletion.
 31. Supplier, purchase, sale, return, batch, expiry-batch, warehouse, and billing
     movements are intentionally excluded.
+32. Draft bills have only `DRAFT` and `CANCELLED` states. They are operational
+    carts, not finalized revenue, payments, or receipts.
+33. OWNER may manage any draft in their shop. CASHIER may manage only drafts
+    created by that cashier. Both roles are constrained to their own shop.
+34. Draft line items snapshot product name, SKU, barcode, unit, selling price,
+    tax rate, and tax-inclusion state. Later catalogue changes do not rewrite an
+    existing line.
+35. Billing quantities use three decimal places. QAR amounts use two decimals
+    with `ROUND_HALF_UP`; all calculations use Decimal and run on the server.
+36. Tax-exclusive lines calculate tax on quantity × price. Tax-inclusive lines
+    extract the tax portion from the gross line total. Sale totals equal the sum
+    of stored calculated line values.
+37. Adding or changing a draft line requires active, initialized, sufficient
+    own-shop inventory. Drafts do not reserve stock, deduct balances, or create
+    movements; availability must be revalidated during future finalization.
+38. Re-adding a product increases its existing draft quantity. Zero quantity is
+    rejected; removing a line requires the explicit DELETE operation.
+39. Cancellation retains line items and totals, records cancelling user/time,
+    and is idempotent. Cancelled drafts cannot be edited.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.

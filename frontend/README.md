@@ -37,6 +37,12 @@ from Django; there is no mock fallback.
 opening/adjustment dialogs, and paginated read-only movement history. CASHIER
 inventory access is limited to active products and contains no mutation controls.
 
+`/billing` is the draft POS workspace. It reloads a non-sensitive saved draft
+identifier, searches real inventory by name/SKU/barcode, adds server-priced
+lines, and renders server-calculated QAR totals. Desktop uses a split
+product/cart workspace; mobile uses explicit Products and Cart views. Payment is
+visibly unavailable until the next phase.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

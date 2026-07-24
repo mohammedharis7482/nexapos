@@ -26,6 +26,7 @@ export interface InventoryProduct {
   sku: string;
   barcode: string | null;
   unit: ProductUnit;
+  selling_price: string;
   category: CategorySummary | null;
   is_active: boolean;
 }

@@ -39,7 +39,12 @@ The frontend includes real session login, a protected responsive shell,
 role-aware navigation, shop settings, category management, and product catalogue
 management. The inventory module adds decimal balances, one-time opening stock,
 manual adjustments, low/out-of-stock tracking, and an immutable movement
-history. Purchasing, suppliers, billing, and sales remain outside this phase.
+history. Purchasing, suppliers, payment completion, and finalized sales remain
+outside this phase.
+Draft billing now supports stock-aware product entry, server-calculated line
+items and totals, owner/cashier draft permissions, cancellation, and a
+responsive POS cart. Drafts do not reserve or deduct inventory and cannot be
+paid or finalized in this phase.
 
 ## Local backend
 
@@ -117,3 +122,18 @@ python manage.py bootstrap_shop \
 
 The command prompts for the password without echoing it and refuses duplicate
 shop names.
+
+Create a cashier for an existing active shop:
+
+```bash
+cd backend
+python manage.py create_cashier \
+  --shop-id <shop-uuid> \
+  --username cashier \
+  --full-name "Counter Cashier" \
+  --email cashier@example.com
+```
+
+The command prompts twice without echoing the password. Never pass passwords in
+shell arguments or store them in shell history. It refuses inactive shops and
+case-insensitive duplicate usernames within the selected shop.

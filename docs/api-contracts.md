@@ -199,3 +199,29 @@ and signed quantities cannot be supplied.
 Every response follows the existing success envelope. Inventory and movement
 representations omit shop identifiers. Movement creators include only UUID and
 full name.
+
+## Draft billing
+
+- `POST|GET /api/v1/billing/drafts/`
+- `GET /api/v1/billing/drafts/{sale_id}/`
+- `POST /api/v1/billing/drafts/{sale_id}/items/`
+- `PATCH|DELETE /api/v1/billing/drafts/{sale_id}/items/{item_id}/`
+- `POST /api/v1/billing/drafts/{sale_id}/cancel/`
+
+Draft creation accepts only optional notes. An item addition accepts exactly one
+of `product_id` or `barcode`, plus a positive quantity with up to three decimal
+places. Item updates accept only quantity. Prices, tax configuration, line
+totals, sale totals, shop, creator, and cancellation fields are server-owned.
+
+OWNER sees and manages all drafts in their shop. CASHIER sees and manages only
+drafts created by that cashier. Cancelled drafts and their items remain
+available for audit but cannot be modified. Draft lists are newest first and
+page-number paginated.
+
+Responses contain QAR currency, safe creator data, product identity snapshots,
+quantity, price/tax snapshots, calculated line amounts, and calculated sale
+totals. Purchase price and internal shop identifiers are never returned.
+
+Draft billing validates current inventory but creates no stock movement and
+does not reserve stock. Payment, completion, revenue posting, receipt numbers,
+and final sale APIs do not exist yet.

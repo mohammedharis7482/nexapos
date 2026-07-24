@@ -18,7 +18,16 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("id", "name", "sku", "barcode", "unit", "category", "is_active")
+        fields = (
+            "id",
+            "name",
+            "sku",
+            "barcode",
+            "unit",
+            "selling_price",
+            "category",
+            "is_active",
+        )
 
 
 def stock_status_for(balance: InventoryBalance | None) -> str:

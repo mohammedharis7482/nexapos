@@ -66,6 +66,22 @@ stock, positive unsigned adjustment requests, exact service URLs, every status
 label, loading/empty/error/ready collection states, expected-quantity previews,
 successful mutation refresh callbacks, and insufficient-stock field errors.
 
+Cashier-command tests cover secure manager-based creation, password hashing,
+role/active state, safe output, inactive/invalid shops, same-shop duplicate
+rejection, and cross-shop username reuse.
+
+Draft-billing backend tests cover owner/cashier creation and visibility,
+shop/cashier isolation, empty totals, product ID and barcode entry, duplicate
+line accumulation, active/initialized/available stock checks, decimal quantity
+updates, explicit removal, controlled input fields, product/price snapshots,
+tax-inclusive and tax-exclusive rounding, aggregate totals, cancellation audit,
+cancelled-draft protection, and absence of inventory movements.
+
+Billing frontend tests cover positive decimal schemas, exact service paths,
+product/barcode request format, cart rendering and controls, weighted steps,
+workspace states, availability decisions, saved-draft reload, server totals,
+exact barcode submission, and confirmed cancellation recovery.
+
 ```bash
 cd frontend
 npm test
