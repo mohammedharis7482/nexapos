@@ -13,6 +13,15 @@ cross-shop isolation, catalogue writes, per-shop SKU/barcode uniqueness,
 cross-shop category rejection, price/tax validation, searches and filters,
 barcode lookup, inactive visibility, and safe response fields.
 
+Inventory tests cover one-time and zero opening stock, invalid quantities,
+database uniqueness, every manual movement sign, insufficient-stock atomicity,
+sequential persisted-balance adjustments, creator and before/after auditing,
+last-movement timestamps, threshold changes, shop and role isolation, product
+search/category/status filters, status edge cases, summary/low/out endpoints,
+detail responses, and ordered paginated movement history. A true simultaneous
+transaction test is not included; row-locking behavior is validated by service
+implementation and sequential persisted-state tests.
+
 Run checks without changing the database:
 
 ```bash
@@ -37,7 +46,7 @@ Validate the documented schema:
 ```bash
 .venv/bin/python manage.py spectacular \
   --validate \
-  --file /tmp/nexapos-catalogue-schema.yml \
+  --file /tmp/nexapos-inventory-schema.yml \
   --settings=config.settings.development
 ```
 
@@ -51,6 +60,11 @@ OWNER/CASHIER navigation. Catalogue coverage includes shop/category/product
 schemas, decimal string preservation, role controls, list states and filters,
 exact service URLs, successful mutation refresh, and backend permission/field
 errors.
+
+Inventory frontend tests cover three-decimal schema validation, zero opening
+stock, positive unsigned adjustment requests, exact service URLs, every status
+label, loading/empty/error/ready collection states, expected-quantity previews,
+successful mutation refresh callbacks, and insufficient-stock field errors.
 
 ```bash
 cd frontend

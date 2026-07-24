@@ -44,6 +44,30 @@ Functional/conditional constraints enforce per-shop SKU and barcode uniqueness;
 check constraints prevent negative prices and tax outside 0–100. There is no
 quantity, supplier, or inventory ledger field.
 
+## InventoryBalance
+
+`inventory.InventoryBalance` has an explicit Shop and one-to-one protected
+Product relationship, ensuring exactly one current balance per product. Quantity
+on hand and low-stock threshold use `DecimalField(max_digits=15,
+decimal_places=3)`, supporting large counts and weight/volume measurements.
+Thresholds cannot be negative. The database prevents a negative quantity unless
+the explicit `allow_negative_stock` flag is enabled; application APIs never
+enable it in this MVP. Last movement time supports operational lists.
+
+## StockMovement
+
+`inventory.StockMovement` is the audit ledger. It protects its Shop, Product,
+InventoryBalance, and creator relationships and records type, signed delta,
+before quantity, after quantity, reason, reference, creator, and timestamps.
+A database constraint enforces `after = before + delta`. Deltas are nonzero
+except a zero-quantity `OPENING`, which is necessary to audit valid zero opening
+stock. Movement rows cannot be updated or deleted through normal APIs or admin.
+Indexes support shop/product history, balance history, and movement-type review.
+
+Same-shop relationships are validated by transactional services because
+portable SQL constraints cannot compare foreign-table Shop values without a
+database trigger. No triggers are used.
+
 ## Migration precaution
 
 Create the Shop migration before or together with the initial User migration.

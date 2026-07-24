@@ -166,5 +166,36 @@ descending). Category responses contain only `id` and `name`; product responses
 do not expose a shop identifier or inventory state.
 
 All catalogue routes require session authentication and exact trailing slashes.
-No public registration, JWT token, hard-delete, inventory, or billing endpoints
+No public registration, JWT token, catalogue hard-delete, or billing endpoints
 exist.
+
+## Inventory
+
+- `GET /api/v1/inventory/`: shop-scoped product inventory, including products
+  that have not yet been initialized.
+- `GET|PATCH /api/v1/inventory/{product_id}/`: inventory detail; PATCH is
+  OWNER-only and changes only the low-stock threshold.
+- `GET /api/v1/inventory/summary/`: real catalogue, initialized, low-stock, and
+  out-of-stock counts.
+- `POST /api/v1/inventory/products/{product_id}/opening-stock/`: OWNER-only
+  one-time initialization.
+- `POST /api/v1/inventory/products/{product_id}/adjust/`: OWNER-only manual
+  movement.
+- `GET /api/v1/inventory/products/{product_id}/movements/`: paginated,
+  read-only audit history.
+- `GET /api/v1/inventory/low-stock/`
+- `GET /api/v1/inventory/out-of-stock/`
+
+The inventory list accepts `search`, `category`, `stock_status`, `is_active`,
+`page`, and `page_size`. Stock status is `NOT_INITIALIZED`, `IN_STOCK`,
+`LOW_STOCK`, or `OUT_OF_STOCK`.
+
+Opening stock accepts unsigned `quantity`, unsigned `low_stock_threshold`, and
+an optional reason. Adjustment inputs contain a manual movement type, a strictly
+positive unsigned quantity, optional reason, and optional reference. The server
+determines the signed delta and audit values; shop, creator, before/after values,
+and signed quantities cannot be supplied.
+
+Every response follows the existing success envelope. Inventory and movement
+representations omit shop identifiers. Movement creators include only UUID and
+full name.

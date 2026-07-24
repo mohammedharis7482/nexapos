@@ -37,8 +37,9 @@ cookies work across development ports without a proxy or redirect.
 
 The frontend includes real session login, a protected responsive shell,
 role-aware navigation, shop settings, category management, and product catalogue
-management. Inventory quantities, purchasing, billing, and sales remain outside
-this phase.
+management. The inventory module adds decimal balances, one-time opening stock,
+manual adjustments, low/out-of-stock tracking, and an immutable movement
+history. Purchasing, suppliers, billing, and sales remain outside this phase.
 
 ## Local backend
 
@@ -70,6 +71,10 @@ python manage.py seed_catalogue --shop-id <shop-uuid>
 
 The command is disabled unless `DEBUG=True`, requires an existing shop, is safe
 to rerun, and never creates users, stock, or transactions.
+
+Inventory is initialized deliberately from `/inventory/{productId}` after a
+product exists. This phase does not provide an inventory seeding command: stock
+counts are operational data and must not be altered implicitly.
 
 ## Session authentication
 

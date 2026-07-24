@@ -42,6 +42,26 @@
 22. Supported units are `PIECE`, `KG`, `GRAM`, `LITRE`, `MILLILITRE`, `PACK`,
     `BOX`, `CARTON`, `BOTTLE`, `CAN`, and `BAG`.
 23. Product quantity is deliberately absent. Stock is an inventory-ledger
-    concern and will be introduced only in the inventory phase.
+    concern and is stored in `InventoryBalance`, never on Product.
+24. A product may exist without inventory. Opening stock explicitly creates its
+    only balance and an `OPENING` movement; zero opening stock is valid.
+25. Inventory quantities use three decimal places. Manual requests always send
+    positive quantities; `STOCK_IN` and `CORRECTION_IN` produce positive deltas,
+    while `STOCK_OUT`, `DAMAGE`, `EXPIRED`, and `CORRECTION_OUT` produce
+    negative deltas.
+26. Negative stock is disabled for the MVP. Reductions that exceed quantity on
+    hand fail without changing the balance or creating a movement.
+27. Stock status rules are: no balance is `NOT_INITIALIZED`; zero is
+    `OUT_OF_STOCK`; a positive quantity at or below its threshold is
+    `LOW_STOCK`; a quantity above its threshold is `IN_STOCK`. With a zero
+    threshold, any positive quantity is in stock.
+28. OWNER may initialize, adjust, and change thresholds. CASHIER may read active
+    product balances and their audit history but cannot mutate inventory.
+29. Each stock change locks the balance, calculates from the persisted value,
+    writes one movement, and updates the balance in one atomic transaction.
+30. Movement history is immutable through APIs and admin. Product, shop, balance,
+    and creator relationships use protected deletion.
+31. Supplier, purchase, sale, return, batch, expiry-batch, warehouse, and billing
+    movements are intentionally excluded.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.

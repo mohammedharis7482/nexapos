@@ -32,6 +32,11 @@ Authenticated OWNER users can edit `/settings`, manage
 shop/catalogue views and only active categories and products. All data is loaded
 from Django; there is no mock fallback.
 
+`/inventory` provides a responsive real-data balance list and
+`/inventory/[productId]` provides current stock, threshold control, OWNER-only
+opening/adjustment dialogs, and paginated read-only movement history. CASHIER
+inventory access is limited to active products and contains no mutation controls.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
