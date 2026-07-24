@@ -10,7 +10,7 @@ import { OpeningStockDialog } from "@/components/inventory/opening-stock-dialog"
 import { StockStatusBadge } from "@/components/inventory/stock-status";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge, PageHeader } from "@/components/ui/display";
+import { Badge, MetricCard, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { FormField, Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
@@ -107,6 +107,7 @@ export default function InventoryDetailPage() {
         <ArrowLeft className="size-4" /> Back to inventory
       </Link>
       <PageHeader
+        eyebrow="Inventory detail"
         title={item.product.name}
         description={`${item.product.sku} · ${item.product.category?.name ?? "Uncategorized"}`}
         action={
@@ -122,27 +123,24 @@ export default function InventoryDetailPage() {
       {success ? <Alert title={success} tone="success" /> : null}
       {error ? <Alert title={error} /> : null}
 
-      <Card className="p-5">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Current stock</p>
-            <p className="mt-2 text-2xl font-bold">{item.quantity_on_hand ?? "—"} {item.is_initialized ? item.product.unit : ""}</p>
-          </div>
-          <div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard label="Current stock" value={<QuantityDisplay value={item.quantity_on_hand ?? "—"} unit={item.is_initialized ? item.product.unit : undefined} />} icon={Settings2} tone={item.stock_status === "OUT_OF_STOCK" ? "danger" : item.stock_status === "LOW_STOCK" ? "warning" : "success"} />
+        <Card className="p-[var(--card-padding)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Status</p>
             <div className="mt-3"><StockStatusBadge status={item.stock_status} /></div>
-          </div>
-          <div>
+        </Card>
+        <Card className="p-[var(--card-padding)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Barcode</p>
             <p className="mt-2 font-semibold">{item.product.barcode ?? "No barcode"}</p>
-          </div>
-          <div>
+        </Card>
+        <Card className="p-[var(--card-padding)]">
             <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Product status</p>
             <div className="mt-3"><Badge tone={item.product.is_active ? "success" : "neutral"}>{item.product.is_active ? "Active" : "Inactive"}</Badge></div>
-          </div>
-        </div>
+        </Card>
+      </div>
+      <Card className="p-5">
         {owner && item.is_initialized ? (
-          <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <FormField label="Low-stock threshold" htmlFor="detail-threshold">
               <Input id="detail-threshold" className="sm:w-48" inputMode="decimal" value={threshold} onChange={(event) => setThreshold(event.target.value)} />
             </FormField>

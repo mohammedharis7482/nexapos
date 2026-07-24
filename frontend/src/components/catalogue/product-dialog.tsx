@@ -120,12 +120,18 @@ export function ProductDialog({
     >
       <form className="space-y-6" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
-        <fieldset className="space-y-4">
-          <legend className="mb-3 text-sm font-bold text-text-primary">Product identity</legend>
+        <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
+          <legend className="px-1 text-sm font-bold text-text-primary">Basic information</legend>
         <FormField label="Product name" htmlFor="product-name" error={errors.name?.message}>
           <Input id="product-name" invalid={Boolean(errors.name)} {...register("name")} />
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
+          <Textarea id="product-description" {...register("description")} />
+        </FormField>
+        </fieldset>
+        <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
+          <legend className="px-1 text-sm font-bold text-text-primary">Product codes</legend>
+          <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="SKU" htmlFor="product-sku" error={errors.sku?.message}>
             <Input id="product-sku" invalid={Boolean(errors.sku)} {...register("sku")} />
           </FormField>
@@ -133,12 +139,9 @@ export function ProductDialog({
             <Input id="product-barcode" inputMode="numeric" invalid={Boolean(errors.barcode)} {...register("barcode")} />
           </FormField>
         </div>
-        <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
-          <Textarea id="product-description" {...register("description")} />
-        </FormField>
         </fieldset>
-        <fieldset className="space-y-4 border-t border-border pt-5">
-          <legend className="text-sm font-bold text-text-primary">Classification</legend>
+        <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
+          <legend className="px-1 text-sm font-bold text-text-primary">Classification and unit</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Category" htmlFor="product-category" error={errors.category_id?.message}>
             <Select id="product-category" {...register("category_id")}>
@@ -155,32 +158,35 @@ export function ProductDialog({
           </FormField>
         </div>
         </fieldset>
-        <fieldset className="space-y-4 border-t border-border pt-5">
-          <legend className="text-sm font-bold text-text-primary">Pricing and tax</legend>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
+          <legend className="px-1 text-sm font-bold text-text-primary">Pricing</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Purchase price" htmlFor="purchase-price" error={errors.purchase_price?.message}>
             <Input id="purchase-price" inputMode="decimal" invalid={Boolean(errors.purchase_price)} {...register("purchase_price")} />
           </FormField>
           <FormField label="Selling price" htmlFor="selling-price" error={errors.selling_price?.message}>
             <Input id="selling-price" inputMode="decimal" invalid={Boolean(errors.selling_price)} {...register("selling_price")} />
           </FormField>
-          <FormField label="Tax rate %" htmlFor="tax-rate" error={errors.tax_rate?.message}>
-            <Input id="tax-rate" inputMode="decimal" invalid={Boolean(errors.tax_rate)} {...register("tax_rate")} />
-          </FormField>
         </div>
         </fieldset>
-        <fieldset className="space-y-3 border-t border-border pt-5">
-          <legend className="text-sm font-bold text-text-primary">Availability</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
+          <legend className="px-1 text-sm font-bold text-text-primary">Tax configuration</legend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Tax rate %" htmlFor="tax-rate" error={errors.tax_rate?.message}>
+              <Input id="tax-rate" inputMode="decimal" invalid={Boolean(errors.tax_rate)} {...register("tax_rate")} />
+            </FormField>
           <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
             <input type="checkbox" className="size-4 accent-primary" {...register("is_tax_inclusive")} />
             Price includes tax
           </label>
+          </div>
+        </fieldset>
+        <fieldset className="space-y-3 rounded-xl border border-border bg-surface-secondary/50 p-4">
+          <legend className="px-1 text-sm font-bold text-text-primary">Availability</legend>
           <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
             <input type="checkbox" className="size-4 accent-primary" {...register("is_active")} />
             Active product
           </label>
-        </div>
         </fieldset>
         <div className="sticky bottom-0 flex justify-end gap-3 border-t border-border bg-surface pt-4">
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>

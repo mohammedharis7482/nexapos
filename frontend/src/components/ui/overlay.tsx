@@ -53,6 +53,7 @@ export function Sheet({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -64,14 +65,14 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="sheet-title"
+      aria-labelledby={titleId}
       onClose={() => onOpenChange(false)}
       onCancel={() => onOpenChange(false)}
       className="m-0 ml-auto h-dvh max-h-none w-[min(90vw,360px)] max-w-none rounded-l-[var(--radius-dialog)] border-0 bg-surface-elevated p-0 text-text-primary shadow-[var(--shadow-elevated)]"
     >
       <div className="flex h-full flex-col">
         <header className="flex min-h-16 items-center justify-between border-b border-border px-4">
-          <h2 id="sheet-title" className="font-semibold">
+          <h2 id={titleId} className="font-semibold">
             {title}
           </h2>
           <IconButton aria-label="Close menu" onClick={() => onOpenChange(false)}>

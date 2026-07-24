@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
+import { FilterBar } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { categoryService } from "@/services/category.service";
@@ -47,29 +48,31 @@ export default function CategoriesPage() {
   return (
     <div className="page-stack">
       <PageHeader
+        eyebrow="Catalogue"
         title="Product categories"
         description={owner ? "Organize the catalogue and control which categories are active." : "Browse active categories used by your shop."}
         action={owner ? <Button leadingIcon={<Plus className="size-4" />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add category</Button> : undefined}
       />
       <Link href="/products" className="text-sm font-semibold text-primary">← Back to products</Link>
-      <Card className="p-4">
+      <FilterBar>
         <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); void load(search); }}>
           <div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 size-5 text-text-muted" /><Input className="pl-11" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search categories" aria-label="Search categories" /></div>
           <Button type="submit" variant="secondary">Search</Button>
         </form>
-      </Card>
+        <p className="mt-3 border-t border-border pt-3 text-xs font-medium text-text-muted">{categories.length} {categories.length === 1 ? "category" : "categories"}</p>
+      </FilterBar>
       {loading ? <div className="space-y-3"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
       {error ? <ErrorState title="Categories unavailable" description={error} onRetry={() => void load()} /> : null}
       {!loading && !error && categories.length === 0 ? <EmptyState title="No categories found" description={search ? "Try a different search." : "Add a category to organize products."} /> : null}
       {!loading && !error && categories.length > 0 ? (
-        <div className="grid gap-3">
+        <Card className="divide-y divide-border overflow-hidden">
           {categories.map((category) => (
-            <Card key={category.id} className="flex items-center justify-between gap-4 p-4">
-              <div><div className="flex items-center gap-2"><h2 className="font-semibold">{category.name}</h2><Badge tone={category.is_active ? "success" : "neutral"}>{category.is_active ? "Active" : "Inactive"}</Badge></div><p className="mt-1 text-sm text-text-muted">{category.description || "No description"} · Order {category.display_order}</p></div>
+            <div key={category.id} className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary sm:px-5">
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h2 className="font-semibold">{category.name}</h2><Badge tone={category.is_active ? "success" : "neutral"}>{category.is_active ? "Active" : "Inactive"}</Badge></div><p className="mt-1 truncate text-sm text-text-muted">{category.description || "No description"} · Display order {category.display_order}</p></div>
               {owner ? <IconButton aria-label={`Edit ${category.name}`} onClick={() => { setEditing(category); setDialogOpen(true); }}><Edit3 className="size-4" /></IconButton> : null}
-            </Card>
+            </div>
           ))}
-        </div>
+        </Card>
       ) : null}
       <CategoryDialog open={dialogOpen} onOpenChange={setDialogOpen} category={editing} onSaved={() => void load()} />
     </div>

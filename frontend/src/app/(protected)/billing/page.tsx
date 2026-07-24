@@ -14,7 +14,7 @@ import { CartLine } from "@/components/billing/cart-line";
 import { PaymentDialog } from "@/components/billing/payment-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge, PageHeader } from "@/components/ui/display";
+import { Badge, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
@@ -258,16 +258,18 @@ export default function BillingPage() {
     const methods = completedSale.payments.map((payment) => payment.method).join(" + ");
     return (
       <div className="mx-auto max-w-2xl py-6">
-        <Card className="p-6 text-center sm:p-8">
-          <CheckCircle2 className="mx-auto size-14 text-success" />
+        <Card className="overflow-hidden text-center">
+          <div className="bg-success-soft px-6 py-8 sm:px-8">
+          <span className="mx-auto grid size-16 place-items-center rounded-full bg-surface text-success shadow-sm"><CheckCircle2 className="size-9" /></span>
           <h1 className="mt-4 text-2xl font-bold">Payment successful</h1>
           <p className="mt-2 text-sm text-text-muted">{completedSale.sale_number}</p>
-          <p className="mt-6 text-3xl font-bold">QAR {completedSale.grand_total}</p>
+          <p className="mt-6 text-3xl font-bold"><MoneyDisplay value={completedSale.grand_total} /></p>
           <p className="mt-2 text-sm text-text-secondary">{methods}</p>
           {Number(completedSale.change_due) > 0 ? (
-            <p className="mt-2 font-semibold text-success">Change: QAR {completedSale.change_due}</p>
+            <p className="mt-2 font-semibold text-success">Change: <MoneyDisplay value={completedSale.change_due} /></p>
           ) : null}
-          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          </div>
+          <div className="grid gap-3 p-6 sm:grid-cols-2 sm:p-8">
             <Link className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-4 text-sm font-semibold" href={`/sales/${completedSale.id}/receipt`}>
               <ReceiptText className="size-4" /> View / Print Receipt
             </Link>
@@ -287,6 +289,7 @@ export default function BillingPage() {
   return (
     <div className="page-stack">
       <PageHeader
+        eyebrow="Point of sale"
         title="New Bill"
         description="Build a draft using live catalogue prices and current stock availability."
         action={<Badge tone="primary">Draft</Badge>}
@@ -301,9 +304,9 @@ export default function BillingPage() {
         </Button>
       </div>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid min-h-[calc(100dvh-13rem)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_390px] xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className={`${mobileView === "products" ? "block" : "hidden"} space-y-4 lg:block`}>
-          <Card className="p-4">
+          <Card className="p-3.5 sm:p-4">
             <form
               className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_190px]"
               onSubmit={(event) => {
@@ -315,7 +318,7 @@ export default function BillingPage() {
                 <Barcode className="absolute left-3.5 top-3.5 size-5 text-text-muted" />
                 <Input
                   ref={searchRef}
-                  className="pl-11"
+                  className="min-h-12 pl-11 text-base"
                   aria-label="Product or barcode search"
                   placeholder="Scan barcode or search name / SKU"
                   value={search}
@@ -334,13 +337,13 @@ export default function BillingPage() {
           </Card>
 
           {searching ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               <Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" />
             </div>
           ) : results.length === 0 ? (
             <EmptyState title="No products found" description="Search by product name, SKU, or barcode." />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               {results.map((item) => {
                 const available = availableForDraft(item);
                 return (
@@ -349,17 +352,17 @@ export default function BillingPage() {
                     key={item.product.id}
                     disabled={!available || busyItem !== null}
                     onClick={() => void addProduct(item.product.id)}
-                    className="min-h-36 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:border-primary hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group min-h-36 rounded-[var(--radius-card)] border border-border bg-surface p-4 text-left shadow-[var(--shadow-card)] transition-colors hover:border-blue-300 hover:bg-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h2 className="font-semibold">{item.product.name}</h2>
-                      <span className="shrink-0 font-bold text-primary">QAR {item.product.selling_price}</span>
+                      <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
                     </div>
                     <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
                     <div className="mt-5 flex items-end justify-between">
                       <div>
                         <p className="text-xs text-text-muted">Available</p>
-                        <p className="font-semibold">{item.quantity_on_hand ?? "—"} {item.product.unit}</p>
+                        <p className="font-semibold"><QuantityDisplay value={item.quantity_on_hand ?? "—"} unit={item.product.unit} /></p>
                       </div>
                       <Badge tone={
                         item.stock_status === "IN_STOCK"
@@ -378,8 +381,8 @@ export default function BillingPage() {
           )}
         </section>
 
-        <aside className={`${mobileView === "cart" ? "block" : "hidden"} lg:sticky lg:top-4 lg:block`}>
-          <Card className="overflow-hidden">
+        <aside className={`${mobileView === "cart" ? "block" : "hidden"} lg:sticky lg:top-[calc(var(--header-height)+1rem)] lg:block`}>
+          <Card className="overflow-hidden border-border-strong">
             <header className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <h2 className="font-bold">Current draft</h2>
@@ -409,10 +412,10 @@ export default function BillingPage() {
             <div className="border-t border-border bg-surface-secondary p-5">
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between"><dt className="text-text-muted">Items</dt><dd>{draft?.items.length ?? 0}</dd></div>
-                <div className="flex justify-between"><dt className="text-text-muted">Subtotal</dt><dd>QAR {draft?.subtotal ?? "0.00"}</dd></div>
-                <div className="flex justify-between"><dt className="text-text-muted">Tax</dt><dd>QAR {draft?.tax_total ?? "0.00"}</dd></div>
-                <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd>QAR {draft?.discount_total ?? "0.00"}</dd></div>
-                <div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><dt>Total</dt><dd>QAR {draft?.grand_total ?? "0.00"}</dd></div>
+                <div className="flex justify-between"><dt className="text-text-muted">Subtotal</dt><dd><MoneyDisplay value={draft?.subtotal ?? "0.00"} /></dd></div>
+                <div className="flex justify-between"><dt className="text-text-muted">Tax</dt><dd><MoneyDisplay value={draft?.tax_total ?? "0.00"} /></dd></div>
+                <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd><MoneyDisplay value={draft?.discount_total ?? "0.00"} /></dd></div>
+                <div className="flex justify-between border-t border-border pt-3 text-xl font-bold"><dt>Total</dt><dd><MoneyDisplay value={draft?.grand_total ?? "0.00"} /></dd></div>
               </dl>
               <Button
                 className="mt-4 w-full"

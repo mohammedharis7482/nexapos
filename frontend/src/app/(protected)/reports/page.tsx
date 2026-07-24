@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
+import { FilterBar } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { categoryService } from "@/services/category.service";
 import { reportsService } from "@/services/reports.service";
@@ -50,7 +51,7 @@ function qar(value: string) {
 }
 
 function SummaryCard({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return <Card className="p-4"><p className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</p><p className="mt-2 text-xl font-bold">{value}</p>{detail ? <p className="mt-1 text-xs text-text-muted">{detail}</p> : null}</Card>;
+  return <Card className="min-w-0 p-[var(--card-padding)]"><p className="text-xs font-semibold text-text-muted">{label}</p><p className="mt-2 whitespace-nowrap text-xl font-bold tracking-[-0.025em]">{value}</p>{detail ? <p className="mt-1 text-xs text-text-muted">{detail}</p> : null}</Card>;
 }
 
 function SalesReportView({ data }: { data: ReportsData }) {
@@ -64,7 +65,7 @@ function SalesReportView({ data }: { data: ReportsData }) {
       <SummaryCard label="Tax" value={qar(data.sales.tax_total)} />
       <SummaryCard label="Discounts" value={qar(data.sales.discount_total)} />
     </div>
-    <Card className="p-5"><h2 className="font-bold">Sales by day</h2><div className="mt-5 flex h-52 items-end gap-1.5 overflow-x-auto" aria-label="Sales report chart">{data.sales.daily.map((row) => <div key={row.date} className="flex min-w-10 flex-1 flex-col items-center gap-2"><div className="flex h-36 w-full items-end justify-center" title={`${row.date}: ${qar(row.sales_total)}`}><div className="w-full max-w-9 rounded-t bg-primary" style={{ height: `${max ? Math.max(Number(row.sales_total) / max * 100, 3) : 3}%` }} /></div><span className="text-[10px] text-text-muted">{row.date.slice(5)}</span></div>)}</div>{max === 0 ? <p className="text-center text-sm text-text-muted">No completed sales in this range.</p> : null}</Card>
+    <Card className="p-5 sm:p-6"><h2 className="font-bold">Sales by day</h2><p className="mt-1 text-sm text-text-muted">Completed-sale totals for the selected period</p><div className="relative mt-5"><div className="pointer-events-none absolute inset-x-0 top-0 flex h-36 flex-col justify-between"><span className="border-t border-dashed border-border" /><span className="border-t border-dashed border-border" /><span className="border-t border-dashed border-border" /><span className="border-t border-border" /></div><div className="relative flex h-52 items-end gap-1.5 overflow-x-auto" aria-label="Sales report chart">{data.sales.daily.map((row) => <div key={row.date} className="flex min-w-10 flex-1 flex-col items-center gap-2"><div className="flex h-36 w-full items-end justify-center" title={`${row.date}: ${qar(row.sales_total)}`}><div className="w-full max-w-9 rounded-t bg-primary/85" style={{ height: `${max ? Math.max(Number(row.sales_total) / max * 100, 3) : 3}%` }} /></div><span className="text-[10px] text-text-muted">{row.date.slice(5)}</span></div>)}</div>{max === 0 ? <p className="text-center text-sm text-text-muted">No completed sales in this range.</p> : null}</div></Card>
   </div>;
 }
 
@@ -113,8 +114,8 @@ export default function ReportsPage() {
   });
 
   return <div className="page-stack">
-    <PageHeader title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
-    <Card className="p-4">
+    <PageHeader eyebrow="Analytics" title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
+    <FilterBar>
       <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Report date presets">
         <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Period</span>
         {[["Today", 1], ["7 days", 7], ["30 days", 30]].map(([label, days]) => (
@@ -128,8 +129,8 @@ export default function ReportsPage() {
       <Select aria-label="Report category" value={draftFilters.category ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, category: event.target.value }))}><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select>
       <Select aria-label="Report payment method" value={draftFilters.payment_method ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, payment_method: event.target.value as ReportFilters["payment_method"] }))}><option value="">All payments</option><option value="CASH">Cash</option><option value="CARD">Card</option></Select>
       <Button type="submit">Apply filters</Button>
-    </form></Card>
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" role="tablist" aria-label="Report type">{tabs.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-12 rounded-xl border px-3 text-sm font-semibold ${tab === id ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface"}`}><Icon className="mr-2 inline size-4" />{label}</button>)}</div>
+    </form></FilterBar>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" role="tablist" aria-label="Report type">{tabs.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-16 rounded-xl border px-3 text-sm font-semibold shadow-[var(--shadow-sm)] transition-colors ${tab === id ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:border-border-strong hover:bg-surface-secondary"}`}><Icon className="mx-auto mb-1 size-4" />{label}</button>)}</div>
     {loading && !data ? <div aria-label="Loading reports" className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-72" /></div> : null}
     {error && !data ? <ErrorState title="Reports unavailable" description={error} onRetry={() => void load()} /> : null}
     {data ? <>{tab === "sales" ? <SalesReportView data={data} /> : null}{tab === "products" ? <ProductsReportView data={data} /> : null}{tab === "inventory" ? <InventoryReportView data={data} /> : null}{tab === "payments" ? <PaymentsReportView data={data} /> : null}{tab === "cashiers" ? <CashiersReportView data={data} /> : null}</> : null}

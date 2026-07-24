@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/feedback";
 import { FormField, Input, Select, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import {
   adjustmentSchema,
   type AdjustmentFormValues,
@@ -125,10 +126,11 @@ export function AdjustmentDialog({
         <FormField label="Quantity" htmlFor="adjustment-quantity" error={errors.quantity?.message}>
           <Input id="adjustment-quantity" inputMode="decimal" {...register("quantity")} />
         </FormField>
-        <p className="rounded-xl bg-surface-secondary p-3 text-sm text-text-secondary">
-          This movement will <strong>{direction}</strong> stock.
-          {expected !== null ? ` Expected result: ${expected} ${unit}.` : ""}
-        </p>
+        <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-surface-secondary p-4">
+          <div><p className="text-xs font-semibold text-text-muted">Current stock</p><p className="mt-1 font-bold tabular-nums">{currentQuantity} {unit.toLowerCase()}</p></div>
+          <div className="text-right"><p className="text-xs font-semibold text-text-muted">Expected stock</p><p className={cn("mt-1 font-bold tabular-nums", reductionTooLarge ? "text-danger" : "text-text-primary")}>{expected ?? "—"} {unit.toLowerCase()}</p></div>
+          <p className="col-span-2 border-t border-border pt-3 text-xs text-text-muted">This movement will <strong>{direction}</strong> stock.</p>
+        </div>
         {reductionTooLarge ? <Alert title="This exceeds available stock." tone="warning">The backend will reject negative stock.</Alert> : null}
         <FormField label="Reason" htmlFor="adjustment-reason" error={errors.reason?.message}>
           <Textarea id="adjustment-reason" {...register("reason")} />

@@ -88,13 +88,14 @@ export default function SettingsPage() {
   return (
     <div className="page-stack">
       <PageHeader
+        eyebrow="Administration"
         title="Shop settings"
         description={disabled ? "You can view your shop profile. Only owners can make changes." : "Manage the profile printed and displayed across NexaPOS."}
       />
       {disabled ? <Alert title="Read-only access" tone="warning">Ask a shop owner to update these settings.</Alert> : null}
       {success ? <Alert title="Shop settings saved." tone="success" /> : null}
       {submitError ? <Alert title={submitError} /> : null}
-      <Card className="max-w-4xl p-5 sm:p-7">
+      <Card className="max-w-5xl p-5 sm:p-7">
         <form onSubmit={submit} className="space-y-6" noValidate>
           <section className="space-y-5" aria-labelledby="business-details-heading">
           <div>
@@ -163,7 +164,7 @@ export default function SettingsPage() {
           </FormField>
           </section>
           {!disabled ? (
-            <div className="flex justify-end">
+            <div className="sticky bottom-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom))] -mx-5 flex justify-end border-t border-border bg-surface/95 px-5 pt-4 backdrop-blur-sm sm:-mx-7 sm:px-7 lg:bottom-0">
               <Button type="submit" loading={isSubmitting} leadingIcon={<Save className="size-4" />}>Save settings</Button>
             </div>
           ) : null}

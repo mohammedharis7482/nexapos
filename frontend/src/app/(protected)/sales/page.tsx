@@ -6,9 +6,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge, PageHeader } from "@/components/ui/display";
+import { MoneyDisplay, PageHeader, PaymentBadge } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
+import { FilterBar, TableFrame } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { salesService } from "@/services/sales.service";
@@ -87,10 +88,11 @@ export default function SalesPage() {
   return (
     <div className="page-stack">
       <PageHeader
+        eyebrow="Transactions"
         title="Sales"
         description={owner ? "Review completed sales across your shop." : "Review sales completed by your account."}
       />
-      <Card className="p-4">
+      <FilterBar>
         <form
           className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_155px_155px_170px_190px]"
           onSubmit={(event) => {
@@ -122,15 +124,15 @@ export default function SalesPage() {
             </Select>
           ) : <Button type="submit" variant="secondary">Search</Button>}
         </form>
-      </Card>
+      </FilterBar>
 
       {state === "loading" ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : null}
       {state === "error" ? <ErrorState title="Sales unavailable" description={error ?? ""} onRetry={() => void load()} /> : null}
       {state === "empty" ? <EmptyState title="No completed sales found" description="Completed payments will appear here." /> : null}
       {state === "ready" ? (
         <>
-          <Card className="hidden overflow-hidden md:block">
-            <table className="w-full border-collapse text-left text-sm">
+          <TableFrame>
+            <table className="premium-table">
               <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-text-muted">
                 <tr><th className="px-4 py-3">Sale</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Cashier</th><th className="px-4 py-3">Items</th><th className="px-4 py-3">Payment</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3"><span className="sr-only">View</span></th></tr>
               </thead>
@@ -141,25 +143,25 @@ export default function SalesPage() {
                     <td className="px-4 py-4 text-text-secondary">{formatDate(sale.completed_at)}</td>
                     <td className="px-4 py-4 text-text-secondary">{sale.cashier.full_name}</td>
                     <td className="px-4 py-4">{sale.item_count}</td>
-                    <td className="px-4 py-4"><Badge tone="primary">{sale.payment_methods.join(" + ")}</Badge></td>
-                    <td className="px-4 py-4 text-right font-bold">QAR {sale.grand_total}</td>
+                    <td className="px-4 py-4"><PaymentBadge methods={sale.payment_methods} /></td>
+                    <td className="px-4 py-4 text-right font-bold"><MoneyDisplay value={sale.grand_total} /></td>
                     <td className="px-4 py-4 text-right"><Link className="font-semibold text-primary" href={`/sales/${sale.id}`}>View</Link></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </Card>
+          </TableFrame>
           <div className="space-y-3 md:hidden">
             {sales.map((sale) => (
               <Link key={sale.id} href={`/sales/${sale.id}`} className="block">
                 <Card className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div><h2 className="font-semibold">{sale.sale_number}</h2><p className="mt-1 text-xs text-text-muted">{formatDate(sale.completed_at)}</p></div>
-                    <p className="font-bold">QAR {sale.grand_total}</p>
+                    <p className="font-bold"><MoneyDisplay value={sale.grand_total} /></p>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm text-text-secondary">
                     <span>{sale.cashier.full_name} · {sale.item_count} items</span>
-                    <Badge tone="primary">{sale.payment_methods.join(" + ")}</Badge>
+                    <PaymentBadge methods={sale.payment_methods} />
                   </div>
                 </Card>
               </Link>

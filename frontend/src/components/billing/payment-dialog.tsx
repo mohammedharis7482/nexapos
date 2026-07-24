@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { MoneyDisplay } from "@/components/ui/display";
 import { Alert } from "@/components/ui/feedback";
 import { FormField, Input } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
@@ -187,11 +188,12 @@ export function PaymentDialog({
             <button
               key={value}
               type="button"
+              aria-pressed={mode === value}
               onClick={() => setValue("mode", value)}
-              className={`min-h-20 rounded-xl border p-2 text-sm font-semibold ${
+              className={`min-h-20 rounded-xl border p-2 text-sm font-semibold transition-colors ${
                 mode === value
-                  ? "border-primary bg-primary-soft text-primary"
-                  : "border-border bg-surface"
+                  ? "border-primary bg-primary-soft text-primary shadow-[inset_0_0_0_1px_var(--primary)]"
+                  : "border-border bg-surface hover:border-border-strong hover:bg-surface-secondary"
               }`}
             >
               <Icon className="mx-auto mb-1 size-5" />
@@ -200,10 +202,10 @@ export function PaymentDialog({
           ))}
         </div>
 
-        <div className="rounded-xl bg-surface-secondary p-4">
-          <div className="flex justify-between text-sm"><span>Subtotal</span><strong>QAR {draft.subtotal}</strong></div>
-          <div className="mt-2 flex justify-between text-sm"><span>Tax</span><strong>QAR {draft.tax_total}</strong></div>
-          <div className="mt-3 flex justify-between border-t border-border pt-3 text-lg"><strong>Grand total</strong><strong>QAR {draft.grand_total}</strong></div>
+        <div className="rounded-xl border border-border bg-surface-secondary p-4">
+          <div className="flex justify-between text-sm"><span className="text-text-muted">Subtotal</span><strong><MoneyDisplay value={draft.subtotal} /></strong></div>
+          <div className="mt-2 flex justify-between text-sm"><span className="text-text-muted">Tax</span><strong><MoneyDisplay value={draft.tax_total} /></strong></div>
+          <div className="mt-3 flex justify-between border-t border-border pt-3 text-xl"><strong>Grand total</strong><strong><MoneyDisplay value={draft.grand_total} /></strong></div>
         </div>
 
         {mode === "CASH" || mode === "SPLIT" ? (
@@ -222,7 +224,7 @@ export function PaymentDialog({
               </div>
             ) : null}
             <FormField label="Cash received" htmlFor="cash-received" error={errors.amount_received?.message}>
-              <Input id="cash-received" inputMode="decimal" {...register("amount_received")} />
+              <Input id="cash-received" className="text-lg font-bold tabular-nums" inputMode="decimal" {...register("amount_received")} />
             </FormField>
             <div className="flex flex-wrap gap-2">
               {[draft.grand_total, "10.00", "20.00", "50.00", "100.00"].map((amount, index) => (
@@ -231,7 +233,7 @@ export function PaymentDialog({
                 </Button>
               ))}
             </div>
-            <p className="rounded-xl bg-success-soft p-3 text-sm font-semibold text-success">
+            <p className="flex items-center justify-between rounded-xl border border-emerald-200 bg-success-soft p-3 text-sm font-semibold text-success">
               Expected change: QAR {change !== null && Number(change) >= 0 ? change : "—"}
             </p>
           </>

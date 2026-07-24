@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from "react";
+import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
 import { cn, initials } from "@/lib/utils";
 
@@ -73,18 +73,21 @@ export function Avatar({
 }
 
 export function PageHeader({
+  eyebrow,
   title,
   description,
   action,
 }: {
+  eyebrow?: string;
   title: string;
   description?: string;
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
       <div className="min-w-0">
-        <h1 className="text-[1.625rem] font-bold leading-tight tracking-tight text-text-primary">{title}</h1>
+        {eyebrow ? <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.13em] text-primary">{eyebrow}</p> : null}
+        <h1 className="text-[1.625rem] font-bold leading-tight tracking-[-0.025em] text-text-primary sm:text-[1.75rem]">{title}</h1>
         {description ? (
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-text-muted">{description}</p>
         ) : null}
@@ -92,6 +95,46 @@ export function PageHeader({
       {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
     </div>
   );
+}
+
+export function MetricCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+  tone = "primary",
+}: {
+  label: string;
+  value: ReactNode;
+  detail?: ReactNode;
+  icon: ElementType;
+  tone?: "primary" | "success" | "warning" | "danger";
+}) {
+  const tones = {
+    primary: "bg-primary-soft text-primary",
+    success: "bg-success-soft text-success",
+    warning: "bg-warning-soft text-warning",
+    danger: "bg-danger-soft text-danger",
+  };
+  return (
+    <div className="min-w-0 rounded-[var(--radius-card)] border border-border bg-surface p-[var(--card-padding)] shadow-[var(--shadow-card)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-text-muted">{label}</p>
+          <p className="mt-2 tabular-nums whitespace-nowrap text-[1.55rem] font-bold leading-none tracking-[-0.035em] text-text-primary sm:text-[1.75rem]">{value}</p>
+          {detail ? <p className="mt-2 text-xs leading-5 text-text-muted">{detail}</p> : null}
+        </div>
+        <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", tones[tone])}>
+          <Icon className="size-[1.15rem]" aria-hidden="true" />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function PaymentBadge({ methods }: { methods: string[] | string }) {
+  const label = Array.isArray(methods) ? methods.join(" + ") : methods;
+  return <Badge tone="primary">{label.replaceAll("_", " ")}</Badge>;
 }
 
 export function PageContainer({

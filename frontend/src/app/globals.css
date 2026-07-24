@@ -1,44 +1,52 @@
 @import "tailwindcss";
 
 :root {
-  --app-background: #f4f6f9;
+  --app-background: #f5f7fb;
   --surface: #ffffff;
-  --surface-secondary: #f8fafc;
+  --surface-secondary: #f8fafd;
   --surface-elevated: #ffffff;
-  --brand-navy: #102a56;
-  --text-primary: #152238;
-  --text-secondary: #46556a;
-  --text-muted: #69778b;
-  --border: #e2e7ee;
-  --border-strong: #cbd3df;
-  --input-border: #b9c3d1;
-  --primary: #1768e5;
-  --primary-hover: #1258c7;
-  --primary-active: #0e47a3;
-  --primary-soft: #eaf2ff;
-  --focus-ring: rgb(23 104 229 / 24%);
-  --success: #087a55;
-  --success-soft: #eaf8f2;
-  --warning: #a85808;
-  --warning-soft: #fff4e5;
-  --danger: #c5222f;
-  --danger-soft: #fff0f1;
-  --info: #1768e5;
-  --info-soft: #eaf2ff;
-  --disabled: #98a2b3;
-  --low-stock: #a85808;
-  --out-of-stock: #c5222f;
-  --radius-control: 0.75rem;
-  --radius-card: 1rem;
+  --brand-navy: #12233f;
+  --text-primary: #172033;
+  --text-secondary: #526079;
+  --text-muted: #778399;
+  --border: #e5e9f0;
+  --border-strong: #d3dae5;
+  --input-border: #c8d0dc;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-soft: #edf4ff;
+  --focus-ring: rgb(37 99 235 / 22%);
+  --success: #16805d;
+  --success-soft: #edf9f4;
+  --warning: #b26108;
+  --warning-soft: #fff7e8;
+  --danger: #cf3346;
+  --danger-soft: #fff1f3;
+  --info: #2563eb;
+  --info-soft: #edf4ff;
+  --disabled: #9aa4b5;
+  --low-stock: #b26108;
+  --out-of-stock: #cf3346;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --radius-control: var(--radius-md);
+  --radius-card: var(--radius-xl);
   --radius-dialog: 1.125rem;
-  --shadow-card: 0 1px 2px rgb(16 42 86 / 5%), 0 1px 5px rgb(16 42 86 / 3%);
-  --shadow-elevated: 0 16px 40px rgb(16 42 86 / 16%);
+  --shadow-sm: 0 1px 2px rgb(18 35 63 / 4%);
+  --shadow-card: 0 1px 2px rgb(18 35 63 / 4%), 0 4px 14px rgb(18 35 63 / 2%);
+  --shadow-elevated: 0 18px 48px rgb(18 35 63 / 15%);
   --content-max: 90rem;
-  --sidebar-width: 15rem;
-  --header-height: 4rem;
-  --mobile-nav-height: 4.5rem;
-  --control-height: 2.75rem;
-  --transition-fast: 150ms;
+  --sidebar-width: 12rem;
+  --header-height: 3.75rem;
+  --mobile-nav-height: 4.25rem;
+  --control-height: 2.625rem;
+  --content-padding: clamp(1rem, 2.2vw, 2rem);
+  --card-padding: clamp(1rem, 1.6vw, 1.375rem);
+  --table-row-height: 3.5rem;
+  --transition-fast: 160ms;
 }
 
 @theme inline {
@@ -87,7 +95,7 @@ body {
   background: var(--app-background);
   color: var(--text-primary);
   font-family: var(--font-inter), Arial, sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
 }
@@ -134,20 +142,97 @@ a {
 .page-stack {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
   padding-bottom: 1rem;
 }
 
 .data-table th,
 .page-stack table th {
-  height: 2.75rem;
+  height: 2.625rem;
   white-space: nowrap;
 }
 
 .data-table td,
 .page-stack table td {
-  min-height: 3.5rem;
+  min-height: var(--table-row-height);
   vertical-align: middle;
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.premium-table thead {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-secondary);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.premium-table th,
+.premium-table td {
+  padding-inline: 1.125rem;
+}
+
+.premium-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--transition-fast);
+}
+
+.premium-table tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.premium-table tbody tr:hover {
+  background: #fafbfe;
+}
+
+.surface-grid {
+  background-image:
+    linear-gradient(to right, rgb(37 99 235 / 4%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(37 99 235 / 4%) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.premium-action-primary,
+.premium-action-secondary {
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-control);
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.premium-action-primary {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+.premium-action-primary:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+
+.premium-action-secondary {
+  border: 1px solid var(--border-strong);
+  background: white;
+  color: var(--text-primary);
+}
+
+.premium-action-secondary:hover {
+  border-color: var(--input-border);
+  background: var(--surface-secondary);
 }
 
 .page-stack table :is(td, th):has(+ td),

@@ -5,7 +5,7 @@ import type { ReceiptData } from "@/types/sales";
 export function Receipt({ data }: { data: ReceiptData }) {
   const { shop, sale } = data;
   return (
-    <article className="print-receipt mx-auto w-full max-w-[360px] bg-white p-5 font-mono text-[12px] leading-5 text-black">
+    <article className="print-receipt mx-auto w-full max-w-[360px] border border-slate-200 bg-white p-5 font-mono text-[12px] leading-5 text-black shadow-sm">
       <header className="text-center">
         <h1 className="text-lg font-bold">{shop.name}</h1>
         {shop.legal_name ? <p>{shop.legal_name}</p> : null}

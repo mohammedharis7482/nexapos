@@ -1,15 +1,16 @@
 "use client";
 
-import { Boxes, Search } from "lucide-react";
+import { AlertTriangle, Boxes, CheckCircle2, PackageX, Search, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StockStatusBadge } from "@/components/inventory/stock-status";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/display";
+import { MetricCard, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
+import { FilterBar, TableFrame } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { categoryService } from "@/services/category.service";
@@ -96,16 +97,17 @@ export default function InventoryPage() {
   }
 
   const state = inventoryCollectionState(loading, items.length, error);
-  const summaryCards = [
-    ["Catalogue products", summary?.total_products],
-    ["Inventory initialized", summary?.initialized],
-    ["Low stock", summary?.low_stock],
-    ["Out of stock", summary?.out_of_stock],
+  const summaryCards: Array<{ label: string; value?: number; icon: LucideIcon; tone: "primary" | "success" | "warning" | "danger" }> = [
+    { label: "Catalogue products", value: summary?.total_products, icon: Boxes, tone: "primary" },
+    { label: "Inventory initialized", value: summary?.initialized, icon: CheckCircle2, tone: "success" },
+    { label: "Low stock", value: summary?.low_stock, icon: AlertTriangle, tone: "warning" },
+    { label: "Out of stock", value: summary?.out_of_stock, icon: PackageX, tone: "danger" },
   ];
 
   return (
     <div className="page-stack">
       <PageHeader
+        eyebrow="Stock control"
         title="Inventory"
         description={
           owner
@@ -115,21 +117,12 @@ export default function InventoryPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {summaryCards.map(([label, value]) => (
-          <Card key={label} className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              {label}
-            </p>
-            {loading && !summary ? (
-              <Skeleton className="mt-3 h-8 w-16" />
-            ) : (
-              <p className="mt-2 text-2xl font-bold">{value ?? 0}</p>
-            )}
-          </Card>
-        ))}
+        {summaryCards.map(({ label, value, icon, tone }) => loading && !summary
+          ? <Skeleton key={label} className="h-28" />
+          : <MetricCard key={label} label={label} value={value ?? 0} icon={icon} tone={tone} />)}
       </div>
 
-      <Card className="p-4">
+      <FilterBar>
         <form
           className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_200px_190px_150px]"
           onSubmit={(event) => {
@@ -184,7 +177,7 @@ export default function InventoryPage() {
             <Button type="submit" variant="secondary">Search</Button>
           )}
         </form>
-      </Card>
+      </FilterBar>
 
       {state === "loading" ? (
         <div className="space-y-3">
@@ -208,8 +201,8 @@ export default function InventoryPage() {
       ) : null}
       {state === "ready" ? (
         <>
-          <Card className="hidden overflow-hidden md:block">
-            <table className="w-full border-collapse text-left text-sm">
+          <TableFrame>
+            <table className="premium-table">
               <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-text-muted">
                 <tr>
                   <th className="px-4 py-3">Product</th>
@@ -232,7 +225,7 @@ export default function InventoryPage() {
                       {item.product.category?.name ?? "Uncategorized"}
                     </td>
                     <td className="px-4 py-4 font-semibold">
-                      {item.quantity_on_hand ?? "—"} {item.is_initialized ? item.product.unit : ""}
+                      <QuantityDisplay value={item.quantity_on_hand ?? "—"} unit={item.is_initialized ? item.product.unit : undefined} />
                     </td>
                     <td className="px-4 py-4 text-text-secondary">
                       {item.low_stock_threshold ?? "—"}
@@ -248,7 +241,7 @@ export default function InventoryPage() {
                 ))}
               </tbody>
             </table>
-          </Card>
+          </TableFrame>
           <div className="space-y-3 md:hidden">
             {items.map((item) => (
               <Link key={item.product.id} href={`/inventory/${item.product.id}`} className="block">

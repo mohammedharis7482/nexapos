@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ShoppingCart } from "lucide-react";
+import { Boxes, ChartNoAxesCombined, ReceiptText, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -85,32 +85,36 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.72fr)]">
-      <section className="hidden bg-brand-navy p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+    <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(500px,0.7fr)]">
+      <section className="surface-grid relative hidden overflow-hidden border-r border-border bg-[#eef4ff] p-10 text-text-primary lg:flex lg:flex-col lg:justify-between xl:p-14">
         <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-white text-primary">
+          <span className="grid size-11 place-items-center rounded-xl bg-primary text-white shadow-sm">
             <ShoppingCart className="size-6" />
           </span>
           <div>
             <p className="text-xl font-extrabold">NexaPOS</p>
-            <p className="text-sm text-blue-100">Built for grocery retail in Qatar</p>
+            <p className="text-sm text-text-secondary">Grocery operations · Qatar</p>
           </div>
         </div>
         <div className="max-w-xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">
-            Modern minimal retail
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">
+            Modern grocery operations
           </p>
-          <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight">
-            Grocery operations, kept clear and dependable.
+          <h1 className="mt-5 max-w-2xl text-4xl font-bold leading-[1.12] tracking-[-0.035em] xl:text-5xl">
+            One clear workspace for every shop day.
           </h1>
-          <p className="mt-5 max-w-lg text-lg leading-8 text-blue-100">
-            Securely access the tools for your shop. Owners and cashiers see the
-            workspace appropriate to their role.
+          <p className="mt-5 max-w-xl text-base leading-7 text-text-secondary">
+            Sign in to the role-appropriate workspace for checkout, stock control,
+            sales history, and operational reporting.
           </p>
-          <div className="mt-8 h-px max-w-32 bg-blue-300/60" />
+          <div className="mt-9 grid max-w-2xl grid-cols-3 gap-3">
+            <div className="rounded-xl border border-blue-200/70 bg-white/80 p-4 shadow-sm"><ReceiptText className="size-5 text-primary" /><p className="mt-3 text-sm font-semibold">Fast checkout</p></div>
+            <div className="rounded-xl border border-blue-200/70 bg-white/80 p-4 shadow-sm"><Boxes className="size-5 text-primary" /><p className="mt-3 text-sm font-semibold">Live inventory</p></div>
+            <div className="rounded-xl border border-blue-200/70 bg-white/80 p-4 shadow-sm"><ChartNoAxesCombined className="size-5 text-primary" /><p className="mt-3 text-sm font-semibold">Real reports</p></div>
+          </div>
         </div>
-        <p className="text-sm text-blue-200">
-          NexaPOS · Grocery point of sale
+        <p className="text-sm text-text-muted">
+          NexaPOS · Production grocery point of sale
         </p>
       </section>
 
@@ -126,9 +130,10 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Card className="p-5 sm:p-8 lg:border-0 lg:shadow-none">
+          <Card className="p-5 sm:p-8 lg:border-border lg:p-9 lg:shadow-[var(--shadow-card)]">
             <div className="mb-7">
-              <h1 className="text-[1.75rem] font-bold tracking-tight">Welcome back</h1>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">Shop access</p>
+              <h1 className="text-[1.75rem] font-bold tracking-[-0.025em]">Welcome back</h1>
               <p className="mt-2 text-text-secondary">
                 Sign in as a shop owner or cashier to continue.
               </p>

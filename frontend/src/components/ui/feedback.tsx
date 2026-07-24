@@ -85,14 +85,18 @@ export function EmptyState({
   title,
   description,
   action,
+  compact = false,
+  tone = "neutral",
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  compact?: boolean;
+  tone?: "neutral" | "success";
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border-strong p-8 text-center">
-      <Inbox className="mx-auto mb-3 size-8 text-text-muted" aria-hidden="true" />
+    <div className={cn("rounded-[var(--radius-card)] border border-dashed text-center", compact ? "p-5" : "p-8", tone === "success" ? "border-emerald-200 bg-success-soft/50" : "border-border-strong")}>
+      {tone === "success" ? <CheckCircle2 className="mx-auto mb-2.5 size-7 text-success" aria-hidden="true" /> : <Inbox className="mx-auto mb-2.5 size-7 text-text-muted" aria-hidden="true" />}
       <h2 className="font-semibold text-text-primary">{title}</h2>
       <p className="mt-1 text-sm text-text-muted">{description}</p>
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}

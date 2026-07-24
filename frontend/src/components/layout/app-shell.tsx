@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CalendarDays,
   ChevronDown,
   KeyRound,
   LogOut,
@@ -9,27 +10,36 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { ChangePasswordDialog } from "@/components/auth/change-password-dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, Badge } from "@/components/ui/display";
+import { Avatar, Badge, StatusBadge } from "@/components/ui/display";
 import { DropdownMenu, Sheet } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
 import { getNavigationForRole, navigationItems } from "./navigation";
 
+function subscribeToNetwork(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/dashboard" className="flex min-h-11 items-center gap-3 rounded-xl">
-      <span className="grid size-10 place-items-center rounded-xl bg-primary text-white">
-        <ShoppingCart className="size-5" aria-hidden="true" />
+    <Link href="/dashboard" className="flex min-h-10 items-center gap-2.5 rounded-xl">
+      <span className="grid size-9 place-items-center rounded-[10px] bg-primary text-white shadow-sm">
+        <ShoppingCart className="size-[1.1rem]" aria-hidden="true" />
       </span>
       {!compact ? (
         <span>
-          <span className="block text-base font-extrabold tracking-tight">NexaPOS</span>
-          <span className="block text-xs text-text-muted">Retail operations</span>
+          <span className="block text-[15px] font-extrabold tracking-[-0.025em]">NexaPOS</span>
+          <span className="block text-[10px] font-medium text-text-muted">Grocery operations</span>
         </span>
       ) : null}
     </Link>
@@ -52,14 +62,14 @@ function NavigationLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-semibold transition-colors",
+        "relative flex min-h-10 items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold transition-colors",
         active
-          ? "bg-primary-soft text-primary before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-primary"
+          ? "bg-primary-soft text-primary before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
           : "text-text-secondary hover:bg-surface-secondary hover:text-text-primary",
         item.prominent && !active && "border border-blue-200 bg-primary-soft/60 text-primary",
       )}
     >
-      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      <Icon className="size-[1.1rem] shrink-0" aria-hidden="true" />
       {item.label}
     </Link>
   );
@@ -71,6 +81,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, isLoggingOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  const networkOnline = useSyncExternalStore(
+    subscribeToNetwork,
+    () => window.navigator.onLine,
+    () => true,
+  );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const items = useMemo(
     () => (user ? getNavigationForRole(user.role) : []),
@@ -78,9 +101,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
   if (!user) return null;
 
-  const current =
-    navigationItems.find((item) => pathname.startsWith(item.href))?.label ??
-    "NexaPOS";
   const mobilePrimary = items.filter((item) =>
     ["/dashboard", "/billing", "/products", "/sales"].includes(item.href),
   );
@@ -98,13 +118,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-width)] border-r border-border bg-surface p-4 lg:flex lg:flex-col">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-width)] border-r border-border bg-surface px-3 py-4 lg:flex lg:flex-col">
         <Brand />
-        <div className="mt-5 rounded-xl bg-surface-secondary px-3 py-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Current shop</p>
-          <p className="mt-1 truncate text-sm font-semibold">{user.shop.name}</p>
-        </div>
-        <p className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">Workspace</p>
+        <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">Workspace</p>
         <nav className="flex flex-1 flex-col gap-1" aria-label="Primary navigation">
           {items.map((item) => (
             <NavigationLink
@@ -114,33 +130,42 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           ))}
         </nav>
-        <div className="border-t border-border pt-4">
-          <div className="flex items-center gap-3">
-            <Avatar name={user.full_name} />
+        <div className="border-t border-border pt-3">
+          <div className="flex items-center gap-2.5 rounded-xl p-2 hover:bg-surface-secondary">
+            <Avatar name={user.full_name} className="size-9 rounded-[10px] text-xs" />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{user.full_name}</p>
-              <p className="text-xs text-text-muted">{user.role === "OWNER" ? "Owner" : "Cashier"}</p>
+              <p className="truncate text-xs font-semibold">{user.full_name}</p>
+              <p className="truncate text-[10px] text-text-muted">{user.role === "OWNER" ? "Owner" : "Cashier"} · {user.shop.name}</p>
             </div>
           </div>
         </div>
       </aside>
 
       <div className="min-h-screen lg:pl-[var(--sidebar-width)]">
-        <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-surface/95 px-4 backdrop-blur-sm sm:px-6">
+        <header className="sticky top-0 z-20 flex min-h-[var(--header-height)] items-center justify-between border-b border-border bg-surface/95 px-4 backdrop-blur-sm sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <div className="lg:hidden">
               <Brand compact />
             </div>
             <div className="min-w-0">
-              <p className="hidden text-xs text-text-muted sm:block">{user.shop.name}</p>
-              <h1 className="truncate text-base font-bold">{current}</h1>
+              <p className="hidden text-[10px] font-semibold uppercase tracking-[0.08em] text-text-muted sm:block">Active shop</p>
+              <p className="truncate text-sm font-bold">{user.shop.name}</p>
             </div>
           </div>
 
-          <DropdownMenu
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden items-center gap-2 text-xs text-text-muted md:flex">
+              <StatusBadge label={networkOnline ? "Network online" : "Network offline"} online={networkOnline} />
+              <span className="mx-1 h-4 w-px bg-border" />
+              <CalendarDays className="size-4" aria-hidden="true" />
+              <time dateTime={now.toISOString()}>
+                {new Intl.DateTimeFormat("en-QA", { dateStyle: "medium", timeStyle: "short" }).format(now)}
+              </time>
+            </div>
+            <DropdownMenu
             trigger={
               <span className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-1.5 hover:bg-surface-secondary">
-                <Avatar name={user.full_name} />
+                <Avatar name={user.full_name} className="size-9 rounded-[10px] text-xs" />
                 <span className="hidden text-left sm:block">
                   <span className="block max-w-36 truncate text-sm font-semibold">
                     {user.full_name}
@@ -173,10 +198,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <LogOut className="size-5" /> {isLoggingOut ? "Logging out…" : "Logout"}
             </button>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[var(--content-max)] p-4 pb-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom)+1.5rem)] sm:p-6 sm:pb-28 lg:p-7 lg:pb-8 xl:p-8">
+        <main className="mx-auto w-full max-w-[var(--content-max)] p-[var(--content-padding)] pb-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom)+1.5rem)] sm:pb-28 lg:pb-8">
           {children}
         </main>
       </div>

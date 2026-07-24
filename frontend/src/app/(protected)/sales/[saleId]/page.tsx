@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Card } from "@/components/ui/card";
-import { Badge, PageHeader } from "@/components/ui/display";
+import { Badge, MoneyDisplay, PageHeader, PaymentBadge, QuantityDisplay } from "@/components/ui/display";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { ApiError } from "@/lib/api-client";
 import { salesService } from "@/services/sales.service";
@@ -45,6 +45,7 @@ export default function SaleDetailPage() {
     <div className="page-stack">
       <Link href="/sales" className="inline-flex items-center gap-2 text-sm font-semibold text-primary"><ArrowLeft className="size-4" /> Back to sales</Link>
       <PageHeader
+        eyebrow="Sale detail"
         title={sale.sale_number}
         description={`${formatDate(sale.completed_at)} · ${sale.created_by.full_name}`}
         action={<Link href={`/sales/${sale.id}/receipt`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white"><ReceiptText className="size-4" /> View Receipt</Link>}
@@ -55,8 +56,8 @@ export default function SaleDetailPage() {
           <div className="divide-y divide-border">
             {sale.items.map((item) => (
               <article key={item.id} className="flex items-start justify-between gap-4 p-5">
-                <div><h3 className="font-semibold">{item.product.name}</h3><p className="mt-1 text-xs text-text-muted">{item.product.sku} · {item.quantity} {item.product.unit} × QAR {item.unit_price}</p></div>
-                <p className="font-bold">QAR {item.line_total}</p>
+                <div><h3 className="font-semibold">{item.product.name}</h3><p className="mt-1 text-xs text-text-muted">{item.product.sku} · <QuantityDisplay value={item.quantity} unit={item.product.unit} /> × <MoneyDisplay value={item.unit_price} /></p></div>
+                <p className="font-bold"><MoneyDisplay value={item.line_total} /></p>
               </article>
             ))}
           </div>
@@ -65,20 +66,20 @@ export default function SaleDetailPage() {
           <Card className="p-5">
             <div className="flex items-center justify-between"><h2 className="font-bold">Completed sale</h2><Badge tone="success">Completed</Badge></div>
             <dl className="mt-5 space-y-3 text-sm">
-              <div className="flex justify-between"><dt className="text-text-muted">Subtotal</dt><dd>QAR {sale.subtotal}</dd></div>
-              <div className="flex justify-between"><dt className="text-text-muted">Tax</dt><dd>QAR {sale.tax_total}</dd></div>
-              <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd>QAR {sale.discount_total}</dd></div>
-              <div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><dt>Total</dt><dd>QAR {sale.grand_total}</dd></div>
+              <div className="flex justify-between"><dt className="text-text-muted">Subtotal</dt><dd><MoneyDisplay value={sale.subtotal} /></dd></div>
+              <div className="flex justify-between"><dt className="text-text-muted">Tax</dt><dd><MoneyDisplay value={sale.tax_total} /></dd></div>
+              <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd><MoneyDisplay value={sale.discount_total} /></dd></div>
+              <div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><dt>Total</dt><dd><MoneyDisplay value={sale.grand_total} /></dd></div>
             </dl>
           </Card>
           <Card className="p-5">
             <h2 className="font-bold">Payments</h2>
             <div className="mt-4 space-y-3">
               {sale.payments.map((payment) => (
-                <div key={payment.id} className="flex justify-between text-sm"><span>{payment.method}{payment.reference ? ` · ${payment.reference}` : ""}</span><strong>QAR {payment.amount}</strong></div>
+                <div key={payment.id} className="flex justify-between text-sm"><span><PaymentBadge methods={payment.method} />{payment.reference ? ` · ${payment.reference}` : ""}</span><strong><MoneyDisplay value={payment.amount} /></strong></div>
               ))}
-              <div className="flex justify-between border-t border-border pt-3 text-sm"><span>Amount received</span><strong>QAR {sale.amount_received}</strong></div>
-              <div className="flex justify-between text-sm text-success"><span>Change</span><strong>QAR {sale.change_due}</strong></div>
+              <div className="flex justify-between border-t border-border pt-3 text-sm"><span>Amount received</span><strong><MoneyDisplay value={sale.amount_received} /></strong></div>
+              <div className="flex justify-between text-sm text-success"><span>Change</span><strong><MoneyDisplay value={sale.change_due} /></strong></div>
             </div>
           </Card>
         </div>

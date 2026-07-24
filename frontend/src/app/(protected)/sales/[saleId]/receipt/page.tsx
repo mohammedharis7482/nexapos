@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Receipt } from "@/components/sales/receipt";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/display";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { ApiError } from "@/lib/api-client";
 import { salesService } from "@/services/sales.service";
@@ -33,11 +34,12 @@ export default function ReceiptPage() {
   if (!receipt) return <Skeleton className="mx-auto h-[680px] max-w-[360px]" />;
   return (
     <div className="page-stack print:!p-0">
-      <div className="print-controls mx-auto flex max-w-[560px] items-center justify-between">
-        <Link href={`/sales/${saleId}`} className="inline-flex items-center gap-2 text-sm font-semibold text-primary"><ArrowLeft className="size-4" /> Sale details</Link>
-        <Button leadingIcon={<Printer className="size-4" />} onClick={() => window.print()}>Print Receipt</Button>
+      <div className="print-controls mx-auto w-full max-w-3xl">
+        <PageHeader eyebrow="Customer copy" title="Receipt preview" description={receipt.sale.sale_number} action={<div className="flex gap-2"><Link href={`/sales/${saleId}`} className="premium-action-secondary"><ArrowLeft className="size-4" /> Sale details</Link><Button leadingIcon={<Printer className="size-4" />} onClick={() => window.print()}>Print Receipt</Button></div>} />
       </div>
-      <Receipt data={receipt} />
+      <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border bg-surface-secondary p-4 shadow-[var(--shadow-card)] sm:p-8">
+        <Receipt data={receipt} />
+      </div>
     </div>
   );
 }

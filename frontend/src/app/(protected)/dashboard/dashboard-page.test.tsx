@@ -81,10 +81,13 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("Today’s sales")).toBeInTheDocument();
     expect(screen.getByText("Payments today")).toBeInTheDocument();
     expect(screen.getByText("Top products today")).toBeInTheDocument();
-    expect(screen.getByText("NXP-ABC-20260724-000001").closest("a")).toHaveAttribute("href", "/sales/sale-id");
+    expect(screen.getAllByText("NXP-ABC-20260724-000001")[0].closest("a")).toHaveAttribute("href", "/sales/sale-id");
     expect(screen.getAllByText("Milk")[0].closest("a")).toHaveAttribute("href", "/inventory/product-id");
     expect(screen.getByText("View all sales")).toHaveAttribute("href", "/sales");
     expect(screen.queryByText(/up \\d+%/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Ready for today's customers")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Seven-day sales chart" })).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("...");
   });
 
   it("renders the role-limited cashier dashboard", async () => {
