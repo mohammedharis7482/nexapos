@@ -114,5 +114,18 @@
 50. Top products rank snapshot quantities for today by default, with an optional
     seven-day period. The seven-day trend includes today and explicit zero days.
     Neither calculation exposes purchase price, profit, margin, or COGS.
+51. Reports are OWNER-only and always derive the shop from the authenticated
+    user. Cashiers receive HTTP 403 and another shop’s identifiers never broaden
+    access.
+52. Report date filters are inclusive local dates converted into a half-open
+    timezone-aware datetime range. Draft and cancelled sales are excluded.
+53. Sales, product, payment, and cashier reports share date, cashier, category,
+    and payment filters. Current inventory respects category only because stock
+    is a present-time snapshot rather than a historical valuation.
+54. Product reporting uses immutable SaleItem identity and value snapshots.
+    Payment reporting uses allocated Payment amounts. Neither report uses
+    purchase price or estimates profit.
+55. The reports foundation does not provide exports, accounting, suppliers,
+    purchases, refunds, forecasting, or cross-shop analytics.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.

@@ -108,6 +108,18 @@ owner payment/top-product sections for cashier payloads, manual refresh, and
 absence of invented comparison percentages. Full lint, Vitest, and production
 build validation remain mandatory.
 
+Reports backend tests cover unauthenticated and CASHIER denial, OWNER access,
+completed-sale aggregation, weighted product quantities, current inventory
+statuses, allocated split payments, cashier totals without line-join
+duplication, shared filter combinations, inclusive zero-filled dates, invalid
+date rejection, and cross-shop isolation.
+
+Reports frontend tests cover the exact consolidated URL, default date range,
+loading state, real sales metrics, switching all five responsive report views
+without redundant requests, shared filter submission, and inventory-detail
+links. Full regression tests, lint, build, OpenAPI validation, and migration
+drift checks are run after implementation.
+
 ```bash
 cd frontend
 npm test

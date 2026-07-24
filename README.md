@@ -56,6 +56,13 @@ Cashiers see only their own financial and recent-sale metrics plus the permitted
 active-product alert preview. “Today” is calculated in the shop timezone
 (`Asia/Qatar` by default), not from the application server’s local date.
 
+The OWNER-only reports foundation is available at `/reports` and uses the
+consolidated `GET /api/v1/reports/` API. It provides real sales, product,
+inventory, allocated-payment, and cashier summaries with shared inclusive date,
+cashier, category, and payment-method filters. Reports are operational views of
+completed sales and current inventory; they do not calculate profit, COGS,
+accounting entries, purchasing, or exports.
+
 ## Local backend
 
 Create PostgreSQL as described in [deployment](docs/deployment.md), then:

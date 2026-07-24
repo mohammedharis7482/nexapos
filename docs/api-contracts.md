@@ -273,3 +273,28 @@ shop ID. Payment totals use allocated Payment amounts, so cash tender and change
 cannot inflate revenue. `split_sales_total_today` identifies the total value of
 sales containing both methods; cash and card allocation fields remain the
 reconciling payment totals.
+
+## Reports foundation
+
+- `GET /api/v1/reports/` — OWNER only
+
+Shared query parameters are `date_from`, `date_to`, `cashier`, `category`, and
+`payment_method=CASH|CARD`. Dates are inclusive local calendar dates and default
+to the seven days ending today in the shop timezone. The maximum accepted range
+is 367 calendar days. Invalid ranges return the standard validation-error
+envelope.
+
+The consolidated response contains:
+
+- sales totals, bill count, average bill, item quantity, tax, discount, and
+  zero-filled daily totals;
+- up to 50 ranked product snapshot aggregates by sales value;
+- current active-product inventory counts and up to 50 inventory rows;
+- CASH/CARD allocated amounts, counts, sale counts, and percentages;
+- cashier sales, bill count, average bill, and item quantity.
+
+Only completed, current-shop sales contribute to dated reports. Inventory is a
+current snapshot, so date, cashier, and payment filters do not alter quantities;
+the category filter does. Payment values use allocated Payment amounts and
+never tendered cash. No purchase price, profit, COGS, supplier, accounting, or
+export data is returned.

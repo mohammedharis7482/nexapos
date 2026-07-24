@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/v1/billing/", include("apps.sales.api.urls")),
     path("api/v1/sales/", include("apps.sales.api.sales_urls")),
     path("api/v1/dashboard/", include("apps.reports.api.urls")),
+    path("api/v1/reports/", include("apps.reports.api.report_urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",

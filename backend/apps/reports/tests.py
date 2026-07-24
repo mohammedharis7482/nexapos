@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -7,7 +8,7 @@ from rest_framework.test import APITestCase
 from apps.accounts.models import User
 from apps.inventory.models import InventoryBalance
 from apps.payments.models import Payment
-from apps.products.models import Product
+from apps.products.models import Product, ProductCategory
 from apps.sales.models import Sale, SaleItem
 from apps.shops.models import Shop
 
@@ -272,5 +273,178 @@ class DashboardApiTests(APITestCase):
         data = self.client.get(self.endpoint).json()["data"]
         self.assertEqual(data["summary"]["sales_total_today"], "0.00")
         self.assertEqual(data["recent_sales"], [])
+
+
+class ReportsFoundationApiTests(APITestCase):
+    endpoint = "/api/v1/reports/"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.shop = Shop.objects.create(
+            name="Reports Grocery", address="Doha", phone="+974 5111 0000"
+        )
+        cls.other_shop = Shop.objects.create(
+            name="Other Reports Grocery", address="Doha", phone="+974 5111 0001"
+        )
+        cls.owner = User.objects.create_user(
+            shop=cls.shop, username="owner", password="StrongPass123!",
+            full_name="Reports Owner", role=User.Role.OWNER,
+        )
+        cls.cashier = User.objects.create_user(
+            shop=cls.shop, username="cashier", password="StrongPass123!",
+            full_name="Cashier One", role=User.Role.CASHIER,
+        )
+        cls.cashier_two = User.objects.create_user(
+            shop=cls.shop, username="cashier2", password="StrongPass123!",
+            full_name="Cashier Two", role=User.Role.CASHIER,
+        )
+        cls.other_owner = User.objects.create_user(
+            shop=cls.other_shop, username="owner", password="StrongPass123!",
+            full_name="Other Owner", role=User.Role.OWNER,
+        )
+        cls.category = ProductCategory.objects.create(
+            shop=cls.shop, name="Dairy"
+        )
+        cls.milk = Product.objects.create(
+            shop=cls.shop, category=cls.category, name="Milk", sku="MILK",
+            selling_price=Decimal("6.00"), unit=Product.Unit.BOTTLE,
+        )
+        cls.rice = Product.objects.create(
+            shop=cls.shop, name="Rice", sku="RICE",
+            selling_price=Decimal("8.00"), unit=Product.Unit.KG,
+        )
+        cls.uninitialized = Product.objects.create(
+            shop=cls.shop, name="New Product", sku="NEW", selling_price=Decimal("2.00")
+        )
+        InventoryBalance.objects.create(
+            shop=cls.shop, product=cls.milk,
+            quantity_on_hand=Decimal("2.000"), low_stock_threshold=Decimal("3.000"),
+        )
+        InventoryBalance.objects.create(
+            shop=cls.shop, product=cls.rice,
+            quantity_on_hand=Decimal("0.000"), low_stock_threshold=Decimal("2.000"),
+        )
+
+    @classmethod
+    def create_sale(
+        cls, user, product, total, quantity, methods, *, completed_at=None
+    ):
+        completed_at = completed_at or timezone.now()
+        sale = Sale.objects.create(
+            shop=user.shop,
+            created_by=user,
+            completed_by=user,
+            completed_at=completed_at,
+            sale_number=f"NXP-REPORT-{Sale.objects.count() + 1:06d}",
+            status=Sale.Status.COMPLETED,
+            subtotal=Decimal(total),
+            grand_total=Decimal(total),
+            amount_received=Decimal(total),
+        )
+        SaleItem.objects.create(
+            sale=sale, product=product, product_name=product.name, sku=product.sku,
+            unit=product.unit, quantity=Decimal(quantity),
+            unit_price=product.selling_price, tax_rate=Decimal("0.00"),
+            is_tax_inclusive=False, tax_amount=Decimal("0.00"),
+            line_subtotal=Decimal(total), line_total=Decimal(total),
+        )
+        for method, amount in methods:
+            Payment.objects.create(
+                shop=user.shop, sale=sale, payment_method=method,
+                amount=Decimal(amount), recorded_by=user,
+            )
+        return sale
+
+    def query(self, **filters):
+        self.client.force_authenticate(user=self.owner)
+        return self.client.get(self.endpoint, filters)
+
+    def test_reports_are_authenticated_and_owner_only(self):
+        self.assertEqual(self.client.get(self.endpoint).status_code, 401)
+        self.client.force_authenticate(user=self.cashier)
+        self.assertEqual(self.client.get(self.endpoint).status_code, 403)
+
+    def test_sales_product_payment_and_cashier_aggregations(self):
+        self.create_sale(
+            self.cashier, self.milk, "12.00", "2.000",
+            (("CASH", "5.00"), ("CARD", "7.00")),
+        )
+        self.create_sale(
+            self.cashier_two, self.rice, "8.00", "1.000", (("CARD", "8.00"),)
+        )
+        data = self.query().json()["data"]
+        self.assertEqual(data["sales"]["gross_sales"], "20.00")
+        self.assertEqual(data["sales"]["completed_sales_count"], 2)
+        self.assertEqual(data["sales"]["average_sale_value"], "10.00")
+        self.assertEqual(data["sales"]["items_sold"], "3.000")
+        self.assertEqual(data["products"][0]["product_name"], "Milk")
+        self.assertEqual(
+            {row["method"]: row["amount"] for row in data["payments"]},
+            {"CASH": "5.00", "CARD": "15.00"},
+        )
+        self.assertEqual(len(data["cashiers"]), 2)
+        self.assertEqual(
+            sum(Decimal(row["sales_total"]) for row in data["cashiers"]),
+            Decimal("20.00"),
+        )
+
+    def test_inventory_report_uses_current_active_stock(self):
+        data = self.query().json()["data"]["inventory"]
+        self.assertEqual(data["active_products"], 3)
+        self.assertEqual(data["low_stock"], 1)
+        self.assertEqual(data["out_of_stock"], 1)
+        self.assertEqual(data["not_initialized"], 1)
+        self.assertEqual(data["quantity_on_hand"], "2.000")
+
+    def test_shared_cashier_payment_and_category_filters(self):
+        milk_sale = self.create_sale(
+            self.cashier, self.milk, "12.00", "2.000", (("CASH", "12.00"),)
+        )
+        self.create_sale(
+            self.cashier_two, self.rice, "8.00", "1.000", (("CARD", "8.00"),)
+        )
+        data = self.query(
+            cashier=str(self.cashier.id),
+            payment_method="CASH",
+            category=str(self.category.id),
+        ).json()["data"]
+        self.assertEqual(data["sales"]["gross_sales"], "12.00")
+        self.assertEqual(data["products"][0]["product_id"], str(self.milk.id))
+        self.assertEqual(data["cashiers"][0]["cashier_id"], str(self.cashier.id))
+        self.assertEqual(data["payments"], [{
+            "method": "CASH", "amount": "12.00", "payment_count": 1,
+            "sale_count": 1, "percentage": "100.00",
+        }])
+        self.assertEqual(milk_sale.status, Sale.Status.COMPLETED)
+
+    def test_date_range_is_inclusive_and_zero_days_are_returned(self):
+        self.create_sale(
+            self.cashier, self.milk, "12.00", "2.000", (("CASH", "12.00"),)
+        )
+        today = timezone.now().astimezone(ZoneInfo("Asia/Qatar")).date()
+        data = self.query(
+            date_from=str(today - timedelta(days=2)), date_to=str(today)
+        ).json()["data"]["sales"]
+        self.assertEqual(len(data["daily"]), 3)
+        self.assertEqual(data["daily"][-1]["sales_total"], "12.00")
+        self.assertEqual(data["daily"][0]["sales_total"], "0.00")
+
+    def test_invalid_dates_are_rejected(self):
+        response = self.query(date_from="2026-07-24", date_to="2026-07-20")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date_to", response.json()["errors"])
+
+    def test_cross_shop_sales_never_leak(self):
+        product = Product.objects.create(
+            shop=self.other_shop, name="Other", sku="OTHER",
+            selling_price=Decimal("100.00"),
+        )
+        self.create_sale(
+            self.other_owner, product, "100.00", "1.000", (("CASH", "100.00"),)
+        )
+        data = self.query().json()["data"]
+        self.assertEqual(data["sales"]["gross_sales"], "0.00")
+        self.assertEqual(data["products"], [])
+        self.assertEqual(data["cashiers"], [])
 
 # Create your tests here.
