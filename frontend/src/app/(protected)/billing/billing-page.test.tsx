@@ -101,7 +101,7 @@ describe("BillingPage", () => {
     render(<BillingPage />);
     expect(await screen.findByText("Cart is empty")).toBeInTheDocument();
     expect(billing.detail).toHaveBeenCalledWith("draft-id");
-    expect(screen.getByText("QAR 12.60")).toBeInTheDocument();
+    expect(screen.getAllByText("QAR 12.60")).not.toHaveLength(0);
     expect(billing.create).not.toHaveBeenCalled();
   });
 

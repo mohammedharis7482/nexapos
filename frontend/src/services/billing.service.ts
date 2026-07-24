@@ -6,6 +6,8 @@ import type {
   DraftSale,
   UpdateItemRequest,
 } from "@/types/billing";
+import type { CompleteSaleRequest } from "@/types/payment";
+import type { CompletedSale } from "@/types/sales";
 
 export const BILLING_DRAFTS_ENDPOINT = "/billing/drafts/";
 
@@ -48,6 +50,12 @@ export const billingService = {
     return apiRequest<ApiSuccess<DraftSale>>(
       `/billing/drafts/${saleId}/cancel/`,
       { method: "POST" },
+    );
+  },
+  complete(saleId: string, payload: CompleteSaleRequest) {
+    return apiRequest<ApiSuccess<CompletedSale>>(
+      `/billing/drafts/${saleId}/complete/`,
+      { method: "POST", body: JSON.stringify(payload) },
     );
   },
 };

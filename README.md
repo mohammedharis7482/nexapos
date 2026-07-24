@@ -39,12 +39,15 @@ The frontend includes real session login, a protected responsive shell,
 role-aware navigation, shop settings, category management, and product catalogue
 management. The inventory module adds decimal balances, one-time opening stock,
 manual adjustments, low/out-of-stock tracking, and an immutable movement
-history. Purchasing, suppliers, payment completion, and finalized sales remain
-outside this phase.
+history. Purchasing and suppliers remain outside this phase.
 Draft billing now supports stock-aware product entry, server-calculated line
 items and totals, owner/cashier draft permissions, cancellation, and a
-responsive POS cart. Drafts do not reserve or deduct inventory and cannot be
-paid or finalized in this phase.
+responsive POS cart. Drafts do not reserve or deduct inventory. Checkout
+supports cash, externally processed card, and cash/card split payments. A
+successful atomic completion deducts inventory, writes one `SALE` movement per
+line, records allocated payments, and exposes read-only sale history and an
+80mm-friendly browser-print receipt. Refunds, returns, purchasing, sensitive
+card capture, and payment-gateway processing are not implemented.
 
 ## Local backend
 

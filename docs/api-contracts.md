@@ -207,6 +207,7 @@ full name.
 - `POST /api/v1/billing/drafts/{sale_id}/items/`
 - `PATCH|DELETE /api/v1/billing/drafts/{sale_id}/items/{item_id}/`
 - `POST /api/v1/billing/drafts/{sale_id}/cancel/`
+- `POST /api/v1/billing/drafts/{sale_id}/complete/`
 
 Draft creation accepts only optional notes. An item addition accepts exactly one
 of `product_id` or `barcode`, plus a positive quantity with up to three decimal
@@ -223,5 +224,28 @@ quantity, price/tax snapshots, calculated line amounts, and calculated sale
 totals. Purchase price and internal shop identifiers are never returned.
 
 Draft billing validates current inventory but creates no stock movement and
-does not reserve stock. Payment, completion, revenue posting, receipt numbers,
-and final sale APIs do not exist yet.
+does not reserve stock. Completion accepts only `payments` and, for cash,
+`amount_received`. Each payment has method `CASH` or `CARD`, an allocated
+positive decimal amount, and an optional card-terminal reference. The allocated
+sum must equal the server-calculated grand total. Cash tender must cover its
+allocation; change is tender minus the cash allocation. Card is a local record
+of an external terminal payment and never accepts card number, CVV, or expiry.
+
+Completion returns the immutable completed-sale representation. The service
+recalculates totals, locks the sale and product balances, revalidates stock,
+records payments, deducts inventory, and creates `SALE` movements in one
+transaction. A failure leaves the draft, payments, and inventory unchanged.
+
+## Completed sales and receipts
+
+- `GET /api/v1/sales/`
+- `GET /api/v1/sales/cashiers/`
+- `GET /api/v1/sales/{sale_id}/`
+- `GET /api/v1/sales/{sale_id}/receipt/`
+
+Lists contain completed sales only and support `search`, `date_from`, `date_to`,
+`created_by` (OWNER only), `payment_method`, `ordering`, and pagination.
+OWNER can access every completed sale in the same shop. CASHIER can access only
+sales they created or completed. Receipt data comes from the completed Sale,
+its snapshot lines, allocated Payments, and current receipt presentation
+settings; it excludes purchase prices and sensitive payment data.

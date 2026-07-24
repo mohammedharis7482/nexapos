@@ -94,3 +94,23 @@ Create the Shop migration before or together with the initial User migration.
 Inspect both files before applying them. Do not migrate using Django's default
 user and later swap models: `AUTH_USER_MODEL` must remain configured from the
 first migration onward.
+# Sales completion additions
+
+`sales.Sale` retains its draft snapshot totals and adds a nullable, globally
+unique `sale_number`, completion actor/time, cash/card amount received, and
+change due. Database checks keep receipt money non-negative and require the
+number and completion audit fields when status is `COMPLETED`.
+
+`sales.SaleSequence` is unique per shop and business date. Completion locks the
+shop and sequence row before incrementing it, producing a shop-scoped daily
+number without counting Sale rows.
+
+`payments.Payment` belongs to one shop and completed Sale, records one positive
+allocated `CASH` or `CARD` amount, an optional non-sensitive external reference,
+and the recording user. Same-shop relationships are validated by the model and
+completion service. Payment rows are immutable through normal application and
+admin workflows.
+
+Each completed SaleItem keeps its product identity, unit price, tax, quantity,
+and line-total snapshots. Finalization updates `inventory.InventoryBalance` and
+creates a distinct immutable negative `SALE` StockMovement for every line.

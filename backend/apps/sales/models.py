@@ -11,6 +11,7 @@ from common.models import BaseModel
 class Sale(BaseModel):
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
+        COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
 
     shop = models.ForeignKey(
@@ -49,6 +50,25 @@ class Sale(BaseModel):
         default=Decimal("0.00"),
     )
     notes = models.TextField(blank=True)
+    sale_number = models.CharField(max_length=40, null=True, blank=True, unique=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="sales_completed",
+        null=True,
+        blank=True,
+    )
+    amount_received = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    change_due = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancelled_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -77,6 +97,23 @@ class Sale(BaseModel):
                 condition=Q(grand_total__gte=0),
                 name="sales_grand_total_nonnegative",
             ),
+            models.CheckConstraint(
+                condition=Q(amount_received__gte=0),
+                name="sales_amount_received_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(change_due__gte=0),
+                name="sales_change_due_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=~Q(status="COMPLETED")
+                | (
+                    Q(sale_number__isnull=False)
+                    & Q(completed_at__isnull=False)
+                    & Q(completed_by__isnull=False)
+                ),
+                name="sales_completed_audit_required",
+            ),
         ]
         indexes = [
             models.Index(
@@ -102,6 +139,14 @@ class Sale(BaseModel):
         ):
             raise ValidationError(
                 {"cancelled_by": "The cancelling user must belong to the sale shop."}
+            )
+        if (
+            self.shop_id
+            and self.completed_by_id
+            and self.completed_by.shop_id != self.shop_id
+        ):
+            raise ValidationError(
+                {"completed_by": "The completing user must belong to the sale shop."}
             )
 
     def __str__(self) -> str:
@@ -172,3 +217,24 @@ class SaleItem(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.product_name} × {self.quantity}"
+
+
+class SaleSequence(BaseModel):
+    shop = models.ForeignKey(
+        "shops.Shop",
+        on_delete=models.PROTECT,
+        related_name="sale_sequences",
+    )
+    sequence_date = models.DateField()
+    last_value = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shop", "sequence_date"],
+                name="sales_sequence_shop_date_uniq",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.shop.name} {self.sequence_date}: {self.last_value}"

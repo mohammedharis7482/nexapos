@@ -82,6 +82,20 @@ product/barcode request format, cart rendering and controls, weighted steps,
 workspace states, availability decisions, saved-draft reload, server totals,
 exact barcode submission, and confirmed cancellation recovery.
 
+Sale-completion backend tests cover owner/cashier permissions, shop isolation,
+empty/cancelled/already-completed rejection, cash/card/split allocation, cash
+change, invalid-payment rollback, unique sequenced sale numbers, inventory
+deduction, per-line `SALE` movements, weighted quantities, total
+recalculation, history filtering, and safe receipt responses. Database-backed
+tests run against PostgreSQL.
+
+Checkout frontend tests cover decimal-safe payment validation, cash change,
+underpayment, card and split request shapes, duplicate-submit prevention,
+failure preservation, successful completion, receipt rendering, sales service
+URLs, and history filter state. Browser print layout is additionally verified
+by inspecting the 80mm `@media print` rules; a physical printer is not part of
+the automated suite.
+
 ```bash
 cd frontend
 npm test

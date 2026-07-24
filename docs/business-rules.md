@@ -61,10 +61,12 @@
     writes one movement, and updates the balance in one atomic transaction.
 30. Movement history is immutable through APIs and admin. Product, shop, balance,
     and creator relationships use protected deletion.
-31. Supplier, purchase, sale, return, batch, expiry-batch, warehouse, and billing
-    movements are intentionally excluded.
-32. Draft bills have only `DRAFT` and `CANCELLED` states. They are operational
-    carts, not finalized revenue, payments, or receipts.
+31. Supplier, purchase, return, batch, expiry-batch, and warehouse movements are
+    intentionally excluded. Completion creates one negative `SALE` movement per
+    sale line.
+32. Sales have `DRAFT`, `COMPLETED`, and `CANCELLED` states. Only a non-empty
+    DRAFT can be completed; completed and cancelled sales are immutable through
+    billing APIs.
 33. OWNER may manage any draft in their shop. CASHIER may manage only drafts
     created by that cashier. Both roles are constrained to their own shop.
 34. Draft line items snapshot product name, SKU, barcode, unit, selling price,
@@ -77,10 +79,26 @@
     of stored calculated line values.
 37. Adding or changing a draft line requires active, initialized, sufficient
     own-shop inventory. Drafts do not reserve stock, deduct balances, or create
-    movements; availability must be revalidated during future finalization.
+    movements; availability is revalidated while locked during finalization.
 38. Re-adding a product increases its existing draft quantity. Zero quantity is
     rejected; removing a line requires the explicit DELETE operation.
 39. Cancellation retains line items and totals, records cancelling user/time,
     and is idempotent. Cancelled drafts cannot be edited.
+40. Completion runs in one database transaction and locks the sale and inventory
+    balances in deterministic product order. Insufficient stock rolls back the
+    entire checkout.
+41. `Payment.amount` is the amount allocated to revenue, never cash tendered.
+    Allocations must exactly equal the sale total. Cash tender and change are
+    retained on Sale; card records only an optional external-terminal reference.
+42. Cash, card, and one cash-plus-card split are supported. Payment entries must
+    be positive and each method may appear at most once.
+43. Sale numbers are server-generated at completion as
+    `NXP-{shop-prefix}-{YYYYMMDD}-{sequence}` using a locked shop/day sequence.
+44. OWNER can complete any own-shop draft and read all own-shop completed sales.
+    CASHIER can complete and read only their own sales. Cross-shop access is
+    never allowed.
+45. A completed Sale and its snapshot items are the receipt record; no separate
+    receipt model is used. Refunds, returns, exchanges, and customer credit are
+    outside this phase.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.

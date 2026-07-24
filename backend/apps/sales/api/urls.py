@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     DraftCancelView,
+    DraftCompleteView,
     DraftDetailView,
     DraftItemCreateView,
     DraftItemDetailView,
@@ -27,5 +28,10 @@ urlpatterns = [
         "drafts/<uuid:sale_id>/cancel/",
         DraftCancelView.as_view(),
         name="draft-cancel",
+    ),
+    path(
+        "drafts/<uuid:sale_id>/complete/",
+        DraftCompleteView.as_view(),
+        name="draft-complete",
     ),
 ]

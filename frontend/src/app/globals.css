@@ -85,3 +85,31 @@ dialog::backdrop {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible !important;
+  }
+
+  .print-receipt {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 72mm;
+    max-width: 72mm;
+    padding: 0;
+  }
+
+  .print-controls {
+    display: none !important;
+  }
+}

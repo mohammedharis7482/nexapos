@@ -80,6 +80,7 @@ class StockMovement(BaseModel):
         EXPIRED = "EXPIRED", "Expired"
         CORRECTION_IN = "CORRECTION_IN", "Correction increase"
         CORRECTION_OUT = "CORRECTION_OUT", "Correction decrease"
+        SALE = "SALE", "Sale"
 
     shop = models.ForeignKey(
         "shops.Shop",

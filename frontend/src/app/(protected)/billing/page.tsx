@@ -2,12 +2,16 @@
 
 import {
   Barcode,
+  CheckCircle2,
+  ReceiptText,
   ShoppingCart,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CartLine } from "@/components/billing/cart-line";
+import { PaymentDialog } from "@/components/billing/payment-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
@@ -20,6 +24,7 @@ import { inventoryService } from "@/services/inventory.service";
 import type { DraftSale } from "@/types/billing";
 import type { ProductCategory } from "@/types/category";
 import type { InventoryItem } from "@/types/inventory";
+import type { CompletedSale } from "@/types/sales";
 
 const DRAFT_STORAGE_KEY = "nexapos.activeDraftId";
 
@@ -56,6 +61,8 @@ export default function BillingPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [busyItem, setBusyItem] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"products" | "cart">("products");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
 
   const createFreshDraft = useCallback(async () => {
     const response = await billingService.create();
@@ -204,6 +211,33 @@ export default function BillingPage() {
     }
   }
 
+  async function refreshAfterConflict() {
+    if (!draft) return;
+    try {
+      const response = await billingService.detail(draft.id);
+      setDraft(response.data);
+      await searchProducts(search);
+    } catch {
+      setError("The draft could not be refreshed after the stock conflict.");
+    }
+  }
+
+  async function startNewBill() {
+    setLoading(true);
+    setCompletedSale(null);
+    setSuccess(null);
+    setError(null);
+    try {
+      await createFreshDraft();
+      setMobileView("products");
+      queueMicrotask(() => searchRef.current?.focus());
+    } catch (newDraftError) {
+      setError(apiMessage(newDraftError, "A new draft could not be created."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const state = billingWorkspaceState(loading, draft, error);
   const itemCount = draft?.items.reduce(
     (total, item) => total + Number(item.quantity),
@@ -215,6 +249,32 @@ export default function BillingPage() {
   }
   if (state === "error") {
     return <ErrorState title="Billing unavailable" description={error ?? ""} onRetry={() => void initializeDraft()} />;
+  }
+  if (completedSale) {
+    const methods = completedSale.payments.map((payment) => payment.method).join(" + ");
+    return (
+      <div className="mx-auto max-w-2xl py-6">
+        <Card className="p-6 text-center sm:p-8">
+          <CheckCircle2 className="mx-auto size-14 text-success" />
+          <h1 className="mt-4 text-2xl font-bold">Payment successful</h1>
+          <p className="mt-2 text-sm text-text-muted">{completedSale.sale_number}</p>
+          <p className="mt-6 text-3xl font-bold">QAR {completedSale.grand_total}</p>
+          <p className="mt-2 text-sm text-text-secondary">{methods}</p>
+          {Number(completedSale.change_due) > 0 ? (
+            <p className="mt-2 font-semibold text-success">Change: QAR {completedSale.change_due}</p>
+          ) : null}
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <Link className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border-strong bg-surface px-4 text-sm font-semibold" href={`/sales/${completedSale.id}/receipt`}>
+              <ReceiptText className="size-4" /> View / Print Receipt
+            </Link>
+            <Button onClick={() => void startNewBill()}>Start New Bill</Button>
+            <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-strong px-4 text-sm font-semibold sm:col-span-2" href="/sales">
+              Return to Sales
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -347,11 +407,30 @@ export default function BillingPage() {
                 <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd>QAR {draft?.discount_total ?? "0.00"}</dd></div>
                 <div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><dt>Total</dt><dd>QAR {draft?.grand_total ?? "0.00"}</dd></div>
               </dl>
-              <Button className="mt-4 w-full" disabled>Continue to Payment — next phase</Button>
+              <Button
+                className="mt-4 w-full"
+                disabled={!draft?.items.length}
+                onClick={() => setPaymentOpen(true)}
+              >
+                Continue to Payment
+              </Button>
             </div>
           </Card>
         </aside>
       </div>
+      {draft ? (
+        <PaymentDialog
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          draft={draft}
+          onCompleted={(sale) => {
+            localStorage.removeItem(DRAFT_STORAGE_KEY);
+            setCompletedSale(sale);
+            setDraft(null);
+          }}
+          onInventoryConflict={() => void refreshAfterConflict()}
+        />
+      ) : null}
     </div>
   );
 }

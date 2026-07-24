@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Sale, SaleItem
+from .models import Sale, SaleItem, SaleSequence
 
 
 class SaleItemInline(admin.TabularInline):
@@ -34,8 +34,13 @@ class SaleAdmin(admin.ModelAdmin):
         "id",
         "shop",
         "status",
+        "sale_number",
         "created_by",
         "grand_total",
+        "completed_at",
+        "completed_by",
+        "amount_received",
+        "change_due",
         "created_at",
     )
     list_filter = ("shop", "status")
@@ -56,6 +61,21 @@ class SaleAdmin(admin.ModelAdmin):
     inlines = [SaleItemInline]
 
     def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(SaleSequence)
+class SaleSequenceAdmin(admin.ModelAdmin):
+    list_display = ("shop", "sequence_date", "last_value")
+    readonly_fields = ("shop", "sequence_date", "last_value", "created_at", "updated_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):

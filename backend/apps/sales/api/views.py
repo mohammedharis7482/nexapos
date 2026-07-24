@@ -4,11 +4,13 @@ from rest_framework import serializers, status
 from rest_framework.views import APIView
 
 from apps.sales.exceptions import BillingOperationError
+from apps.sales.models import Sale
 from apps.sales.selectors import drafts_for_user
 from apps.sales.services import (
     add_product_to_draft,
     cancel_draft_sale,
     create_draft_sale,
+    complete_sale,
     remove_draft_item,
     update_draft_item_quantity,
 )
@@ -18,6 +20,8 @@ from common.views import success_response
 
 from .serializers import (
     AddItemSerializer,
+    CompleteSaleRequestSerializer,
+    CompletedSaleSerializer,
     CreateDraftSerializer,
     DraftSaleSerializer,
     UpdateItemSerializer,
@@ -154,4 +158,43 @@ class DraftCancelView(APIView):
         return success_response(
             "Draft bill cancelled.",
             DraftSaleSerializer(sale).data,
+        )
+
+
+class DraftCompleteView(APIView):
+    permission_classes = [IsCashierOrOwner]
+
+    @extend_schema(
+        request=CompleteSaleRequestSerializer,
+        responses={200: CompletedSaleSerializer},
+    )
+    def post(self, request, sale_id):
+        sale_for_request(request, sale_id)
+        serializer = CompleteSaleRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        payments = [
+            {
+                "method": payment["method"],
+                "amount": payment["amount"],
+                "reference": payment.get("reference", ""),
+            }
+            for payment in serializer.validated_data["payments"]
+        ]
+        try:
+            sale = complete_sale(
+                sale_id=sale_id,
+                user=request.user,
+                payments=payments,
+                amount_received=serializer.validated_data.get("amount_received"),
+            )
+        except BillingOperationError as exc:
+            raise_operation_error(exc)
+        sale = (
+            Sale.objects.select_related("shop", "created_by", "completed_by")
+            .prefetch_related("items", "payments")
+            .get(pk=sale.pk)
+        )
+        return success_response(
+            "Sale completed.",
+            CompletedSaleSerializer(sale).data,
         )

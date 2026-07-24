@@ -2,7 +2,7 @@ import type { PaginatedResponse } from "@/types/api";
 import type { UserRole } from "@/types/auth";
 import type { ProductUnit } from "@/types/product";
 
-export type SaleStatus = "DRAFT" | "CANCELLED";
+export type SaleStatus = "DRAFT" | "COMPLETED" | "CANCELLED";
 
 export interface DraftCreator {
   id: string;
