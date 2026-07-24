@@ -100,5 +100,19 @@
 45. A completed Sale and its snapshot items are the receipt record; no separate
     receipt model is used. Refunds, returns, exchanges, and customer credit are
     outside this phase.
+46. Dashboard day boundaries use the shop IANA timezone and `completed_at`.
+    Ranges include local midnight and exclude the following midnight. Invalid
+    timezone configuration safely falls back to `Asia/Qatar`.
+47. Dashboard revenue, bill counts, items sold, top products, payment allocation,
+    and trends include completed sales only. Drafts and cancellations never
+    contribute.
+48. OWNER dashboard metrics cover the current shop. CASHIER financial metrics
+    and recent sales cover only sales created or completed by that cashier.
+49. Dashboard inventory counts and previews include active products only.
+    Missing InventoryBalance rows are “not initialized”; zero is out of stock;
+    positive quantity at or below threshold is low stock.
+50. Top products rank snapshot quantities for today by default, with an optional
+    seven-day period. The seven-day trend includes today and explicit zero days.
+    Neither calculation exposes purchase price, profit, margin, or COGS.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.

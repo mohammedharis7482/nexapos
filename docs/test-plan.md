@@ -96,6 +96,18 @@ URLs, and history filter state. Browser print layout is additionally verified
 by inspecting the 80mm `@media print` rules; a physical printer is not part of
 the automated suite.
 
+Dashboard backend tests cover completed-sale-only daily totals, Decimal
+averages and quantities, cash/card and split allocation, owner/cashier scope,
+cross-shop isolation, active-product inventory alerts, top-product aggregation,
+seven-day zero filling, recent-sale ordering/limits, unauthenticated denial, and
+invalid-timezone fallback. These tests use PostgreSQL.
+
+Dashboard frontend tests cover the exact consolidated service URL, loading
+structure, owner sections and navigation links, cashier-only cards, absence of
+owner payment/top-product sections for cashier payloads, manual refresh, and
+absence of invented comparison percentages. Full lint, Vitest, and production
+build validation remain mandatory.
+
 ```bash
 cd frontend
 npm test

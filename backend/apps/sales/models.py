@@ -121,6 +121,10 @@ class Sale(BaseModel):
                 name="sales_shop_status_time_idx",
             ),
             models.Index(
+                fields=["shop", "status", "-completed_at"],
+                name="sales_shop_status_done_idx",
+            ),
+            models.Index(
                 fields=["shop", "created_by", "-created_at"],
                 name="sales_shop_creator_time_idx",
             ),

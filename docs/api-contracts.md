@@ -249,3 +249,27 @@ OWNER can access every completed sale in the same shop. CASHIER can access only
 sales they created or completed. Receipt data comes from the completed Sale,
 its snapshot lines, allocated Payments, and current receipt presentation
 settings; it excludes purchase prices and sensitive payment data.
+
+## Operational dashboard
+
+- `GET /api/v1/dashboard/`
+- Optional query: `period=today|7d`; this affects top products only.
+
+The consolidated response contains `role`, `currency`, effective `timezone`,
+`generated_at`, role-specific `summary`, five recent completed sales, limited
+inventory-alert previews, five top products, seven daily trend points, and
+today’s CASH/CARD allocation breakdown.
+
+Day ranges are half-open—local midnight inclusive through the next local
+midnight exclusive—using `completed_at` in the authenticated shop’s IANA
+timezone. An invalid timezone falls back to `Asia/Qatar`. Draft and cancelled
+sales are excluded. Trend output always includes the seven calendar days ending
+today, including zero-sale days.
+
+OWNER data is shop-wide. CASHIER financial totals, trends, top products, and
+recent sales are limited to sales created or completed by that cashier.
+Inventory previews include active products only. The frontend never supplies a
+shop ID. Payment totals use allocated Payment amounts, so cash tender and change
+cannot inflate revenue. `split_sales_total_today` identifies the total value of
+sales containing both methods; cash and card allocation fields remain the
+reconciling payment totals.

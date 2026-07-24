@@ -49,6 +49,13 @@ line, records allocated payments, and exposes read-only sale history and an
 80mm-friendly browser-print receipt. Refunds, returns, purchasing, sensitive
 card capture, and payment-gateway processing are not implemented.
 
+The protected dashboard is backed by real PostgreSQL aggregates at
+`GET /api/v1/dashboard/`. Owners see shop-wide daily sales, allocated cash/card
+payments, inventory alerts, recent sales, top products, and a seven-day trend.
+Cashiers see only their own financial and recent-sale metrics plus the permitted
+active-product alert preview. “Today” is calculated in the shop timezone
+(`Asia/Qatar` by default), not from the application server’s local date.
+
 ## Local backend
 
 Create PostgreSQL as described in [deployment](docs/deployment.md), then:
