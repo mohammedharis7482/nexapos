@@ -8,7 +8,8 @@ const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export function joinApiUrl(baseUrl: string, path: string): string {
   const normalizedBase = baseUrl.trim().replace(/\/+$/, "");
-  const normalizedPath = `/${path.trim().replace(/^\/+|\/+$/g, "")}/`;
+  const [pathname, query = ""] = path.trim().split("?", 2);
+  const normalizedPath = `/${pathname.replace(/^\/+|\/+$/g, "")}/`;
 
   if (!normalizedBase || /^https?:\/\//i.test(path)) {
     throw new Error("API paths must be relative to the configured API base URL.");
@@ -17,7 +18,7 @@ export function joinApiUrl(baseUrl: string, path: string): string {
     throw new Error("API paths must not duplicate the /api/v1 base path.");
   }
 
-  return `${normalizedBase}${normalizedPath}`;
+  return `${normalizedBase}${normalizedPath}${query ? `?${query}` : ""}`;
 }
 
 export class ApiError extends Error {

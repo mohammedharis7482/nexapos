@@ -35,10 +35,10 @@ secret. The frontend defaults to the same URL when the variable is omitted.
 Use `localhost` consistently for both applications so `SameSite=Lax` session
 cookies work across development ports without a proxy or redirect.
 
-The frontend includes a real session login, protected client boundary,
-responsive application shell, role-aware navigation, and password-change flow.
-Dashboard and business destinations remain explicit placeholders without fake
-data or workflows.
+The frontend includes real session login, a protected responsive shell,
+role-aware navigation, shop settings, category management, and product catalogue
+management. Inventory quantities, purchasing, billing, and sales remain outside
+this phase.
 
 ## Local backend
 
@@ -61,6 +61,15 @@ fallback. Never change `AUTH_USER_MODEL` after the first migration.
 
 API discovery is available at `/api/schema/`, `/api/docs/`, and `/api/redoc/`.
 The unauthenticated liveness endpoint is `/api/v1/health/`.
+
+Owners can optionally seed a development shop with a small catalogue:
+
+```bash
+python manage.py seed_catalogue --shop-id <shop-uuid>
+```
+
+The command is disabled unless `DEBUG=True`, requires an existing shop, is safe
+to rerun, and never creates users, stock, or transactions.
 
 ## Session authentication
 

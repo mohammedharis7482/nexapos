@@ -27,5 +27,21 @@
 16. There is no public registration. Initial shops and owners are created with
     the transactional `bootstrap_shop` command; subsequent controlled creation
     belongs to a later approved workflow.
+17. Shop country, currency, and timezone are fixed to Qatar, QAR, and
+    `Asia/Qatar`; the default tax rate is between 0 and 100.
+18. Category names and product SKUs are case-insensitively unique within a shop,
+    but may be reused by another shop. A non-empty barcode is unique per shop.
+19. Product categories must belong to the product's shop. Prices cannot be
+    negative and tax rates are restricted to 0–100. Selling below purchase
+    price is allowed because promotions and clearance pricing are valid.
+20. OWNER may create, edit, activate, and deactivate categories and products.
+    CASHIER may only read active catalogue records.
+21. Catalogue records are deactivated instead of hard-deleted. Category
+    deactivation does not modify its products, and categories referenced by
+    products are protected from deletion at the model level.
+22. Supported units are `PIECE`, `KG`, `GRAM`, `LITRE`, `MILLILITRE`, `PACK`,
+    `BOX`, `CARTON`, `BOTTLE`, `CAN`, and `BAG`.
+23. Product quantity is deliberately absent. Stock is an inventory-ledger
+    concern and will be introduced only in the inventory phase.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.

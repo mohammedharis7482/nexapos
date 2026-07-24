@@ -36,6 +36,9 @@ describe("API client", () => {
     expect(joinApiUrl(API_BASE_URL, "/auth/login/")).toBe(
       "http://localhost:8000/api/v1/auth/login/",
     );
+    expect(joinApiUrl(API_BASE_URL, "/products/?search=milk&page=2")).toBe(
+      "http://localhost:8000/api/v1/products/?search=milk&page=2",
+    );
     expect(() => joinApiUrl(API_BASE_URL, "/api/v1/auth/me/")).toThrow(
       "must not duplicate",
     );

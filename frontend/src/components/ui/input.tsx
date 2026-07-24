@@ -6,6 +6,8 @@ import {
   useState,
   type InputHTMLAttributes,
   type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from "react";
 
 import { cn } from "@/lib/utils";
@@ -29,6 +31,40 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ),
 );
 Input.displayName = "Input";
+
+export const Select = forwardRef<
+  HTMLSelectElement,
+  SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }
+>(({ className, invalid, ...props }, ref) => (
+  <select
+    ref={ref}
+    aria-invalid={invalid || undefined}
+    className={cn(
+      "min-h-12 w-full rounded-xl border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-blue-100 disabled:bg-surface-secondary",
+      invalid ? "border-danger" : "border-border-strong",
+      className,
+    )}
+    {...props}
+  />
+));
+Select.displayName = "Select";
+
+export const Textarea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }
+>(({ className, invalid, ...props }, ref) => (
+  <textarea
+    ref={ref}
+    aria-invalid={invalid || undefined}
+    className={cn(
+      "min-h-24 w-full resize-y rounded-xl border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-blue-100 disabled:bg-surface-secondary",
+      invalid ? "border-danger" : "border-border-strong",
+      className,
+    )}
+    {...props}
+  />
+));
+Textarea.displayName = "Textarea";
 
 export const PasswordInput = forwardRef<HTMLInputElement, InputProps>(
   ({ className, ...props }, ref) => {

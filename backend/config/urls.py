@@ -28,6 +28,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/health/", HealthView.as_view(), name="health"),
     path("api/v1/auth/", include("apps.accounts.api.urls")),
+    path("api/v1/shop/", include("apps.shops.api.urls")),
+    path("api/v1/", include("apps.products.api.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",

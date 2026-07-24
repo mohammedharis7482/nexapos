@@ -7,6 +7,12 @@ creation and rotation, current-user access, logout invalidation, password
 validation and session preservation, safe response fields, reusable permissions,
 and transactional shop bootstrap behavior.
 
+Catalogue tests additionally cover owner/cashier shop-settings permissions,
+shop-ID rejection, category ordering and case-insensitive uniqueness,
+cross-shop isolation, catalogue writes, per-shop SKU/barcode uniqueness,
+cross-shop category rejection, price/tax validation, searches and filters,
+barcode lookup, inactive visibility, and safe response fields.
+
 Run checks without changing the database:
 
 ```bash
@@ -31,7 +37,7 @@ Validate the documented schema:
 ```bash
 .venv/bin/python manage.py spectacular \
   --validate \
-  --file /tmp/nexapos-auth-schema.yml \
+  --file /tmp/nexapos-catalogue-schema.yml \
   --settings=config.settings.development
 ```
 
@@ -41,7 +47,10 @@ The frontend uses Vitest with jsdom and Testing Library matchers. Tests cover
 login and password schemas, credentials inclusion, CSRF initialization and
 headers, backend error parsing, authentication state initialization, successful
 login state, logout clearing, protected loading and redirect decisions, and
-OWNER/CASHIER navigation.
+OWNER/CASHIER navigation. Catalogue coverage includes shop/category/product
+schemas, decimal string preservation, role controls, list states and filters,
+exact service URLs, successful mutation refresh, and backend permission/field
+errors.
 
 ```bash
 cd frontend

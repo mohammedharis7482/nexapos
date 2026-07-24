@@ -1,4 +1,15 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NexaPOS frontend
+
+Next.js App Router client for NexaPOS. Local development expects Django at
+`http://localhost:8000`:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+```
+
+Use `localhost` for both applications so session and CSRF cookies remain
+same-site. The shared client always includes credentials, initializes CSRF
+before unsafe requests, and calls Django's trailing-slash routes directly.
 
 ## Getting Started
 
@@ -16,7 +27,10 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Authenticated OWNER users can edit `/settings`, manage
+`/products/categories`, and manage `/products`. CASHIER users receive read-only
+shop/catalogue views and only active categories and products. All data is loaded
+from Django; there is no mock fallback.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

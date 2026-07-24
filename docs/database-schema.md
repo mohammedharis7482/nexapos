@@ -10,10 +10,11 @@ fallback.
 
 ## Shop
 
-`shops.Shop` contains name, optional legal name, address, phone, optional email,
-currency, timezone, invoice prefix, optional receipt footer, optional logo, and
-active state. Name, phone, and active-state indexes support common administration
-lookups.
+`shops.Shop` contains name, optional legal name, address, optional city, country,
+phone, optional email, currency, timezone, optional tax registration number,
+default tax rate, invoice prefix, optional receipt footer, optional logo, and
+active state. The tax rate has a 0–100 check constraint. Name, phone, and
+active-state indexes support common administration lookups.
 
 ## User
 
@@ -25,6 +26,23 @@ A functional database constraint enforces case-insensitive uniqueness of
 
 Django resolves the app labels as `shops` and `accounts`; therefore the user
 setting is `AUTH_USER_MODEL = "accounts.User"`.
+
+## ProductCategory
+
+`products.ProductCategory` belongs to one protected Shop and contains a trimmed
+name, optional description, display order, and active state. A functional
+constraint on `Lower(name)` and shop enforces case-insensitive per-shop
+uniqueness. Default ordering is display order then name.
+
+## Product
+
+`products.Product` belongs to one protected Shop and may reference a protected
+category from that same shop. It stores a trimmed name, optional description,
+normalized uppercase SKU, nullable trimmed barcode, unit, decimal purchase and
+selling prices, decimal tax rate, tax-inclusive flag, and active state.
+Functional/conditional constraints enforce per-shop SKU and barcode uniqueness;
+check constraints prevent negative prices and tax outside 0–100. There is no
+quantity, supplier, or inventory ledger field.
 
 ## Migration precaution
 

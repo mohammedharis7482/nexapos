@@ -1,0 +1,181 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/feedback";
+import { FormField, Input, Select, Textarea } from "@/components/ui/input";
+import { Dialog } from "@/components/ui/overlay";
+import { ApiError } from "@/lib/api-client";
+import {
+  productSchema,
+  type ProductFormValues,
+} from "@/schemas/product.schema";
+import { productService } from "@/services/product.service";
+import type { ProductCategory } from "@/types/category";
+import {
+  PRODUCT_UNITS,
+  type Product,
+  type ProductInput,
+} from "@/types/product";
+
+const defaults: ProductFormValues = {
+  name: "",
+  description: "",
+  sku: "",
+  barcode: "",
+  unit: "PIECE",
+  purchase_price: "0.00",
+  selling_price: "",
+  tax_rate: "0.00",
+  is_tax_inclusive: false,
+  is_active: true,
+  category_id: "",
+};
+
+export function ProductDialog({
+  open,
+  onOpenChange,
+  product,
+  categories,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  product: Product | null;
+  categories: ProductCategory[];
+  onSaved: () => void;
+}) {
+  const [generalError, setGeneralError] = useState<string | null>(null);
+  const {
+    register,
+    reset,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: defaults,
+  });
+
+  useEffect(() => {
+    reset(
+      product
+        ? {
+            name: product.name,
+            description: product.description,
+            sku: product.sku,
+            barcode: product.barcode ?? "",
+            unit: product.unit,
+            purchase_price: product.purchase_price,
+            selling_price: product.selling_price,
+            tax_rate: product.tax_rate,
+            is_tax_inclusive: product.is_tax_inclusive,
+            is_active: product.is_active,
+            category_id: product.category?.id ?? "",
+          }
+        : defaults,
+    );
+  }, [open, product, reset]);
+
+  const submit = handleSubmit(async (values) => {
+    setGeneralError(null);
+    const payload: ProductInput = {
+      ...values,
+      category_id: values.category_id || null,
+    };
+    try {
+      if (product) await productService.update(product.id, payload);
+      else await productService.create(payload);
+      onSaved();
+      onOpenChange(false);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        Object.entries(error.errors).forEach(([field, messages]) => {
+          if (field in defaults) {
+            setError(field as keyof ProductFormValues, {
+              message: Array.isArray(messages) ? messages[0] : messages,
+            });
+          }
+        });
+        setGeneralError(error.status === 403 ? "Owner access is required." : error.message);
+      } else {
+        setGeneralError("The product could not be saved.");
+      }
+    }
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setGeneralError(null);
+        onOpenChange(next);
+      }}
+      title={product ? "Edit product" : "Add product"}
+      description="Catalogue details only. Stock quantities are managed separately."
+    >
+      <form className="max-h-[70vh] space-y-4 overflow-y-auto pr-1" onSubmit={submit} noValidate>
+        {generalError ? <Alert title={generalError} /> : null}
+        <FormField label="Product name" htmlFor="product-name" error={errors.name?.message}>
+          <Input id="product-name" invalid={Boolean(errors.name)} {...register("name")} />
+        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="SKU" htmlFor="product-sku" error={errors.sku?.message}>
+            <Input id="product-sku" invalid={Boolean(errors.sku)} {...register("sku")} />
+          </FormField>
+          <FormField label="Barcode" htmlFor="product-barcode" error={errors.barcode?.message}>
+            <Input id="product-barcode" inputMode="numeric" invalid={Boolean(errors.barcode)} {...register("barcode")} />
+          </FormField>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Category" htmlFor="product-category" error={errors.category_id?.message}>
+            <Select id="product-category" {...register("category_id")}>
+              <option value="">Uncategorized</option>
+              {categories.filter((category) => category.is_active || category.id === product?.category?.id).map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Unit" htmlFor="product-unit" error={errors.unit?.message}>
+            <Select id="product-unit" {...register("unit")}>
+              {PRODUCT_UNITS.map((unit) => <option key={unit} value={unit}>{unit.replaceAll("_", " ")}</option>)}
+            </Select>
+          </FormField>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <FormField label="Purchase price" htmlFor="purchase-price" error={errors.purchase_price?.message}>
+            <Input id="purchase-price" inputMode="decimal" invalid={Boolean(errors.purchase_price)} {...register("purchase_price")} />
+          </FormField>
+          <FormField label="Selling price" htmlFor="selling-price" error={errors.selling_price?.message}>
+            <Input id="selling-price" inputMode="decimal" invalid={Boolean(errors.selling_price)} {...register("selling_price")} />
+          </FormField>
+          <FormField label="Tax rate %" htmlFor="tax-rate" error={errors.tax_rate?.message}>
+            <Input id="tax-rate" inputMode="decimal" invalid={Boolean(errors.tax_rate)} {...register("tax_rate")} />
+          </FormField>
+        </div>
+        <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
+          <Textarea id="product-description" {...register("description")} />
+        </FormField>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
+            <input type="checkbox" className="size-4 accent-primary" {...register("is_tax_inclusive")} />
+            Price includes tax
+          </label>
+          <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
+            <input type="checkbox" className="size-4 accent-primary" {...register("is_active")} />
+            Active product
+          </label>
+        </div>
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-border bg-surface pt-4">
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="submit" loading={isSubmitting}>
+            {product ? "Save product" : "Add product"}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}

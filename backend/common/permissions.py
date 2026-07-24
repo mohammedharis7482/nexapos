@@ -12,6 +12,7 @@ class IsOwner(BasePermission):
             user
             and user.is_authenticated
             and user.is_active
+            and user.shop.is_active
             and (user.is_superuser or user.role == user.Role.OWNER)
         )
 
@@ -27,6 +28,7 @@ class IsCashierOrOwner(BasePermission):
             user
             and user.is_authenticated
             and user.is_active
+            and user.shop.is_active
             and (
                 user.is_superuser
                 or user.role in (user.Role.OWNER, user.Role.CASHIER)
@@ -41,7 +43,12 @@ class IsSameShop(BasePermission):
 
     def has_permission(self, request, view) -> bool:
         user = request.user
-        return bool(user and user.is_authenticated and user.is_active)
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.shop.is_active
+        )
 
     def has_object_permission(self, request, view, obj) -> bool:
         user = request.user

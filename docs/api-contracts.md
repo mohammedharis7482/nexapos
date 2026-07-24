@@ -134,4 +134,37 @@ authoritative.
 - `GET /api/docs/`: Swagger UI
 - `GET /api/redoc/`: ReDoc
 
-No public registration, business resource APIs, or JWT token endpoints exist.
+## Shop settings
+
+- `GET /api/v1/shop/settings/`: authenticated users read their own shop.
+- `PATCH /api/v1/shop/settings/`: OWNER only; the shop always comes from the
+  session and `shop`/`shop_id` inputs are rejected.
+
+Editable fields are name, legal name, phone, email, address, city, tax
+registration number, default tax rate, receipt footer, and active status.
+Country, currency, and timezone remain Qatar, QAR, and `Asia/Qatar`.
+
+## Categories
+
+- `GET|POST /api/v1/categories/`
+- `GET|PATCH /api/v1/categories/{uuid}/`
+
+Lists accept `search`, `is_active`, `page`, and `page_size`. OWNER may see all
+states and create/update records. CASHIER receives active records only and
+cannot write.
+
+## Products
+
+- `GET|POST /api/v1/products/`
+- `GET|PATCH /api/v1/products/{uuid}/`
+- `GET /api/v1/products/barcode/{barcode}/`
+
+Product lists accept `search`, `category`, `unit`, `is_active`, `ordering`,
+`page`, and `page_size`. Search covers name, SKU, and barcode. Ordering accepts
+`name`, `selling_price`, `created_at`, and `updated_at` (prefix with `-` for
+descending). Category responses contain only `id` and `name`; product responses
+do not expose a shop identifier or inventory state.
+
+All catalogue routes require session authentication and exact trailing slashes.
+No public registration, JWT token, hard-delete, inventory, or billing endpoints
+exist.
