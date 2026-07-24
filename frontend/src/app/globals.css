@@ -1,36 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --app-background: #f5f7fa;
+  --app-background: #f4f6f9;
   --surface: #ffffff;
-  --surface-secondary: #f9fafb;
-  --text-primary: #101828;
-  --text-secondary: #475467;
-  --text-muted: #667085;
-  --border: #e4e7ec;
-  --border-strong: #d0d5dd;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-soft: #eff6ff;
-  --success: #16a36a;
-  --success-soft: #ecfdf5;
-  --warning: #d97706;
-  --warning-soft: #fff7ed;
-  --danger: #dc2626;
-  --danger-soft: #fef2f2;
+  --surface-secondary: #f8fafc;
+  --surface-elevated: #ffffff;
+  --brand-navy: #102a56;
+  --text-primary: #152238;
+  --text-secondary: #46556a;
+  --text-muted: #69778b;
+  --border: #e2e7ee;
+  --border-strong: #cbd3df;
+  --input-border: #b9c3d1;
+  --primary: #1768e5;
+  --primary-hover: #1258c7;
+  --primary-active: #0e47a3;
+  --primary-soft: #eaf2ff;
+  --focus-ring: rgb(23 104 229 / 24%);
+  --success: #087a55;
+  --success-soft: #eaf8f2;
+  --warning: #a85808;
+  --warning-soft: #fff4e5;
+  --danger: #c5222f;
+  --danger-soft: #fff0f1;
+  --info: #1768e5;
+  --info-soft: #eaf2ff;
+  --disabled: #98a2b3;
+  --low-stock: #a85808;
+  --out-of-stock: #c5222f;
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+  --radius-dialog: 1.125rem;
+  --shadow-card: 0 1px 2px rgb(16 42 86 / 5%), 0 1px 5px rgb(16 42 86 / 3%);
+  --shadow-elevated: 0 16px 40px rgb(16 42 86 / 16%);
+  --content-max: 90rem;
+  --sidebar-width: 15rem;
+  --header-height: 4rem;
+  --mobile-nav-height: 4.5rem;
+  --control-height: 2.75rem;
+  --transition-fast: 150ms;
 }
 
 @theme inline {
   --color-background: var(--app-background);
   --color-surface: var(--surface);
   --color-surface-secondary: var(--surface-secondary);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-brand-navy: var(--brand-navy);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-input-border: var(--input-border);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
   --color-primary-soft: var(--primary-soft);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
@@ -38,6 +63,11 @@
   --color-warning-soft: var(--warning-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-disabled: var(--disabled);
+  --color-low-stock: var(--low-stock);
+  --color-out-of-stock: var(--out-of-stock);
   --font-sans: var(--font-inter);
 }
 
@@ -48,6 +78,7 @@
 html {
   min-width: 320px;
   background: var(--app-background);
+  scroll-padding-top: calc(var(--header-height) + 1rem);
 }
 
 body {
@@ -56,25 +87,72 @@ body {
   background: var(--app-background);
   color: var(--text-primary);
   font-family: var(--font-inter), Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
 ::selection {
-  background: #bfdbfe;
+  background: #cfe0ff;
   color: var(--text-primary);
 }
 
 :focus-visible {
-  outline: 3px solid rgb(37 99 235 / 25%);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 dialog::backdrop {
-  background: rgb(16 24 40 / 45%);
+  background: rgb(8 22 46 / 52%);
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  transition-duration: var(--transition-fast);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 1rem;
+}
+
+.data-table th,
+.page-stack table th {
+  height: 2.75rem;
+  white-space: nowrap;
+}
+
+.data-table td,
+.page-stack table td {
+  min-height: 3.5rem;
+  vertical-align: middle;
+}
+
+.page-stack table :is(td, th):has(+ td),
+.page-stack table td {
+  font-variant-numeric: tabular-nums;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -107,6 +185,8 @@ dialog::backdrop {
     width: 72mm;
     max-width: 72mm;
     padding: 0;
+    border: 0 !important;
+    box-shadow: none !important;
   }
 
   .print-controls {

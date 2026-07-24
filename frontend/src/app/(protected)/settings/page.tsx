@@ -86,7 +86,7 @@ export default function SettingsPage() {
 
   const disabled = mode === "readonly";
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Shop settings"
         description={disabled ? "You can view your shop profile. Only owners can make changes." : "Manage the profile printed and displayed across NexaPOS."}
@@ -94,8 +94,13 @@ export default function SettingsPage() {
       {disabled ? <Alert title="Read-only access" tone="warning">Ask a shop owner to update these settings.</Alert> : null}
       {success ? <Alert title="Shop settings saved." tone="success" /> : null}
       {submitError ? <Alert title={submitError} /> : null}
-      <Card className="p-5 sm:p-7">
+      <Card className="max-w-4xl p-5 sm:p-7">
         <form onSubmit={submit} className="space-y-6" noValidate>
+          <section className="space-y-5" aria-labelledby="business-details-heading">
+          <div>
+            <h2 id="business-details-heading" className="font-bold">Business details</h2>
+            <p className="mt-1 text-sm text-text-muted">The identity displayed throughout NexaPOS and on receipts.</p>
+          </div>
           <div className="grid gap-5 md:grid-cols-2">
             <FormField label="Shop name" htmlFor="shop-name" error={errors.name?.message}>
               <Input id="shop-name" disabled={disabled} {...register("name")} />
@@ -110,6 +115,12 @@ export default function SettingsPage() {
               <Input id="shop-email" type="email" disabled={disabled} {...register("email")} />
             </FormField>
           </div>
+          </section>
+          <section className="space-y-5 border-t border-border pt-6" aria-labelledby="contact-heading">
+          <div>
+            <h2 id="contact-heading" className="font-bold">Contact and address</h2>
+            <p className="mt-1 text-sm text-text-muted">Customer-facing contact information for your shop.</p>
+          </div>
           <FormField label="Address" htmlFor="shop-address" error={errors.address?.message}>
             <Textarea id="shop-address" disabled={disabled} {...register("address")} />
           </FormField>
@@ -117,6 +128,14 @@ export default function SettingsPage() {
             <FormField label="City" htmlFor="shop-city" error={errors.city?.message}>
               <Input id="shop-city" disabled={disabled} {...register("city")} />
             </FormField>
+          </div>
+          </section>
+          <section className="space-y-5 border-t border-border pt-6" aria-labelledby="regional-heading">
+          <div>
+            <h2 id="regional-heading" className="font-bold">Regional and tax settings</h2>
+            <p className="mt-1 text-sm text-text-muted">Qatar regional values and receipt tax identity.</p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
             <FormField label="Country" htmlFor="shop-country" error={errors.country?.message}>
               <Input id="shop-country" readOnly aria-readonly="true" {...register("country")} />
             </FormField>
@@ -133,9 +152,16 @@ export default function SettingsPage() {
               <Input id="default-tax" inputMode="decimal" disabled={disabled} {...register("default_tax_rate")} />
             </FormField>
           </div>
+          </section>
+          <section className="space-y-5 border-t border-border pt-6" aria-labelledby="receipt-heading">
+          <div>
+            <h2 id="receipt-heading" className="font-bold">Receipt settings</h2>
+            <p className="mt-1 text-sm text-text-muted">A short message printed at the bottom of customer receipts.</p>
+          </div>
           <FormField label="Receipt footer" htmlFor="receipt-footer" error={errors.receipt_footer?.message}>
             <Textarea id="receipt-footer" disabled={disabled} {...register("receipt_footer")} />
           </FormField>
+          </section>
           {!disabled ? (
             <div className="flex justify-end">
               <Button type="submit" loading={isSubmitting} leadingIcon={<Save className="size-4" />}>Save settings</Button>

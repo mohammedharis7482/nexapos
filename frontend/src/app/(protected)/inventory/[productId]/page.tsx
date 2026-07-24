@@ -102,7 +102,7 @@ export default function InventoryDetailPage() {
   if (!item) return null;
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="page-stack">
       <Link href="/inventory" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
         <ArrowLeft className="size-4" /> Back to inventory
       </Link>

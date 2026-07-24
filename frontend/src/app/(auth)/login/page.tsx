@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LockKeyhole, ShieldCheck, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -86,10 +86,8 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.72fr)]">
-      <section className="relative hidden overflow-hidden bg-[#102A56] p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute -right-24 -top-24 size-80 rounded-full border border-white/10" />
-        <div className="absolute -bottom-40 left-20 size-[440px] rounded-full border border-white/10" />
-        <div className="relative flex items-center gap-3">
+      <section className="hidden bg-brand-navy p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div className="flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-xl bg-white text-primary">
             <ShoppingCart className="size-6" />
           </span>
@@ -98,36 +96,25 @@ export default function LoginPage() {
             <p className="text-sm text-blue-100">Built for grocery retail in Qatar</p>
           </div>
         </div>
-        <div className="relative max-w-xl">
+        <div className="max-w-xl">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">
             Modern minimal retail
           </p>
-          <h1 className="mt-5 text-4xl font-bold leading-tight">
-            A focused workspace for every shop day.
+          <h1 className="mt-5 text-4xl font-bold leading-tight tracking-tight">
+            Grocery operations, kept clear and dependable.
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-8 text-blue-100">
             Securely access the tools for your shop. Owners and cashiers see the
             workspace appropriate to their role.
           </p>
-          <div className="mt-10 grid max-w-lg grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-              <ShieldCheck className="size-6 text-blue-200" />
-              <p className="mt-3 font-semibold">Secure shop sessions</p>
-              <p className="mt-1 text-sm text-blue-100">Protected by Django and CSRF.</p>
-            </div>
-            <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-              <LockKeyhole className="size-6 text-blue-200" />
-              <p className="mt-3 font-semibold">Role-aware access</p>
-              <p className="mt-1 text-sm text-blue-100">Owner and cashier workspaces.</p>
-            </div>
-          </div>
+          <div className="mt-8 h-px max-w-32 bg-blue-300/60" />
         </div>
-        <p className="relative text-sm text-blue-200">
+        <p className="text-sm text-blue-200">
           NexaPOS · Grocery point of sale
         </p>
       </section>
 
-      <section className="flex min-h-screen items-center justify-center p-4 sm:p-8">
+      <section className="flex min-h-screen items-center justify-center p-4 sm:p-8 lg:p-10">
         <div className="w-full max-w-md">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <span className="grid size-11 place-items-center rounded-xl bg-primary text-white">
@@ -139,9 +126,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Card className="p-5 sm:p-8">
+          <Card className="p-5 sm:p-8 lg:border-0 lg:shadow-none">
             <div className="mb-7">
-              <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+              <h1 className="text-[1.75rem] font-bold tracking-tight">Welcome back</h1>
               <p className="mt-2 text-text-secondary">
                 Sign in as a shop owner or cashier to continue.
               </p>
@@ -190,7 +177,7 @@ export default function LoginPage() {
               <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-text-secondary">
                 <input
                   type="checkbox"
-                  className="size-4 rounded border-border-strong accent-primary"
+                  className="size-5 rounded border-border-strong accent-primary focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]"
                   {...register("remember_shop")}
                 />
                 Remember this Shop ID on this device
@@ -200,13 +187,12 @@ export default function LoginPage() {
                 className="min-h-12 w-full"
                 loading={isSubmitting}
               >
-                Sign in securely
+                Sign in
               </Button>
             </form>
           </Card>
           <p className="mt-5 text-center text-xs leading-5 text-text-muted">
-            Your session is stored securely by the NexaPOS server. Passwords and
-            session identifiers are never exposed to frontend application code.
+            Use the Shop ID and account details provided by your shop owner.
           </p>
         </div>
       </section>

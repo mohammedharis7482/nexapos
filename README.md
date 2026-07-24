@@ -63,6 +63,13 @@ cashier, category, and payment-method filters. Reports are operational views of
 completed sales and current inventory; they do not calculate profit, COGS,
 accounting entries, purchasing, or exports.
 
+The frontend uses a consolidated operational design system documented in
+[docs/design-system.md](docs/design-system.md). Shared semantic tokens,
+responsive page rhythm, accessible controls and dialogs, role-aware navigation,
+consistent loading/empty/error states, and thermal receipt print rules apply
+across the existing MVP. The complete viewport and keyboard checklist is in
+[docs/manual-testing.md](docs/manual-testing.md).
+
 ## Local backend
 
 Create PostgreSQL as described in [deployment](docs/deployment.md), then:

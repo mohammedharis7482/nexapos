@@ -22,8 +22,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       ref={ref}
       aria-invalid={invalid || undefined}
       className={cn(
-        "min-h-12 w-full rounded-xl border bg-surface px-3.5 py-2.5 text-base text-text-primary shadow-[0_1px_2px_rgb(16_24_40_/_0.04)] outline-none placeholder:text-text-muted transition-colors focus:border-primary focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-surface-secondary",
-        invalid ? "border-danger focus:border-danger focus:ring-red-100" : "border-border-strong",
+        "min-h-[var(--control-height)] w-full rounded-[var(--radius-control)] border bg-surface px-3.5 py-2.5 text-base text-text-primary shadow-sm outline-none placeholder:text-text-muted transition-colors focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-secondary disabled:text-disabled",
+        invalid ? "border-danger focus:border-danger focus:ring-red-100" : "border-input-border",
         className,
       )}
       {...props}
@@ -40,8 +40,8 @@ export const Select = forwardRef<
     ref={ref}
     aria-invalid={invalid || undefined}
     className={cn(
-      "min-h-12 w-full rounded-xl border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-blue-100 disabled:bg-surface-secondary",
-      invalid ? "border-danger" : "border-border-strong",
+      "min-h-[var(--control-height)] w-full rounded-[var(--radius-control)] border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:bg-surface-secondary disabled:text-disabled",
+      invalid ? "border-danger" : "border-input-border",
       className,
     )}
     {...props}
@@ -57,8 +57,8 @@ export const Textarea = forwardRef<
     ref={ref}
     aria-invalid={invalid || undefined}
     className={cn(
-      "min-h-24 w-full resize-y rounded-xl border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-blue-100 disabled:bg-surface-secondary",
-      invalid ? "border-danger" : "border-border-strong",
+      "min-h-24 w-full resize-y rounded-[var(--radius-control)] border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:bg-surface-secondary disabled:text-disabled",
+      invalid ? "border-danger" : "border-input-border",
       className,
     )}
     {...props}
@@ -111,7 +111,7 @@ export function FormField({
       </label>
       {children}
       {error ? (
-        <p className="text-sm text-danger" role="alert">
+        <p className="text-sm font-medium text-danger" role="alert" aria-live="polite">
           {error}
         </p>
       ) : hint ? (

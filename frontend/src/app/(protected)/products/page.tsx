@@ -77,7 +77,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Products"
         description={owner ? "Manage your shop catalogue, pricing, barcodes, and active status." : "Search the active product catalogue."}

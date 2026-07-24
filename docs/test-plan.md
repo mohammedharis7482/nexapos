@@ -120,6 +120,17 @@ without redundant requests, shared filter submission, and inventory-detail
 links. Full regression tests, lint, build, OpenAPI validation, and migration
 drift checks are run after implementation.
 
+UI-foundation regression tests cover accessible button states and names, unique
+dialog labelling, Escape cancellation, safe destructive confirmation, optional
+empty-state actions, role navigation, and the refined draft/cart confirmation
+flows. Existing page and service suites continue to protect authentication,
+dashboard, catalogue, inventory, billing, payment, sales, receipt, reports, and
+settings behaviour.
+
+Manual UI checks use [manual-testing.md](manual-testing.md) across 360–1440px,
+keyboard navigation, reduced motion, mobile safe areas, dialogs, operational
+states, browser console output, and both 80mm and A4 receipt print preview.
+
 ```bash
 cd frontend
 npm test

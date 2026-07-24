@@ -87,6 +87,16 @@ describe("ReportsPage", () => {
     }));
   });
 
+  it("offers clear date presets without applying them prematurely", async () => {
+    reports.get.mockResolvedValue({ success: true, message: "", data });
+    render(<ReportsPage />);
+    await screen.findByText("Gross sales");
+    const preset = screen.getByRole("button", { name: "30 days" });
+    fireEvent.click(preset);
+    expect(preset).toHaveAttribute("aria-pressed", "true");
+    expect(reports.get).toHaveBeenCalledOnce();
+  });
+
   it("provides responsive linked inventory rows", async () => {
     reports.get.mockResolvedValue({ success: true, message: "", data });
     render(<ReportsPage />);

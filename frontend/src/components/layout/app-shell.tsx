@@ -2,7 +2,6 @@
 
 import {
   ChevronDown,
-  CircleUserRound,
   KeyRound,
   LogOut,
   MoreHorizontal,
@@ -14,7 +13,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { ChangePasswordDialog } from "@/components/auth/change-password-dialog";
 import { Button } from "@/components/ui/button";
-import { Avatar, Badge, StatusBadge } from "@/components/ui/display";
+import { Avatar, Badge } from "@/components/ui/display";
 import { DropdownMenu, Sheet } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
@@ -53,9 +52,9 @@ function NavigationLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+        "relative flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-semibold transition-colors",
         active
-          ? "bg-primary-soft text-primary"
+          ? "bg-primary-soft text-primary before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-primary"
           : "text-text-secondary hover:bg-surface-secondary hover:text-text-primary",
         item.prominent && !active && "border border-blue-200 bg-primary-soft/60 text-primary",
       )}
@@ -99,9 +98,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-border bg-surface p-4 lg:flex lg:flex-col md:landscape:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-width)] border-r border-border bg-surface p-4 lg:flex lg:flex-col">
         <Brand />
-        <nav className="mt-8 flex flex-1 flex-col gap-1" aria-label="Primary navigation">
+        <div className="mt-5 rounded-xl bg-surface-secondary px-3 py-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Current shop</p>
+          <p className="mt-1 truncate text-sm font-semibold">{user.shop.name}</p>
+        </div>
+        <p className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">Workspace</p>
+        <nav className="flex flex-1 flex-col gap-1" aria-label="Primary navigation">
           {items.map((item) => (
             <NavigationLink
               key={item.href}
@@ -121,17 +125,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="min-h-screen lg:pl-60 md:landscape:pl-60">
+      <div className="min-h-screen lg:pl-[var(--sidebar-width)]">
         <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-surface/95 px-4 backdrop-blur-sm sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="lg:hidden md:landscape:hidden">
+            <div className="lg:hidden">
               <Brand compact />
             </div>
             <div className="min-w-0">
               <p className="hidden text-xs text-text-muted sm:block">{user.shop.name}</p>
               <h1 className="truncate text-base font-bold">{current}</h1>
             </div>
-            <StatusBadge label="Online" />
           </div>
 
           <DropdownMenu
@@ -157,9 +160,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {user.role === "OWNER" ? "Owner" : "Cashier"}
               </Badge>
             </div>
-            <button className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary">
-              <CircleUserRound className="size-5" /> Profile
-            </button>
             <button
               onClick={() => setPasswordOpen(true)}
               className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary"
@@ -176,13 +176,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           </DropdownMenu>
         </header>
 
-        <main className="mx-auto w-full max-w-[1440px] p-4 pb-28 sm:p-6 sm:pb-28 lg:p-8 lg:pb-8">
+        <main className="mx-auto w-full max-w-[var(--content-max)] p-4 pb-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom)+1.5rem)] sm:p-6 sm:pb-28 lg:p-7 lg:pb-8 xl:p-8">
           {children}
         </main>
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 lg:hidden md:landscape:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/98 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-6px_20px_rgb(16_42_86_/_0.06)] lg:hidden"
         aria-label="Mobile navigation"
       >
         <div className="grid grid-cols-5">
@@ -196,7 +196,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold",
-                  active ? "text-primary" : "text-text-muted",
+                  active ? "bg-primary-soft text-primary" : "text-text-muted",
                 )}
               >
                 <Icon className="size-5" />
@@ -205,6 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
           <button
+            aria-label="Open more navigation"
             onClick={() => setMobileOpen(true)}
             className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold text-text-muted"
           >
@@ -224,9 +225,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               onNavigate={() => setMobileOpen(false)}
             />
           ))}
-          <button className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-text-secondary hover:bg-surface-secondary">
-            <CircleUserRound className="size-5" /> Profile
-          </button>
           <button
             onClick={() => {
               setMobileOpen(false);

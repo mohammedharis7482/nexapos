@@ -236,7 +236,7 @@ export default function DashboardPage() {
   const updated = useMemo(() => data ? formatDateTime(data.generated_at) : null, [data]);
   if (!user) return null;
   return (
-    <div className="space-y-5 pb-4">
+    <div className="page-stack">
       <PageHeader
         title={`${greeting()}, ${user.full_name.split(" ")[0]}`}
         description={`${user.shop.name}${updated ? ` · Updated ${updated}` : ""}`}

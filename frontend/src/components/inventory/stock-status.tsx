@@ -16,5 +16,18 @@ export function StockStatusBadge({ status }: { status: StockStatus }) {
     OUT_OF_STOCK: "danger",
   }[status] as "neutral" | "success" | "warning" | "danger";
 
-  return <Badge tone={tone}>{stockStatusLabels[status]}</Badge>;
+  const Icon = {
+    NOT_INITIALIZED: HelpCircle,
+    IN_STOCK: CheckCircle2,
+    LOW_STOCK: AlertTriangle,
+    OUT_OF_STOCK: CircleSlash2,
+  }[status];
+
+  return (
+    <Badge tone={tone}>
+      <Icon className="mr-1.5 size-3.5" aria-hidden="true" />
+      {stockStatusLabels[status]}
+    </Badge>
+  );
 }
+import { AlertTriangle, CheckCircle2, CircleSlash2, HelpCircle } from "lucide-react";

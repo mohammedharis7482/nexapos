@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 import { cn, initials } from "@/lib/utils";
 
@@ -83,13 +83,72 @@ export function PageHeader({
 }) {
   return (
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text-primary">{title}</h1>
+      <div className="min-w-0">
+        <h1 className="text-[1.625rem] font-bold leading-tight tracking-tight text-text-primary">{title}</h1>
         {description ? (
-          <p className="mt-1 text-sm text-text-muted">{description}</p>
+          <p className="mt-1.5 max-w-3xl text-sm leading-6 text-text-muted">{description}</p>
         ) : null}
       </div>
-      {action}
+      {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
     </div>
+  );
+}
+
+export function PageContainer({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("page-stack", className)} {...props} />;
+}
+
+export function SectionHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h2 className="text-base font-bold text-text-primary">{title}</h2>
+        {description ? <p className="mt-1 text-sm text-text-muted">{description}</p> : null}
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+export function MoneyDisplay({
+  value,
+  currency = "QAR",
+  className,
+}: {
+  value: string | number;
+  currency?: string;
+  className?: string;
+}) {
+  return (
+    <span className={cn("tabular-nums whitespace-nowrap", className)}>
+      {currency} {Number(value).toFixed(2)}
+    </span>
+  );
+}
+
+export function QuantityDisplay({
+  value,
+  unit,
+  className,
+}: {
+  value: string | number;
+  unit?: string;
+  className?: string;
+}) {
+  return (
+    <span className={cn("tabular-nums whitespace-nowrap", className)}>
+      {value}{unit ? ` ${unit.toLowerCase()}` : ""}
+    </span>
   );
 }

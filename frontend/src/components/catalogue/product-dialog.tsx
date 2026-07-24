@@ -116,9 +116,12 @@ export function ProductDialog({
       }}
       title={product ? "Edit product" : "Add product"}
       description="Catalogue details only. Stock quantities are managed separately."
+      size="large"
     >
-      <form className="max-h-[70vh] space-y-4 overflow-y-auto pr-1" onSubmit={submit} noValidate>
+      <form className="space-y-6" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
+        <fieldset className="space-y-4">
+          <legend className="mb-3 text-sm font-bold text-text-primary">Product identity</legend>
         <FormField label="Product name" htmlFor="product-name" error={errors.name?.message}>
           <Input id="product-name" invalid={Boolean(errors.name)} {...register("name")} />
         </FormField>
@@ -130,6 +133,12 @@ export function ProductDialog({
             <Input id="product-barcode" inputMode="numeric" invalid={Boolean(errors.barcode)} {...register("barcode")} />
           </FormField>
         </div>
+        <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
+          <Textarea id="product-description" {...register("description")} />
+        </FormField>
+        </fieldset>
+        <fieldset className="space-y-4 border-t border-border pt-5">
+          <legend className="text-sm font-bold text-text-primary">Classification</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Category" htmlFor="product-category" error={errors.category_id?.message}>
             <Select id="product-category" {...register("category_id")}>
@@ -145,6 +154,9 @@ export function ProductDialog({
             </Select>
           </FormField>
         </div>
+        </fieldset>
+        <fieldset className="space-y-4 border-t border-border pt-5">
+          <legend className="text-sm font-bold text-text-primary">Pricing and tax</legend>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField label="Purchase price" htmlFor="purchase-price" error={errors.purchase_price?.message}>
             <Input id="purchase-price" inputMode="decimal" invalid={Boolean(errors.purchase_price)} {...register("purchase_price")} />
@@ -156,9 +168,9 @@ export function ProductDialog({
             <Input id="tax-rate" inputMode="decimal" invalid={Boolean(errors.tax_rate)} {...register("tax_rate")} />
           </FormField>
         </div>
-        <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
-          <Textarea id="product-description" {...register("description")} />
-        </FormField>
+        </fieldset>
+        <fieldset className="space-y-3 border-t border-border pt-5">
+          <legend className="text-sm font-bold text-text-primary">Availability</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
             <input type="checkbox" className="size-4 accent-primary" {...register("is_tax_inclusive")} />
@@ -169,6 +181,7 @@ export function ProductDialog({
             Active product
           </label>
         </div>
+        </fieldset>
         <div className="sticky bottom-0 flex justify-end gap-3 border-t border-border bg-surface pt-4">
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="submit" loading={isSubmitting}>

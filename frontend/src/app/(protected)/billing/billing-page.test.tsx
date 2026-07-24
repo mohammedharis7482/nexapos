@@ -119,7 +119,6 @@ describe("BillingPage", () => {
   });
 
   it("confirms cancellation and prepares a fresh draft", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     billing.create
       .mockResolvedValueOnce({ success: true, message: "", data: draft })
       .mockResolvedValueOnce({
@@ -130,6 +129,8 @@ describe("BillingPage", () => {
     render(<BillingPage />);
     await screen.findByText("Cart is empty");
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByText("Cancel this draft?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel draft" }));
     await waitFor(() => expect(billing.cancel).toHaveBeenCalledWith("draft-id"));
     expect(localStorage.getItem("nexapos.activeDraftId")).toBe("fresh-id");
   });

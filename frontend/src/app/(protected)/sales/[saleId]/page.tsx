@@ -42,7 +42,7 @@ export default function SaleDetailPage() {
   if (!sale) return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-80" /></div>;
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="page-stack">
       <Link href="/sales" className="inline-flex items-center gap-2 text-sm font-semibold text-primary"><ArrowLeft className="size-4" /> Back to sales</Link>
       <PageHeader
         title={sale.sale_number}

@@ -104,7 +104,7 @@ export default function InventoryPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="page-stack">
       <PageHeader
         title="Inventory"
         description={

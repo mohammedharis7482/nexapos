@@ -39,6 +39,12 @@ export function defaultReportFilters(now = new Date()): ReportFilters {
   return { date_from: isoDate(from), date_to: isoDate(now), payment_method: "" };
 }
 
+function presetFilters(days: number, now = new Date()): Pick<ReportFilters, "date_from" | "date_to"> {
+  const from = new Date(now);
+  from.setDate(from.getDate() - (days - 1));
+  return { date_from: isoDate(from), date_to: isoDate(now) };
+}
+
 function qar(value: string) {
   return new Intl.NumberFormat("en-QA", { style: "currency", currency: "QAR" }).format(Number(value));
 }
@@ -101,10 +107,21 @@ export default function ReportsPage() {
   useEffect(() => { queueMicrotask(() => void load()); }, [load]);
   useEffect(() => { void Promise.all([salesService.cashiers(), categoryService.list("", "true")]).then(([users, groups]) => { setCashiers(users.data); setCategories(groups.data.results); }).catch(() => undefined); }, []);
   const updated = useMemo(() => data ? new Intl.DateTimeFormat("en-QA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(data.generated_at)) : null, [data]);
+  const activePreset = [1, 7, 30].find((days) => {
+    const preset = presetFilters(days);
+    return draftFilters.date_from === preset.date_from && draftFilters.date_to === preset.date_to;
+  });
 
-  return <div className="space-y-5 pb-4">
+  return <div className="page-stack">
     <PageHeader title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
-    <Card className="p-4"><form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]" onSubmit={(event) => { event.preventDefault(); setFilters(draftFilters); }}>
+    <Card className="p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Report date presets">
+        <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Period</span>
+        {[["Today", 1], ["7 days", 7], ["30 days", 30]].map(([label, days]) => (
+          <button key={label} type="button" aria-pressed={activePreset === Number(days)} className={`min-h-9 rounded-lg border px-3 text-xs font-semibold ${activePreset === Number(days) ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface-secondary"}`} onClick={() => setDraftFilters((current) => ({ ...current, ...presetFilters(Number(days)) }))}>{label}</button>
+        ))}
+      </div>
+      <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]" onSubmit={(event) => { event.preventDefault(); setFilters(draftFilters); }}>
       <Input aria-label="Report date from" type="date" value={draftFilters.date_from} onChange={(event) => setDraftFilters((current) => ({ ...current, date_from: event.target.value }))} />
       <Input aria-label="Report date to" type="date" value={draftFilters.date_to} onChange={(event) => setDraftFilters((current) => ({ ...current, date_to: event.target.value }))} />
       <Select aria-label="Report cashier" value={draftFilters.cashier ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, cashier: event.target.value }))}><option value="">All cashiers</option>{cashiers.map((cashier) => <option key={cashier.id} value={cashier.id}>{cashier.full_name}</option>)}</Select>

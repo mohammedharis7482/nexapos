@@ -45,7 +45,7 @@ export default function CategoriesPage() {
   }, [load]);
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack">
       <PageHeader
         title="Product categories"
         description={owner ? "Organize the catalogue and control which categories are active." : "Browse active categories used by your shop."}

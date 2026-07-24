@@ -30,6 +30,7 @@ export function CartLine({
   onRemove: () => void;
 }) {
   const [quantity, setQuantity] = useState(item.quantity);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   function commit(value: string) {
     if (billingQuantity.safeParse(value).success && value !== item.quantity) {
@@ -48,9 +49,16 @@ export function CartLine({
             {item.product.sku} · QAR {item.unit_price}/{item.product.unit}
           </p>
         </div>
-        <IconButton aria-label={`Remove ${item.product.name}`} disabled={busy} onClick={onRemove}>
-          <Trash2 className="size-4 text-danger" />
-        </IconButton>
+        {confirmRemove ? (
+          <div className="flex items-center gap-1">
+            <button type="button" className="min-h-10 rounded-lg px-2 text-xs font-semibold text-text-secondary hover:bg-surface-secondary" onClick={() => setConfirmRemove(false)}>Keep</button>
+            <button type="button" className="min-h-10 rounded-lg bg-danger-soft px-2 text-xs font-semibold text-danger hover:bg-red-100" onClick={onRemove}>Remove</button>
+          </div>
+        ) : (
+          <IconButton aria-label={`Remove ${item.product.name}`} disabled={busy} onClick={() => setConfirmRemove(true)}>
+            <Trash2 className="size-4 text-danger" />
+          </IconButton>
+        )}
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">

@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useRef,
   type ReactElement,
   type ReactNode,
@@ -29,7 +30,7 @@ export function DropdownMenu({
       </summary>
       <div
         className={cn(
-          "absolute top-[calc(100%+8px)] z-50 min-w-64 rounded-2xl border border-border bg-surface p-2 shadow-[0_12px_28px_rgb(16_24_40_/_0.14)]",
+          "absolute top-[calc(100%+8px)] z-50 min-w-64 rounded-[var(--radius-card)] border border-border bg-surface-elevated p-2 shadow-[var(--shadow-elevated)]",
           align === "right" ? "right-0" : "left-0",
         )}
         onClick={() => detailsRef.current?.removeAttribute("open")}
@@ -66,7 +67,7 @@ export function Sheet({
       aria-labelledby="sheet-title"
       onClose={() => onOpenChange(false)}
       onCancel={() => onOpenChange(false)}
-      className="m-0 ml-auto h-dvh max-h-none w-[min(88vw,360px)] max-w-none translate-x-0 rounded-l-[20px] border-0 bg-surface p-0 text-text-primary backdrop:bg-slate-950/45"
+      className="m-0 ml-auto h-dvh max-h-none w-[min(90vw,360px)] max-w-none rounded-l-[var(--radius-dialog)] border-0 bg-surface-elevated p-0 text-text-primary shadow-[var(--shadow-elevated)]"
     >
       <div className="flex h-full flex-col">
         <header className="flex min-h-16 items-center justify-between border-b border-border px-4">
@@ -89,14 +90,18 @@ export function Dialog({
   title,
   description,
   children,
+  size = "default",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
   children: ReactNode;
+  size?: "default" | "large";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -108,19 +113,22 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="dialog-title"
-      aria-describedby={description ? "dialog-description" : undefined}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
       onClose={() => onOpenChange(false)}
       onCancel={() => onOpenChange(false)}
-      className="m-auto w-[calc(100%-32px)] max-w-lg rounded-[20px] border-0 bg-surface p-0 text-text-primary shadow-xl backdrop:bg-slate-950/45"
+      className={cn(
+        "m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-1.5rem)] overflow-hidden rounded-[var(--radius-dialog)] border-0 bg-surface-elevated p-0 text-text-primary shadow-[var(--shadow-elevated)]",
+        size === "large" ? "max-w-3xl" : "max-w-lg",
+      )}
     >
       <header className="flex items-start justify-between gap-4 border-b border-border p-5">
         <div>
-          <h2 id="dialog-title" className="text-lg font-bold">
+          <h2 id={titleId} className="text-lg font-bold">
             {title}
           </h2>
           {description ? (
-            <p id="dialog-description" className="mt-1 text-sm text-text-muted">
+            <p id={descriptionId} className="mt-1 text-sm leading-5 text-text-muted">
               {description}
             </p>
           ) : null}
@@ -129,7 +137,55 @@ export function Dialog({
           <X className="size-5" />
         </IconButton>
       </header>
-      <div className="p-5">{children}</div>
+      <div className="max-h-[calc(100dvh-7rem)] overflow-y-auto p-4 sm:p-5">{children}</div>
     </dialog>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+  loading = false,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  loading?: boolean;
+}) {
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+    >
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          autoFocus
+          disabled={loading}
+          onClick={() => onOpenChange(false)}
+          className="min-h-11 rounded-[var(--radius-control)] border border-border-strong px-4 text-sm font-semibold hover:bg-surface-secondary disabled:opacity-50"
+        >
+          Keep working
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          aria-busy={loading}
+          onClick={onConfirm}
+          className="min-h-11 rounded-[var(--radius-control)] border border-danger bg-danger px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50"
+        >
+          {loading ? "Working…" : confirmLabel}
+        </button>
+      </div>
+    </Dialog>
   );
 }

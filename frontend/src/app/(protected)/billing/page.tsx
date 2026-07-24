@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import { billingService } from "@/services/billing.service";
 import { categoryService } from "@/services/category.service";
@@ -63,6 +64,8 @@ export default function BillingPage() {
   const [mobileView, setMobileView] = useState<"products" | "cart">("products");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const createFreshDraft = useCallback(async () => {
     const response = await billingService.create();
@@ -195,8 +198,8 @@ export default function BillingPage() {
   }
 
   async function cancelDraft() {
-    if (!draft || !window.confirm("Cancel this draft bill? Its audit record will be retained.")) return;
-    setLoading(true);
+    if (!draft) return;
+    setCancelling(true);
     setError(null);
     try {
       await billingService.cancel(draft.id);
@@ -204,10 +207,11 @@ export default function BillingPage() {
       await createFreshDraft();
       setSuccess("Draft cancelled. A new empty draft is ready.");
       setMobileView("products");
+      setCancelOpen(false);
     } catch (cancelError) {
       setError(apiMessage(cancelError, "The draft could not be cancelled."));
     } finally {
-      setLoading(false);
+      setCancelling(false);
     }
   }
 
@@ -268,8 +272,11 @@ export default function BillingPage() {
               <ReceiptText className="size-4" /> View / Print Receipt
             </Link>
             <Button onClick={() => void startNewBill()}>Start New Bill</Button>
-            <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-strong px-4 text-sm font-semibold sm:col-span-2" href="/sales">
-              Return to Sales
+            <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-strong px-4 text-sm font-semibold" href={`/sales/${completedSale.id}`}>
+              View Sale
+            </Link>
+            <Link className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border-strong px-4 text-sm font-semibold" href="/sales">
+              View All Sales
             </Link>
           </div>
         </Card>
@@ -278,7 +285,7 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="page-stack">
       <PageHeader
         title="New Bill"
         description="Build a draft using live catalogue prices and current stock availability."
@@ -378,7 +385,7 @@ export default function BillingPage() {
                 <h2 className="font-bold">Current draft</h2>
                 <p className="text-xs text-text-muted">{itemCount.toFixed(3)} total quantity</p>
               </div>
-              <Button variant="ghost" leadingIcon={<Trash2 className="size-4" />} onClick={() => void cancelDraft()}>
+              <Button variant="ghost" leadingIcon={<Trash2 className="size-4" />} onClick={() => setCancelOpen(true)}>
                 Cancel
               </Button>
             </header>
@@ -431,6 +438,15 @@ export default function BillingPage() {
           onInventoryConflict={() => void refreshAfterConflict()}
         />
       ) : null}
+      <ConfirmDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title="Cancel this draft?"
+        description="The bill will no longer be editable. Its audit record will be retained and a new empty draft will be prepared."
+        confirmLabel="Cancel draft"
+        loading={cancelling}
+        onConfirm={() => void cancelDraft()}
+      />
     </div>
   );
 }

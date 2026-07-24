@@ -45,6 +45,8 @@ describe("CartLine", () => {
     fireEvent.blur(input);
     expect(onQuantity).toHaveBeenCalledWith("1.250");
     fireEvent.click(screen.getByRole("button", { name: "Remove Baladna Milk" }));
+    expect(onRemove).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(onRemove).toHaveBeenCalledOnce();
   });
 

@@ -85,7 +85,7 @@ export default function SalesPage() {
 
   const state = salesCollectionState(loading, sales.length, error);
   return (
-    <div className="space-y-6 pb-4">
+    <div className="page-stack">
       <PageHeader
         title="Sales"
         description={owner ? "Review completed sales across your shop." : "Review sales completed by your account."}
