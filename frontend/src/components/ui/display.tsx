@@ -118,14 +118,14 @@ export function MetricCard({
     danger: "bg-danger-soft text-danger",
   };
   return (
-    <div className="min-w-0 rounded-[var(--radius-card)] border border-border bg-surface p-[var(--card-padding)] shadow-[var(--shadow-card)]">
-      <div className="flex items-start justify-between gap-3">
+    <div className="relative min-w-0 rounded-[var(--radius-card)] border border-border bg-surface p-[var(--card-padding)] shadow-[var(--shadow-card)]">
+      <div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-text-muted">{label}</p>
+          <p className="pr-11 text-xs font-semibold text-text-muted">{label}</p>
           <p className="mt-2 tabular-nums whitespace-nowrap text-[1.55rem] font-bold leading-none tracking-[-0.035em] text-text-primary sm:text-[1.75rem]">{value}</p>
           {detail ? <p className="mt-2 text-xs leading-5 text-text-muted">{detail}</p> : null}
         </div>
-        <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", tones[tone])}>
+        <span className={cn("absolute right-[var(--card-padding)] top-[var(--card-padding)] grid size-10 place-items-center rounded-xl", tones[tone])}>
           <Icon className="size-[1.15rem]" aria-hidden="true" />
         </span>
       </div>

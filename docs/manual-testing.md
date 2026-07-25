@@ -14,8 +14,20 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 
 ## Operations
 
-- Dashboard: role-specific metrics, zero data, refresh, links, alerts, and chart
-  resizing.
+- Dashboard OWNER: verify shop-wide sales, bills, average bill, items sold,
+  cash/card allocation, cashier context in Recent Sales, all three inventory
+  alert states, top products, action links, and refresh.
+- Dashboard CASHIER: verify personal metrics and own recent sales; confirm
+  payment summary, inventory management, top products, Add Product, and Update
+  Stock are absent.
+- Dashboard states: verify zero sales, no payments, no recent sales, healthy
+  inventory, empty top products, initial skeleton, complete failure, failed
+  background refresh, and retry.
+- Complete one real sale and confirm metrics, chart, payments, recent sales,
+  inventory attention, and top products update after refresh.
+- At 360, 390, 430, 768, 1024, 1280, and 1440px verify the one-column narrow
+  phone/two-column 430px metric grid, chart labels/tooltips, table-to-card transition, readable QAR
+  values, bottom-navigation clearance, and absence of horizontal overflow.
 - Products/categories: search, filters, desktop table, mobile cards, grouped
   forms, validation, saving, and inactive states.
 - Inventory: all four statuses, detail, opening stock, adjustment direction,

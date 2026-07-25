@@ -159,6 +159,22 @@ Every interactive control has a visible focus ring. Touch targets are approximat
 
 `/dev/design-system` renders only in development and tests. Production requests receive Next.js `notFound()`. It contains neutral component data only and no credentials, shop identifiers, or private business records.
 
+## Dashboard composition
+
+The dashboard is NexaPOS’s operational landing surface and uses a deliberate priority order: billing work, today’s performance, payment collection, recent completed sales, inventory risk, and product performance.
+
+- The header combines a role-appropriate greeting, shop context, timezone-aware update time, Refresh, and the primary Start New Bill action.
+- The compact command strip exposes only role-permitted operational shortcuts.
+- Four equal primary metrics show sales, bills, average bill, and items sold. Inventory counts are not financial metrics.
+- Sales Overview and Payments Today form a 2:1 desktop analytics row.
+- Recent Sales forms the primary operational column. Inventory Attention and Top Products form a compact secondary rail.
+- At tablet widths analytics stack. Recent Sales switches from a semantic table to designed cards below 1024px.
+- At 430px metrics use a two-column scan surface; narrower phones use one column so QAR values never clip. Actions form a compact grid and content clears the bottom navigation.
+
+Owners receive shop-wide metrics, payment allocation, cashier context, inventory attention, management shortcuts, and top products. Cashiers receive only their personal metrics, personal recent sales, product search, billing, and permitted sales navigation. Backend permissions remain authoritative.
+
+Dashboard empty states are compact and factual. Refresh keeps already-loaded content visible and reports a local recoverable error instead of replacing usable data.
+
 ## Prohibited patterns
 
 - Arbitrary hex values or page-specific semantic colours.

@@ -102,11 +102,14 @@ cross-shop isolation, active-product inventory alerts, top-product aggregation,
 seven-day zero filling, recent-sale ordering/limits, unauthenticated denial, and
 invalid-timezone fallback. These tests use PostgreSQL.
 
-Dashboard frontend tests cover the exact consolidated service URL, loading
-structure, owner sections and navigation links, cashier-only cards, absence of
-owner payment/top-product sections for cashier payloads, manual refresh, and
-absence of invented comparison percentages. Full lint, Vitest, and production
-build validation remain mandatory.
+Dashboard frontend tests cover the exact consolidated service URL, page-aware
+loading structure, owner/cashier greeting and commands, four role-specific
+metrics, complete QAR values, seven-day totals/average/bill count, current-day
+chart semantics, payment reconciliation, shortened visual sale numbers with
+full accessible values, owner cashier context, mobile sale cards, all inventory
+statuses, weighted top-product quantities, compact zero/healthy states, manual
+refresh, plain-language failure and retry, and absence of invented comparisons.
+Full lint, Vitest, and production build validation remain mandatory.
 
 Reports backend tests cover unauthenticated and CASHIER denial, OWNER access,
 completed-sale aggregation, weighted product quantities, current inventory
