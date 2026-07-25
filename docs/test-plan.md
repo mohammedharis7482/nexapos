@@ -111,6 +111,14 @@ statuses, weighted top-product quantities, compact zero/healthy states, manual
 refresh, plain-language failure and retry, and absence of invented comparisons.
 Full lint, Vitest, and production build validation remain mandatory.
 
+Dashboard transaction-preview regression covers expected and fallback short
+references, today/previous-date shop-local formatting, owner/cashier metadata,
+item counts, payment badges, non-wrapping totals, whole-row detail links,
+accessible full references, compact empty/loading/error states, and absence of
+management-table headers. Sales-page regression separately protects the full
+sale number, complete table columns, filters, badges, aligned total, and View
+link.
+
 Reports backend tests cover unauthenticated and CASHIER denial, OWNER access,
 completed-sale aggregation, weighted product quantities, current inventory
 statuses, allocated split payments, cashier totals without line-join

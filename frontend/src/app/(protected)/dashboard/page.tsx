@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Boxes,
   CircleDollarSign,
-  Clock3,
   PackagePlus,
   ReceiptText,
   RefreshCw,
@@ -15,12 +14,12 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { DashboardTransactionList } from "@/components/dashboard/dashboard-transaction-list";
 import { Button } from "@/components/ui/button";
 import { Badge, MetricCard, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { MobileDataCard, SectionCard } from "@/components/ui/layout";
+import { SectionCard } from "@/components/ui/layout";
 import { PaymentMethodBadge, StockStatusBadgeV2 } from "@/components/ui/status";
-import { DataTable, DataTableBody, DataTableCell, DataTableHeader, DataTableHeading, DataTableRow } from "@/components/ui/table";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { dashboardService } from "@/services/dashboard.service";
@@ -29,7 +28,6 @@ import type {
   DashboardData,
   InventoryAlert,
   OwnerDashboardSummary,
-  RecentSale,
 } from "@/types/dashboard";
 
 function greeting(date = new Date()) {
@@ -45,18 +43,6 @@ function zonedDate(value: string, timezone: string, options: Intl.DateTimeFormat
 
 function formatUpdated(value: string, timezone: string) {
   return zonedDate(value, timezone, { dateStyle: "medium", timeStyle: "short" });
-}
-
-function formatSaleTime(value: string, timezone: string) {
-  const saleDate = zonedDate(value, timezone, { year: "numeric", month: "2-digit", day: "2-digit" });
-  const today = zonedDate(new Date().toISOString(), timezone, { year: "numeric", month: "2-digit", day: "2-digit" });
-  const time = zonedDate(value, timezone, { hour: "numeric", minute: "2-digit" });
-  return saleDate === today ? time : `${zonedDate(value, timezone, { month: "short", day: "numeric" })}, ${time}`;
-}
-
-function readableSaleNumber(value: string) {
-  const parts = value.split("-");
-  return parts.length > 2 ? parts.slice(-2).join("-") : value;
 }
 
 function ActionLink({
@@ -158,7 +144,7 @@ function SalesOverview({ data, timezone }: { data: DashboardData["sales_trend"];
   const bills = data.reduce((sum, point) => sum + point.completed_sales_count, 0);
   const latestDate = data.at(-1)?.date;
   return (
-    <SectionCard title="Sales Overview" description="Completed sales across the last seven calendar days" action={<Badge tone="primary">7 days</Badge>} className="h-full">
+    <SectionCard title="Sales Overview" description="Completed sales across the last seven calendar days" action={<Badge tone="primary">7 days</Badge>}>
       <div className="p-5">
         <dl className="grid grid-cols-2 gap-3 border-b border-border-subtle pb-4 min-[430px]:grid-cols-3">
           <div><dt className="text-xs font-semibold text-text-muted">Seven-day total</dt><dd className="mt-1 text-lg font-bold"><MoneyDisplay value={total} /></dd></div>
@@ -166,10 +152,10 @@ function SalesOverview({ data, timezone }: { data: DashboardData["sales_trend"];
           <div className="col-span-2 min-[430px]:col-span-1"><dt className="text-xs font-semibold text-text-muted">Completed bills</dt><dd className="mt-1 text-lg font-bold tabular-nums">{bills}</dd></div>
         </dl>
         <div className="relative mt-5">
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex h-36 flex-col justify-between" aria-hidden="true">
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex h-32 flex-col justify-between" aria-hidden="true">
             <span className="border-t border-dashed border-border" /><span className="border-t border-dashed border-border" /><span className="border-t border-dashed border-border" /><span className="border-t border-border" />
           </div>
-          <div className="relative flex h-44 items-end gap-2 sm:gap-3" role="img" aria-label={`Seven-day sales chart. Total QAR ${total.toFixed(2)} across ${bills} completed bills.`}>
+          <div className="relative flex h-40 items-end gap-2 sm:gap-3" role="img" aria-label={`Seven-day sales chart. Total QAR ${total.toFixed(2)} across ${bills} completed bills.`}>
             {data.map((point) => {
               const value = Number(point.sales_total);
               const height = max === 0 ? 0 : (value / max) * 100;
@@ -177,7 +163,7 @@ function SalesOverview({ data, timezone }: { data: DashboardData["sales_trend"];
               const label = zonedDate(`${point.date}T12:00:00Z`, timezone, { weekday: "short" });
               return (
                 <div key={point.date} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                  <div className="flex h-36 w-full items-end justify-center">
+                  <div className="flex h-32 w-full items-end justify-center">
                     <div
                       tabIndex={0}
                       aria-label={`${label}: QAR ${value.toFixed(2)}, ${point.completed_sales_count} bills${today ? ", current day" : ""}`}
@@ -201,11 +187,11 @@ function SalesOverview({ data, timezone }: { data: DashboardData["sales_trend"];
 function PaymentSummary({ data }: { data: DashboardData["payment_breakdown"] }) {
   const total = data.reduce((sum, item) => sum + Number(item.amount), 0);
   return (
-    <SectionCard title="Payments Today" description="Collected against completed sales" className="h-full">
+    <SectionCard title="Payments Today" description="Collected against completed sales">
       {total === 0 ? (
         <div className="p-5"><EmptyState title="No payments today" description="Complete the first sale to see the breakdown." compact action={<ActionLink href="/billing" primary>Start New Bill</ActionLink>} /></div>
       ) : (
-        <div className="flex h-full flex-col p-5">
+        <div className="p-5">
           <div className="space-y-5">
             {data.map((item) => (
               <div key={item.method}>
@@ -227,50 +213,20 @@ function PaymentSummary({ data }: { data: DashboardData["payment_breakdown"] }) 
   );
 }
 
-function SalePayment({ methods }: { methods: RecentSale["payment_methods"] }) {
-  return <div className="flex flex-wrap gap-1">{methods.map((method) => <PaymentMethodBadge key={method} method={method} />)}</div>;
-}
-
 function RecentSales({ data, owner, timezone }: { data: DashboardData["recent_sales"]; owner: boolean; timezone: string }) {
-  const columns = owner ? 7 : 6;
   return (
-    <SectionCard title="Recent Sales" description="Latest completed bills" action={<Link className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-primary hover:underline" href="/sales">View All Sales<ArrowRight className="size-4" /></Link>}>
+    <SectionCard title="Recent Sales" description="Latest completed bills" action={<Link aria-label="View all completed sales" className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-primary hover:underline" href="/sales">View All Sales<ArrowRight className="size-4" /></Link>}>
       {data.length === 0 ? (
-        <div className="p-5"><EmptyState title="No completed sales yet" description="Start a new bill to record the first sale." compact action={<ActionLink href="/billing" primary>Start New Bill</ActionLink>} /></div>
+        <div className="flex flex-col items-start gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-muted text-text-muted"><ReceiptText className="size-4" aria-hidden="true" /></span>
+            <div><p className="text-sm font-semibold">No completed sales yet</p><p className="mt-1 text-sm text-text-muted">Start a new bill to record the first sale.</p></div>
+          </div>
+          <ActionLink href="/billing" primary>Start New Bill</ActionLink>
+        </div>
       ) : (
-        <>
-          <div className="hidden lg:block">
-            <DataTable>
-              <DataTableHeader><DataTableRow><DataTableHeading>Sale</DataTableHeading><DataTableHeading>Time</DataTableHeading>{owner ? <DataTableHeading>Cashier</DataTableHeading> : null}<DataTableHeading>Items</DataTableHeading><DataTableHeading>Payment</DataTableHeading><DataTableHeading align="right">Total</DataTableHeading><DataTableHeading><span className="sr-only">View</span></DataTableHeading></DataTableRow></DataTableHeader>
-              <DataTableBody>
-                {data.map((sale) => (
-                  <DataTableRow key={sale.id} interactive>
-                    <DataTableCell><Link title={sale.sale_number} href={`/sales/${sale.id}`} className="font-semibold text-text-primary hover:text-primary">{readableSaleNumber(sale.sale_number)}</Link></DataTableCell>
-                    <DataTableCell className="text-text-secondary"><time dateTime={sale.completed_at}>{formatSaleTime(sale.completed_at, timezone)}</time></DataTableCell>
-                    {owner ? <DataTableCell className="max-w-36 truncate text-text-secondary">{sale.cashier_name}</DataTableCell> : null}
-                    <DataTableCell numeric>{sale.item_count} {sale.item_count === 1 ? "item" : "items"}</DataTableCell>
-                    <DataTableCell><SalePayment methods={sale.payment_methods} /></DataTableCell>
-                    <DataTableCell align="right" numeric className="font-bold"><MoneyDisplay value={sale.grand_total} /></DataTableCell>
-                    <DataTableCell align="right"><Link href={`/sales/${sale.id}`} aria-label={`View sale ${sale.sale_number}`} className="inline-flex min-h-9 items-center text-sm font-semibold text-primary hover:underline">View</Link></DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          </div>
-          <div className="grid gap-3 p-4 lg:hidden" data-testid="recent-sales-cards">
-            {data.map((sale) => (
-              <MobileDataCard key={sale.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0"><Link title={sale.sale_number} href={`/sales/${sale.id}`} className="font-semibold hover:text-primary">{readableSaleNumber(sale.sale_number)}</Link><p className="mt-1 flex items-center gap-1 text-xs text-text-muted"><Clock3 className="size-3" />{formatSaleTime(sale.completed_at, timezone)} · {sale.item_count} {sale.item_count === 1 ? "item" : "items"}</p></div>
-                  <p className="shrink-0 font-bold"><MoneyDisplay value={sale.grand_total} /></p>
-                </div>
-                <div className="mt-3 flex items-end justify-between gap-3"><div>{owner ? <p className="mb-1.5 text-xs text-text-muted">{sale.cashier_name}</p> : null}<SalePayment methods={sale.payment_methods} /></div><Link href={`/sales/${sale.id}`} aria-label={`View sale ${sale.sale_number}`} className="text-sm font-semibold text-primary hover:underline">View</Link></div>
-              </MobileDataCard>
-            ))}
-          </div>
-        </>
+        <DashboardTransactionList sales={data} owner={owner} timezone={timezone} />
       )}
-      <span className="sr-only">{columns} table columns</span>
     </SectionCard>
   );
 }
@@ -336,7 +292,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
     <>
       <CommandStrip owner={owner} />
       <PrimaryMetrics data={data} />
-      <div className={`grid items-stretch gap-5 ${owner ? "xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]" : ""}`}>
+      <div className={`grid items-start gap-5 ${owner ? "xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]" : ""}`}>
         <SalesOverview data={data.sales_trend} timezone={data.timezone} />
         {owner ? <PaymentSummary data={data.payment_breakdown} /> : null}
       </div>

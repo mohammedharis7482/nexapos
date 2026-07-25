@@ -175,6 +175,14 @@ Owners receive shop-wide metrics, payment allocation, cashier context, inventory
 
 Dashboard empty states are compact and factual. Refresh keeps already-loaded content visible and reports a local recoverable error instead of replacing usable data.
 
+### Dashboard transaction preview
+
+Dashboard Recent Sales is a compact transaction preview, not a management table. Each semantic link presents `NXP-######`, concise shop-local time, item count, owner-only cashier context, payment badge, total, and a chevron. The full backend sale number and timestamp remain in the link’s accessible name and title.
+
+Expected sale numbers such as `NXP-209D48-20260724-000008` display as `NXP-000008`; values that do not match the known structure remain unchanged. Today’s sales show local time only. Older sales show `Mon DD · time`.
+
+At narrow widths payment moves below the metadata while the reference and total remain on one line. The `/sales` route deliberately retains the full table, complete sale number, filters, pagination, and management columns. Do not reuse the dashboard preview as a replacement for that table.
+
 ## Prohibited patterns
 
 - Arbitrary hex values or page-specific semantic colours.

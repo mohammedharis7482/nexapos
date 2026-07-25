@@ -25,6 +25,13 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
   background refresh, and retry.
 - Complete one real sale and confirm metrics, chart, payments, recent sales,
   inventory attention, and top products update after refresh.
+- Compare Dashboard Recent Sales with `/sales`: Dashboard rows must use the
+  compact `NXP-######` preview, concise local time, owner-only cashier metadata,
+  payment, total, and whole-row detail link; `/sales` must retain its full sale
+  number, table columns, filters, pagination, and View action.
+- Keyboard-focus each dashboard transaction row and open it with Enter. Confirm
+  the full reference/timestamp remain available through its accessible label
+  and title.
 - At 360, 390, 430, 768, 1024, 1280, and 1440px verify the one-column narrow
   phone/two-column 430px metric grid, chart labels/tooltips, table-to-card transition, readable QAR
   values, bottom-navigation clearance, and absence of horizontal overflow.

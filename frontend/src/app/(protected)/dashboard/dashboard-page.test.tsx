@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dashboardService } from "@/services/dashboard.service";
@@ -93,7 +93,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Low stock", { selector: "p" })).not.toBeInTheDocument();
     expect(screen.getByText("Payments Today")).toBeInTheDocument();
     expect(screen.getByText("Top Products")).toBeInTheDocument();
-    expect(screen.getAllByText("20260724-000001")[0].closest("a")).toHaveAttribute("href", "/sales/sale-id");
+    expect(screen.getByText("NXP-000001").closest("a")).toHaveAttribute("href", "/sales/sale-id");
     expect(screen.getAllByText("Milk")[0].closest("a")).toHaveAttribute("href", "/inventory/product-id");
     expect(screen.getByText("View All Sales")).toHaveAttribute("href", "/sales");
     expect(screen.queryByText(/up \\d+%/i)).not.toBeInTheDocument();
@@ -127,6 +127,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Payments Today")).not.toBeInTheDocument();
     expect(screen.queryByText("Inventory Attention")).not.toBeInTheDocument();
     expect(screen.queryByText("Top Products")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("dashboard-transaction-list")).queryByText(/Cashier One/)).not.toBeInTheDocument();
   });
 
   it("supports controlled manual refresh", async () => {
@@ -145,11 +146,13 @@ describe("DashboardPage", () => {
     expect(screen.getByLabelText(/current day/)).toBeInTheDocument();
     expect(screen.getByText("Total collected")).toBeInTheDocument();
     expect(screen.getAllByText(/125\.00/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("2 items").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/2 items/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Cash").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Cashier One").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("recent-sales-cards")).toBeInTheDocument();
-    expect(screen.getByRole("table")).toBeInTheDocument();
+    const transactions = screen.getByTestId("dashboard-transaction-list");
+    expect(within(transactions).getByText(/Cashier One/)).toBeInTheDocument();
+    expect(within(transactions).getByRole("link", { name: /Open sale NXP-ABC-20260724-000001/ })).toHaveAttribute("href", "/sales/sale-id");
+    expect(within(transactions).queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Sale" })).not.toBeInTheDocument();
   });
 
   it("renders compact zero and healthy states without inventing values", async () => {
