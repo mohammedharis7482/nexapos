@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/ui/display";
 import { CardSkeleton, EmptyState } from "@/components/ui/feedback";
-import { Checkbox, FormField, Input, SegmentedControl } from "@/components/ui/input";
-import { MobileDataCard, ResponsiveGrid } from "@/components/ui/layout";
+import { Checkbox, FormField, Input, SegmentedControl, Select } from "@/components/ui/input";
+import { FilterToolbar, MobileDataCard, Pagination, ResponsiveGrid } from "@/components/ui/layout";
 import { Drawer } from "@/components/ui/overlay";
 import { PaymentMethodBadge, RoleBadge, StockStatusBadgeV2 } from "@/components/ui/status";
 import { DataTable, DataTableBody, DataTableCell, DataTableHeader, DataTableHeading, DataTableRow, ResponsiveDataList } from "@/components/ui/table";
@@ -31,6 +31,42 @@ describe("V2 components", () => {
     expect(screen.getByRole("button", { name: "Cash" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Card" }));
     expect(change).toHaveBeenCalledWith("card");
+  });
+
+  it("renders a controlled native select with reserved indicator space", () => {
+    const change = vi.fn();
+    render(
+      <Select aria-label="Category" defaultValue="" onChange={change}>
+        <option value="">All categories</option>
+        <option value="dairy">Dairy</option>
+      </Select>,
+    );
+    const select = screen.getByRole("combobox", { name: "Category" });
+    expect(select).toHaveClass("appearance-none", "pr-11");
+    expect(select.parentElement).toHaveAttribute("data-slot", "select-control");
+    expect(select.parentElement?.querySelector('[data-slot="select-indicator"]')).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: "dairy" } });
+    expect(change).toHaveBeenCalledOnce();
+  });
+
+  it("keeps filter results and pagination actions in connected surfaces", () => {
+    const previous = vi.fn();
+    const next = vi.fn();
+    render(
+      <>
+        <FilterToolbar result="12 matching products" status={<span>Filters applied</span>}>
+          <Input aria-label="Search products" />
+        </FilterToolbar>
+        <Pagination count={12} noun="product" page={2} hasNext onPrevious={previous} onNext={next} />
+      </>,
+    );
+    expect(screen.getByText("12 matching products")).toBeInTheDocument();
+    expect(screen.getByText("Filters applied")).toBeInTheDocument();
+    expect(screen.getByLabelText("product pagination")).toHaveTextContent("12 products · Page 2");
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(previous).toHaveBeenCalledOnce();
+    expect(next).toHaveBeenCalledOnce();
   });
 
   it("renders metric values without truncation and semantic status labels", () => {

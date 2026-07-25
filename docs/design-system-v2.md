@@ -106,7 +106,13 @@ Tables transform through `ResponsiveDataList`; they must not force horizontal pa
 - `ResponsiveGrid`: repeatable content-aware cards.
 - `SplitPane`: primary workspace with sticky secondary summary.
 - `Section`, `SectionHeader`, and `SectionCard`: semantic content grouping.
-- `FilterBar`: dense query controls.
+- `FilterToolbar`: the standard connected filter surface. Query controls sit in
+  its body and the result count/filter status sits in the quiet footer; do not
+  detach these into unrelated cards.
+- `Pagination`: the standard list footer. It keeps the result total, current
+  page, Previous, and Next actions together and stacks safely on narrow phones.
+- `FilterBar`: compatibility surface for simple dense controls that do not need
+  result or status context.
 - `StickyActionBar`: reachable save/checkout actions.
 
 Use `PageHeader` once per route. Do not repeat the route title in the application header.
@@ -125,7 +131,7 @@ Mobile uses role-aware bottom navigation. Owners see Dashboard, Billing, Product
 
 ### Forms
 
-Use `FormField` for labels, required indication, hint/error association, and backend validation. Available controls include Input, SearchInput, Select, Textarea, Checkbox, SegmentedControl, PasswordInput, MoneyInput, QuantityInput, and PercentageInput. Preserve user-entered values after recoverable failures.
+Use `FormField` for labels, required indication, hint/error association, and backend validation. Available controls include Input, SearchInput, Select, Textarea, Checkbox, SegmentedControl, PasswordInput, MoneyInput, QuantityInput, and PercentageInput. The shared native Select reserves a dedicated chevron zone, keeps the full field clickable, and must retain its visible focus/invalid/disabled states. Use MoneyInput, QuantityInput, and PercentageInput whenever the unit is part of the meaning rather than hand-building affixes. Preserve user-entered values after recoverable failures.
 
 ### Cards
 
@@ -150,6 +156,20 @@ Use Alert for inline feedback, Toast for non-blocking completion feedback, Conne
 ### Values
 
 Use Money, Quantity, Percentage, and DateTime or the functions in `lib/formatters.ts`. Money is formatted as QAR with two decimals. Quantity removes unnecessary trailing zeros while keeping up to three meaningful decimal places.
+
+## Page audit conventions
+
+- Products, inventory, sales, categories, and reports share the same connected
+  filter hierarchy. Search is explicit, result context stays visible, and
+  paginated lists use the shared footer.
+- Desktop tables right-align money and quantities, keep actions at the edge,
+  and use a quiet row-hover state. Mobile cards use semantic Money/Quantity
+  formatters and allow identifiers to wrap instead of causing page overflow.
+- Inventory detail treats the current balance as the primary metric, separates
+  the low-stock alert into a titled section, and presents its immutable
+  movement ledger with formatted before/after quantities.
+- Settings exposes a sticky save state: the action is disabled when clean and
+  the footer clearly distinguishes saved from unsaved edits.
 
 ## Accessibility and motion
 

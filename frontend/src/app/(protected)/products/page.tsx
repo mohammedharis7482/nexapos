@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit3, FolderCog, Plus, Search } from "lucide-react";
+import { Edit3, FolderCog, Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -10,8 +10,8 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, MoneyDisplay, PageHeader } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { Input, Select } from "@/components/ui/input";
-import { FilterBar, TableFrame } from "@/components/ui/layout";
+import { SearchInput, Select } from "@/components/ui/input";
+import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { categoryService } from "@/services/category.service";
@@ -91,15 +91,15 @@ export default function ProductsPage() {
         }
       />
       {owner ? <Link href="/products/categories" className="text-sm font-semibold text-primary sm:hidden">Manage categories</Link> : null}
-      <FilterBar>
+      <FilterToolbar
+        result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> matching {count === 1 ? "product" : "products"}</>}
+        status={filters.search || filters.category || filters.unit || filters.is_active ? <Badge tone="primary">Filters applied</Badge> : null}
+      >
         <form
-          className="grid gap-3 md:grid-cols-[minmax(220px,1fr)_180px_150px_150px]"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_180px_150px_150px_auto]"
           onSubmit={(event) => { event.preventDefault(); updateFilter("search", searchDraft); }}
         >
-          <div className="relative">
-            <Search className="absolute left-3.5 top-3.5 size-5 text-text-muted" />
-            <Input className="pl-11" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Search name, SKU, or barcode" aria-label="Search products" />
-          </div>
+          <SearchInput value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Search name, SKU, or barcode" aria-label="Search products" />
           <Select aria-label="Category filter" value={filters.category ?? ""} onChange={(event) => updateFilter("category", event.target.value)}>
             <option value="">All categories</option>
             {categories.filter((category) => category.is_active).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
@@ -112,13 +112,10 @@ export default function ProductsPage() {
             <Select aria-label="Status filter" value={filters.is_active ?? ""} onChange={(event) => updateFilter("is_active", event.target.value)}>
               <option value="">All statuses</option><option value="true">Active</option><option value="false">Inactive</option>
             </Select>
-          ) : <Button type="submit" variant="secondary">Search</Button>}
+          ) : null}
+          <Button type="submit" variant="secondary" className="sm:col-span-2 xl:col-span-1">Search</Button>
         </form>
-        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-          <p className="text-xs font-medium text-text-muted">{count} matching {count === 1 ? "product" : "products"}</p>
-          {filters.search || filters.category || filters.unit || filters.is_active ? <Badge tone="primary">Filters applied</Badge> : null}
-        </div>
-      </FilterBar>
+      </FilterToolbar>
 
       {state === "loading" ? <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div> : null}
       {state === "error" ? <ErrorState title="Products unavailable" description={error ?? ""} onRetry={() => void loadProducts()} /> : null}
@@ -128,18 +125,18 @@ export default function ProductsPage() {
           <TableFrame>
             <table className="premium-table">
               <thead className="bg-surface-secondary text-xs uppercase tracking-wide text-text-muted">
-                <tr><th className="px-4 py-3">Product</th><th className="px-4 py-3">SKU / Barcode</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Unit</th><th className="px-4 py-3">Selling price</th><th className="px-4 py-3">Status</th>{owner ? <th className="px-4 py-3"><span className="sr-only">Actions</span></th> : null}</tr>
+                <tr><th className="px-4 py-3">Product</th><th className="px-4 py-3">SKU / Barcode</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Unit</th><th className="px-4 py-3 text-right">Selling price</th><th className="px-4 py-3">Status</th>{owner ? <th className="px-4 py-3 text-right"><span className="sr-only">Actions</span></th> : null}</tr>
               </thead>
               <tbody>
                 {products.map((product) => (
-                  <tr key={product.id} className="border-t border-border">
+                  <tr key={product.id} className="border-t border-border transition-colors hover:bg-surface-subtle">
                     <td className="px-4 py-4 font-semibold">{product.name}</td>
                     <td className="px-4 py-4 text-text-secondary"><span className="block">{product.sku}</span><span className="text-xs text-text-muted">{product.barcode ?? "No barcode"}</span></td>
                     <td className="px-4 py-4 text-text-secondary">{product.category?.name ?? "Uncategorized"}</td>
                     <td className="px-4 py-4 text-text-secondary">{product.unit}</td>
-                    <td className="px-4 py-4 font-semibold"><MoneyDisplay value={product.selling_price} /></td>
+                    <td className="px-4 py-4 text-right font-semibold"><MoneyDisplay value={product.selling_price} /></td>
                     <td className="px-4 py-4"><Badge tone={product.is_active ? "success" : "neutral"}>{product.is_active ? "Active" : "Inactive"}</Badge></td>
-                    {owner ? <td className="px-4 py-4"><IconButton aria-label={`Edit ${product.name}`} onClick={() => { setEditing(product); setDialogOpen(true); }}><Edit3 className="size-4" /></IconButton></td> : null}
+                    {owner ? <td className="px-4 py-4 text-right"><IconButton aria-label={`Edit ${product.name}`} onClick={() => { setEditing(product); setDialogOpen(true); }}><Edit3 className="size-4" /></IconButton></td> : null}
                   </tr>
                 ))}
               </tbody>
@@ -152,14 +149,11 @@ export default function ProductsPage() {
                   <div><h2 className="font-semibold">{product.name}</h2><p className="mt-1 text-sm text-text-muted">{product.category?.name ?? "Uncategorized"} · {product.unit}</p></div>
                   {owner ? <IconButton aria-label={`Edit ${product.name}`} onClick={() => { setEditing(product); setDialogOpen(true); }}><Edit3 className="size-4" /></IconButton> : null}
                 </div>
-                <div className="mt-4 flex items-end justify-between"><div className="text-xs text-text-muted"><p>{product.sku}</p><p>{product.barcode ?? "No barcode"}</p></div><div className="text-right"><p className="font-bold">QAR {product.selling_price}</p><Badge tone={product.is_active ? "success" : "neutral"}>{product.is_active ? "Active" : "Inactive"}</Badge></div></div>
+                <div className="mt-4 flex items-end justify-between gap-3"><div className="min-w-0 text-xs text-text-muted"><p className="break-words">{product.sku}</p><p className="break-words">{product.barcode ?? "No barcode"}</p></div><div className="shrink-0 text-right"><p className="font-bold"><MoneyDisplay value={product.selling_price} /></p><Badge tone={product.is_active ? "success" : "neutral"}>{product.is_active ? "Active" : "Inactive"}</Badge></div></div>
               </Card>
             ))}
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-text-muted">{count} products</p>
-            <div className="flex gap-2"><Button variant="secondary" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>Previous</Button><Button variant="secondary" disabled={!hasNext} onClick={() => setPage((value) => value + 1)}>Next</Button></div>
-          </div>
+          <Pagination count={count} noun="product" page={page} hasNext={hasNext} onPrevious={() => setPage((value) => value - 1)} onNext={() => setPage((value) => value + 1)} />
         </>
       ) : null}
       <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} product={editing} categories={categories} onSaved={() => { void loadProducts(); void loadCategories(); }} />

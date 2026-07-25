@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,58 @@ export function FilterBar({
       className={cn("p-3 sm:p-4", className)}
       {...props}
     />
+  );
+}
+
+export function FilterToolbar({
+  children,
+  result,
+  status,
+  className,
+}: {
+  children: ReactNode;
+  result?: ReactNode;
+  status?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={cn("overflow-hidden", className)} data-slot="filter-toolbar">
+      <div className="p-3 sm:p-4">{children}</div>
+      {result || status ? (
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-t border-border bg-surface-subtle px-4 py-2.5">
+          <div className="text-sm text-foreground-muted">{result}</div>
+          {status ? <div>{status}</div> : null}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+export function Pagination({
+  count,
+  noun,
+  page,
+  hasNext,
+  onPrevious,
+  onNext,
+  className,
+}: {
+  count: number;
+  noun: string;
+  page: number;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between", className)} aria-label={`${noun} pagination`}>
+      <p className="text-sm text-foreground-muted"><span className="font-semibold tabular-nums text-foreground">{count}</span> {count === 1 ? noun : `${noun}s`} · Page {page}</p>
+      <div className="grid grid-cols-2 gap-2 sm:flex">
+        <Button variant="secondary" disabled={page === 1} onClick={onPrevious}>Previous</Button>
+        <Button variant="secondary" disabled={!hasNext} onClick={onNext}>Next</Button>
+      </div>
+    </div>
   );
 }
 

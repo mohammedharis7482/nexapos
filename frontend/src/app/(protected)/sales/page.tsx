@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -8,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MoneyDisplay, PageHeader, PaymentBadge } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { Input, Select } from "@/components/ui/input";
-import { FilterBar, TableFrame } from "@/components/ui/layout";
+import { Input, SearchInput, Select } from "@/components/ui/input";
+import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { salesService } from "@/services/sales.service";
@@ -92,24 +91,20 @@ export default function SalesPage() {
         title="Sales"
         description={owner ? "Review completed sales across your shop." : "Review sales completed by your account."}
       />
-      <FilterBar>
+      <FilterToolbar result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> completed {count === 1 ? "sale" : "sales"}</>}>
         <form
-          className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_155px_155px_170px_190px]"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_155px_155px_170px_190px_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             updateFilter("search", searchDraft);
           }}
         >
-          <div className="relative">
-            <Search className="absolute left-3.5 top-3.5 size-5 text-text-muted" />
-            <Input
-              className="pl-11"
+          <SearchInput
               aria-label="Search sale number"
               placeholder="Search sale number"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-            />
-          </div>
+          />
           <Input aria-label="Date from" type="date" value={filters.date_from ?? ""} onChange={(event) => updateFilter("date_from", event.target.value)} />
           <Input aria-label="Date to" type="date" value={filters.date_to ?? ""} onChange={(event) => updateFilter("date_to", event.target.value)} />
           <Select aria-label="Payment method filter" value={filters.payment_method ?? ""} onChange={(event) => updateFilter("payment_method", event.target.value)}>
@@ -122,9 +117,10 @@ export default function SalesPage() {
               <option value="">All cashiers</option>
               {cashiers.map((cashier) => <option key={cashier.id} value={cashier.id}>{cashier.full_name}</option>)}
             </Select>
-          ) : <Button type="submit" variant="secondary">Search</Button>}
+          ) : null}
+          <Button type="submit" variant="secondary" className="sm:col-span-2 xl:col-span-1">Search</Button>
         </form>
-      </FilterBar>
+      </FilterToolbar>
 
       {state === "loading" ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : null}
       {state === "error" ? <ErrorState title="Sales unavailable" description={error ?? ""} onRetry={() => void load()} /> : null}
@@ -138,7 +134,7 @@ export default function SalesPage() {
               </thead>
               <tbody>
                 {sales.map((sale) => (
-                  <tr key={sale.id} className="border-t border-border">
+                  <tr key={sale.id} className="border-t border-border transition-colors hover:bg-surface-subtle">
                     <td className="px-4 py-4 font-semibold">{sale.sale_number}</td>
                     <td className="px-4 py-4 text-text-secondary">{formatDate(sale.completed_at)}</td>
                     <td className="px-4 py-4 text-text-secondary">{sale.cashier.full_name}</td>
@@ -156,7 +152,7 @@ export default function SalesPage() {
               <Link key={sale.id} href={`/sales/${sale.id}`} className="block">
                 <Card className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div><h2 className="font-semibold">{sale.sale_number}</h2><p className="mt-1 text-xs text-text-muted">{formatDate(sale.completed_at)}</p></div>
+                    <div className="min-w-0"><h2 className="break-all font-semibold">{sale.sale_number}</h2><p className="mt-1 text-xs text-text-muted">{formatDate(sale.completed_at)}</p></div>
                     <p className="font-bold"><MoneyDisplay value={sale.grand_total} /></p>
                   </div>
                   <div className="mt-4 flex items-center justify-between text-sm text-text-secondary">
@@ -167,10 +163,7 @@ export default function SalesPage() {
               </Link>
             ))}
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-text-muted">{count} completed sales</p>
-            <div className="flex gap-2"><Button variant="secondary" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>Previous</Button><Button variant="secondary" disabled={!hasNext} onClick={() => setPage((value) => value + 1)}>Next</Button></div>
-          </div>
+          <Pagination count={count} noun="completed sale" page={page} hasNext={hasNext} onPrevious={() => setPage((value) => value - 1)} onNext={() => setPage((value) => value + 1)} />
         </>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit3, Plus, Search } from "lucide-react";
+import { Edit3, Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -10,8 +10,8 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { Input } from "@/components/ui/input";
-import { FilterBar } from "@/components/ui/layout";
+import { SearchInput } from "@/components/ui/input";
+import { FilterToolbar } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { categoryService } from "@/services/category.service";
@@ -54,13 +54,12 @@ export default function CategoriesPage() {
         action={owner ? <Button leadingIcon={<Plus className="size-4" />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add category</Button> : undefined}
       />
       <Link href="/products" className="text-sm font-semibold text-primary">← Back to products</Link>
-      <FilterBar>
+      <FilterToolbar result={<><span className="font-semibold tabular-nums text-foreground">{categories.length}</span> {categories.length === 1 ? "category" : "categories"}</>}>
         <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); void load(search); }}>
-          <div className="relative flex-1"><Search className="absolute left-3.5 top-3.5 size-5 text-text-muted" /><Input className="pl-11" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search categories" aria-label="Search categories" /></div>
+          <div className="flex-1"><SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search categories" aria-label="Search categories" /></div>
           <Button type="submit" variant="secondary">Search</Button>
         </form>
-        <p className="mt-3 border-t border-border pt-3 text-xs font-medium text-text-muted">{categories.length} {categories.length === 1 ? "category" : "categories"}</p>
-      </FilterBar>
+      </FilterToolbar>
       {loading ? <div className="space-y-3"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
       {error ? <ErrorState title="Categories unavailable" description={error} onRetry={() => void load()} /> : null}
       {!loading && !error && categories.length === 0 ? <EmptyState title="No categories found" description={search ? "Try a different search." : "Add a category to organize products."} /> : null}

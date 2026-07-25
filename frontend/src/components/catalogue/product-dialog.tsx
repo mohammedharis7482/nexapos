@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
-import { FormField, Input, Select, Textarea } from "@/components/ui/input";
+import { Checkbox, FormField, Input, MoneyInput, PercentageInput, Select, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -162,10 +162,10 @@ export function ProductDialog({
           <legend className="px-1 text-sm font-bold text-text-primary">Pricing</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Purchase price" htmlFor="purchase-price" error={errors.purchase_price?.message}>
-            <Input id="purchase-price" inputMode="decimal" invalid={Boolean(errors.purchase_price)} {...register("purchase_price")} />
+            <MoneyInput id="purchase-price" invalid={Boolean(errors.purchase_price)} {...register("purchase_price")} />
           </FormField>
           <FormField label="Selling price" htmlFor="selling-price" error={errors.selling_price?.message}>
-            <Input id="selling-price" inputMode="decimal" invalid={Boolean(errors.selling_price)} {...register("selling_price")} />
+            <MoneyInput id="selling-price" invalid={Boolean(errors.selling_price)} {...register("selling_price")} />
           </FormField>
         </div>
         </fieldset>
@@ -173,20 +173,14 @@ export function ProductDialog({
           <legend className="px-1 text-sm font-bold text-text-primary">Tax configuration</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Tax rate %" htmlFor="tax-rate" error={errors.tax_rate?.message}>
-              <Input id="tax-rate" inputMode="decimal" invalid={Boolean(errors.tax_rate)} {...register("tax_rate")} />
+              <PercentageInput id="tax-rate" invalid={Boolean(errors.tax_rate)} {...register("tax_rate")} />
             </FormField>
-          <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
-            <input type="checkbox" className="size-4 accent-primary" {...register("is_tax_inclusive")} />
-            Price includes tax
-          </label>
+          <Checkbox label="Price includes tax" {...register("is_tax_inclusive")} />
           </div>
         </fieldset>
         <fieldset className="space-y-3 rounded-xl border border-border bg-surface-secondary/50 p-4">
           <legend className="px-1 text-sm font-bold text-text-primary">Availability</legend>
-          <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
-            <input type="checkbox" className="size-4 accent-primary" {...register("is_active")} />
-            Active product
-          </label>
+          <Checkbox label="Active product" {...register("is_active")} />
         </fieldset>
         <div className="sticky bottom-0 flex justify-end gap-3 border-t border-border bg-surface pt-4">
           <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>

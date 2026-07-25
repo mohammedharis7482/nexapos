@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Search } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Search } from "lucide-react";
 import {
   cloneElement,
   forwardRef,
@@ -42,16 +42,21 @@ export const Select = forwardRef<
   HTMLSelectElement,
   SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }
 >(({ className, invalid, ...props }, ref) => (
-  <select
-    ref={ref}
-    aria-invalid={invalid || undefined}
-    className={cn(
-      "min-h-[var(--control-height)] w-full rounded-[var(--radius-control)] border bg-surface px-3.5 py-2.5 text-base text-text-primary outline-none transition-colors focus:border-primary focus:ring-4 focus:ring-[var(--focus-ring)] disabled:bg-surface-secondary disabled:text-disabled",
-      invalid ? "border-danger" : "border-input-border",
-      className,
-    )}
-    {...props}
-  />
+  <span className="relative block min-w-0 w-full" data-slot="select-control">
+    <select
+      ref={ref}
+      aria-invalid={invalid || undefined}
+      className={cn(
+        "min-h-[var(--control-md)] w-full cursor-pointer appearance-none truncate rounded-[var(--radius-control)] border bg-surface py-2 pl-3.5 pr-11 text-[15px] text-foreground shadow-[var(--shadow-xs)] outline-none transition-colors hover:border-border-strong focus:border-border-focus focus:ring-4 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-muted disabled:text-foreground-disabled",
+        invalid ? "border-danger focus:border-danger focus:ring-danger-border" : "border-input-border",
+        className,
+      )}
+      {...props}
+    />
+    <span className="pointer-events-none absolute inset-y-px right-px grid w-10 place-items-center rounded-r-[var(--radius-control)] text-foreground-muted" data-slot="select-indicator" aria-hidden="true">
+      <ChevronDown className="size-4" />
+    </span>
+  </span>
 ));
 Select.displayName = "Select";
 

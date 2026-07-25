@@ -35,19 +35,24 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 - At 360, 390, 430, 768, 1024, 1280, and 1440px verify the one-column narrow
   phone/two-column 430px metric grid, chart labels/tooltips, table-to-card transition, readable QAR
   values, bottom-navigation clearance, and absence of horizontal overflow.
-- Products/categories: search, filters, desktop table, mobile cards, grouped
-  forms, validation, saving, and inactive states.
+- Products/categories: search, filters, connected result footer, desktop table,
+  mobile cards, grouped forms, validation, saving, and inactive states. Confirm
+  select labels never sit beneath the chevron and long SKU/barcode values wrap.
 - Inventory: all four statuses, detail, opening stock, adjustment direction,
-  expected balance, errors, and movement history.
+  expected balance, errors, and movement history. Confirm threshold and ledger
+  quantities show their unit, long references wrap, and movement pagination
+  stays usable at 360px.
 - Billing: initial search focus, exact barcode Enter, repeated item, weighted
   quantity, inline removal confirmation, draft cancellation confirmation,
   empty cart, payment modes, failure preservation, and success actions.
-- Sales: filters, pagination, desktop rows, mobile cards, read-only detail,
-  receipt route, and not-found/error handling.
+- Sales: filters, connected result/pagination surfaces, desktop rows, mobile
+  cards, full wrapping sale numbers, read-only detail, receipt route, and
+  not-found/error handling.
 - Reports: all tabs, shared filters, empty range, refresh, links, and chart
   overflow.
-- Settings: OWNER editing, CASHIER read-only state, grouped fields, validation,
-  success, and backend errors.
+- Settings: OWNER editing, CASHIER read-only state, grouped fields, percentage
+  affix, disabled clean save state, unsaved indicator, validation, success, and
+  backend errors.
 
 ## Accessibility and presentation
 

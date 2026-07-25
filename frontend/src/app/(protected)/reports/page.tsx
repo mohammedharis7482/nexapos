@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
-import { FilterBar } from "@/components/ui/layout";
+import { FilterToolbar } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { categoryService } from "@/services/category.service";
 import { reportsService } from "@/services/reports.service";
@@ -57,7 +57,7 @@ function SummaryCard({ label, value, detail }: { label: string; value: string; d
 function SalesReportView({ data }: { data: ReportsData }) {
   const max = Math.max(...data.sales.daily.map((row) => Number(row.sales_total)), 0);
   return <div className="space-y-5">
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <SummaryCard label="Gross sales" value={qar(data.sales.gross_sales)} />
       <SummaryCard label="Completed bills" value={String(data.sales.completed_sales_count)} />
       <SummaryCard label="Average bill" value={qar(data.sales.average_sale_value)} />
@@ -76,7 +76,7 @@ function ProductsReportView({ data }: { data: ReportsData }) {
 
 function InventoryReportView({ data }: { data: ReportsData }) {
   const report = data.inventory;
-  return <div className="space-y-5"><div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6"><SummaryCard label="Active products" value={String(report.active_products)} /><SummaryCard label="Quantity on hand" value={report.quantity_on_hand} /><SummaryCard label="In stock" value={String(report.in_stock)} /><SummaryCard label="Low stock" value={String(report.low_stock)} /><SummaryCard label="Out of stock" value={String(report.out_of_stock)} /><SummaryCard label="Not initialized" value={String(report.not_initialized)} /></div>{report.items.length ? <Card className="overflow-hidden"><div className="divide-y divide-border">{report.items.map((row) => <Link key={row.product_id} href={`/inventory/${row.product_id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-surface-secondary"><div className="min-w-0"><p className="truncate font-semibold">{row.product_name}</p><p className="text-xs text-text-muted">{row.sku} · {row.category ?? "Uncategorized"}</p></div><div className="text-right"><Badge tone={row.stock_status === "IN_STOCK" ? "success" : row.stock_status === "LOW_STOCK" ? "warning" : "danger"}>{row.stock_status.replaceAll("_", " ")}</Badge><p className="mt-1 text-xs">{row.quantity_on_hand ?? "Not set"}</p></div></Link>)}</div></Card> : <EmptyState title="No inventory rows" description="No active products match this category." />}</div>;
+  return <div className="space-y-5"><div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"><SummaryCard label="Active products" value={String(report.active_products)} /><SummaryCard label="Quantity on hand" value={report.quantity_on_hand} /><SummaryCard label="In stock" value={String(report.in_stock)} /><SummaryCard label="Low stock" value={String(report.low_stock)} /><SummaryCard label="Out of stock" value={String(report.out_of_stock)} /><SummaryCard label="Not initialized" value={String(report.not_initialized)} /></div>{report.items.length ? <Card className="overflow-hidden"><div className="divide-y divide-border">{report.items.map((row) => <Link key={row.product_id} href={`/inventory/${row.product_id}`} className="flex items-center justify-between gap-4 p-4 hover:bg-surface-secondary"><div className="min-w-0"><p className="break-words font-semibold">{row.product_name}</p><p className="break-words text-xs text-text-muted">{row.sku} · {row.category ?? "Uncategorized"}</p></div><div className="shrink-0 text-right"><Badge tone={row.stock_status === "IN_STOCK" ? "success" : row.stock_status === "LOW_STOCK" ? "warning" : "danger"}>{row.stock_status.replaceAll("_", " ")}</Badge><p className="mt-1 text-xs">{row.quantity_on_hand ?? "Not set"}</p></div></Link>)}</div></Card> : <EmptyState title="No inventory rows" description="No active products match this category." />}</div>;
 }
 
 function PaymentsReportView({ data }: { data: ReportsData }) {
@@ -115,7 +115,7 @@ export default function ReportsPage() {
 
   return <div className="page-stack">
     <PageHeader eyebrow="Analytics" title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
-    <FilterBar>
+    <FilterToolbar>
       <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Report date presets">
         <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Period</span>
         {[["Today", 1], ["7 days", 7], ["30 days", 30]].map(([label, days]) => (
@@ -128,8 +128,11 @@ export default function ReportsPage() {
       <Select aria-label="Report cashier" value={draftFilters.cashier ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, cashier: event.target.value }))}><option value="">All cashiers</option>{cashiers.map((cashier) => <option key={cashier.id} value={cashier.id}>{cashier.full_name}</option>)}</Select>
       <Select aria-label="Report category" value={draftFilters.category ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, category: event.target.value }))}><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select>
       <Select aria-label="Report payment method" value={draftFilters.payment_method ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, payment_method: event.target.value as ReportFilters["payment_method"] }))}><option value="">All payments</option><option value="CASH">Cash</option><option value="CARD">Card</option></Select>
-      <Button type="submit">Apply filters</Button>
-    </form></FilterBar>
+      <div className="grid grid-cols-2 gap-2 md:col-span-2 xl:col-span-1">
+        <Button type="button" variant="ghost" onClick={() => { const reset = defaultReportFilters(); setDraftFilters(reset); setFilters(reset); }}>Reset</Button>
+            <Button type="submit">Apply filters</Button>
+      </div>
+    </form></FilterToolbar>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" role="tablist" aria-label="Report type">{tabs.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-16 rounded-xl border px-3 text-sm font-semibold shadow-[var(--shadow-sm)] transition-colors ${tab === id ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:border-border-strong hover:bg-surface-secondary"}`}><Icon className="mx-auto mb-1 size-4" />{label}</button>)}</div>
     {loading && !data ? <div aria-label="Loading reports" className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-72" /></div> : null}
     {error && !data ? <ErrorState title="Reports unavailable" description={error} onRetry={() => void load()} /> : null}

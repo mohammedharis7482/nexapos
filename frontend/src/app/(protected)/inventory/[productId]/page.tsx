@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, MetricCard, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { FormField, Input } from "@/components/ui/input";
+import { FormField, QuantityInput } from "@/components/ui/input";
+import { Pagination, SectionCard } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { inventoryService } from "@/services/inventory.service";
@@ -138,16 +139,19 @@ export default function InventoryDetailPage() {
             <div className="mt-3"><Badge tone={item.product.is_active ? "success" : "neutral"}>{item.product.is_active ? "Active" : "Inactive"}</Badge></div>
         </Card>
       </div>
-      <Card className="p-5">
-        {owner && item.is_initialized ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      {owner && item.is_initialized ? (
+        <SectionCard
+          title="Stock alert"
+          description="Set the quantity at which this product is marked as low stock."
+        >
+          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:p-5">
             <FormField label="Low-stock threshold" htmlFor="detail-threshold">
-              <Input id="detail-threshold" className="sm:w-48" inputMode="decimal" value={threshold} onChange={(event) => setThreshold(event.target.value)} />
+              <QuantityInput id="detail-threshold" className="sm:w-56" unit={item.product.unit} value={threshold} onChange={(event) => setThreshold(event.target.value)} />
             </FormField>
-            <Button variant="secondary" loading={thresholdSaving} onClick={() => void saveThreshold()}>Update threshold</Button>
+            <Button className="w-full sm:w-auto" variant="secondary" loading={thresholdSaving} onClick={() => void saveThreshold()}>Update threshold</Button>
           </div>
-        ) : null}
-      </Card>
+        </SectionCard>
+      ) : null}
 
       <section className="space-y-3">
         <div>
@@ -161,21 +165,21 @@ export default function InventoryDetailPage() {
             {movements.map((movement) => {
               const positive = Number(movement.quantity_delta) >= 0;
               return (
-                <article key={movement.id} className="p-4 sm:p-5">
+                <article key={movement.id} className="p-4 transition-colors hover:bg-surface-subtle sm:p-5">
                   <div className="flex flex-col justify-between gap-3 sm:flex-row">
                     <div>
                       <p className="font-semibold">{movementLabel(movement.movement_type)}</p>
                       <p className="mt-1 text-xs text-text-muted">{formatDate(movement.created_at)} · {movement.created_by.full_name}</p>
                     </div>
-                    <p className={`font-bold ${positive ? "text-success" : "text-danger"}`}>
-                      {positive ? "+" : ""}{movement.quantity_delta} {item.product.unit}
+                    <p className={`whitespace-nowrap font-bold tabular-nums ${positive ? "text-success" : "text-danger"}`}>
+                      {positive ? "+" : ""}<QuantityDisplay value={movement.quantity_delta} unit={item.product.unit} />
                       <span className="sr-only">{positive ? " increase" : " decrease"}</span>
                     </p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-text-secondary">
-                    <span>Before: {movement.quantity_before}</span>
-                    <span>After: {movement.quantity_after}</span>
-                    {movement.reference ? <span>Reference: {movement.reference}</span> : null}
+                    <span>Before: <QuantityDisplay value={movement.quantity_before} unit={item.product.unit} /></span>
+                    <span>After: <QuantityDisplay value={movement.quantity_after} unit={item.product.unit} /></span>
+                    {movement.reference ? <span className="min-w-0 break-words" title={movement.reference}>Reference: {movement.reference}</span> : null}
                   </div>
                   {movement.reason ? <p className="mt-2 text-sm text-text-muted">{movement.reason}</p> : null}
                 </article>
@@ -184,10 +188,7 @@ export default function InventoryDetailPage() {
           </Card>
         )}
         {movementCount > 0 ? (
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" disabled={movementPage === 1} onClick={() => setMovementPage((page) => page - 1)}>Previous</Button>
-            <Button variant="secondary" disabled={!hasNextMovements} onClick={() => setMovementPage((page) => page + 1)}>Next</Button>
-          </div>
+          <Pagination count={movementCount} noun="movement" page={movementPage} hasNext={hasNextMovements} onPrevious={() => setMovementPage((page) => page - 1)} onNext={() => setMovementPage((page) => page + 1)} />
         ) : null}
       </section>
 

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
 import { Alert, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { FormField, Input, Textarea } from "@/components/ui/input";
+import { FormField, Input, PercentageInput, Textarea } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import {
@@ -32,7 +32,7 @@ export default function SettingsPage() {
     reset,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ShopSettingsFormValues>({
     resolver: zodResolver(shopSettingsSchema),
   });
@@ -150,7 +150,7 @@ export default function SettingsPage() {
               <Input id="shop-trn" disabled={disabled} {...register("tax_registration_number")} />
             </FormField>
             <FormField label="Default tax rate %" htmlFor="default-tax" error={errors.default_tax_rate?.message}>
-              <Input id="default-tax" inputMode="decimal" disabled={disabled} {...register("default_tax_rate")} />
+              <PercentageInput id="default-tax" disabled={disabled} {...register("default_tax_rate")} />
             </FormField>
           </div>
           </section>
@@ -164,8 +164,9 @@ export default function SettingsPage() {
           </FormField>
           </section>
           {!disabled ? (
-            <div className="sticky bottom-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom))] -mx-5 flex justify-end border-t border-border bg-surface/95 px-5 pt-4 backdrop-blur-sm sm:-mx-7 sm:px-7 lg:bottom-0">
-              <Button type="submit" loading={isSubmitting} leadingIcon={<Save className="size-4" />}>Save settings</Button>
+            <div className="sticky bottom-[calc(var(--mobile-nav-height)+env(safe-area-inset-bottom))] -mx-5 flex items-center justify-between gap-3 border-t border-border bg-surface/95 px-5 pt-4 backdrop-blur-sm sm:-mx-7 sm:px-7 lg:bottom-0">
+              <p className="text-sm text-text-muted">{isDirty ? "Unsaved changes" : "All changes saved"}</p>
+              <Button type="submit" disabled={!isDirty} loading={isSubmitting} leadingIcon={<Save className="size-4" />}>Save settings</Button>
             </div>
           ) : null}
         </form>

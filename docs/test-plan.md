@@ -138,6 +138,11 @@ flows. Existing page and service suites continue to protect authentication,
 dashboard, catalogue, inventory, billing, payment, sales, receipt, reports, and
 settings behaviour.
 
+Page-audit regression additionally covers the shared native Select indicator
+and change behavior, connected filter result/status context, shared pagination
+counts and callbacks, exact report filter submission, formatted monetary and
+quantity values, and the existing responsive desktop/mobile data structures.
+
 Manual UI checks use [manual-testing.md](manual-testing.md) across 360–1440px,
 keyboard navigation, reduced motion, mobile safe areas, dialogs, operational
 states, browser console output, and both 80mm and A4 receipt print preview.
