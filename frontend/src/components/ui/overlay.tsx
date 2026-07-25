@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  cloneElement,
   useEffect,
   useId,
   useRef,
@@ -16,16 +17,18 @@ export function DropdownMenu({
   trigger,
   children,
   align = "right",
+  label = "Open menu",
 }: {
   trigger: ReactElement<{ onClick?: () => void; "aria-expanded"?: boolean }>;
   children: ReactNode;
   align?: "left" | "right";
+  label?: string;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
   return (
     <details ref={detailsRef} className="group relative">
-      <summary className="list-none [&::-webkit-details-marker]:hidden">
+      <summary aria-label={label} className="list-none rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)] [&::-webkit-details-marker]:hidden">
         {trigger}
       </summary>
       <div
@@ -91,6 +94,7 @@ export function Dialog({
   title,
   description,
   children,
+  footer,
   size = "default",
 }: {
   open: boolean;
@@ -98,6 +102,7 @@ export function Dialog({
   title: string;
   description?: string;
   children: ReactNode;
+  footer?: ReactNode;
   size?: "default" | "large";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -138,9 +143,43 @@ export function Dialog({
           <X className="size-5" />
         </IconButton>
       </header>
-      <div className="max-h-[calc(100dvh-7rem)] overflow-y-auto p-4 sm:p-5">{children}</div>
+      <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto p-4 sm:p-5">{children}</div>
+      {footer ? <footer className="flex flex-wrap justify-end gap-2 border-t border-border bg-surface px-4 py-3 sm:px-5">{footer}</footer> : null}
     </dialog>
   );
+}
+
+export const Drawer = Sheet;
+export const AlertDialog = ConfirmDialog;
+
+export function Tooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactElement<{ "aria-describedby"?: string }>;
+}) {
+  const id = useId();
+  return (
+    <span className="group relative inline-flex">
+      {cloneElement(children, { "aria-describedby": id })}
+      <span id={id} role="tooltip" className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-50 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs text-foreground-inverse shadow-[var(--shadow-sm)] group-hover:block group-focus-within:block">
+        {label}
+      </span>
+    </span>
+  );
+}
+
+export function Popover({
+  trigger,
+  children,
+  align = "left",
+}: {
+  trigger: ReactElement<{ onClick?: () => void; "aria-expanded"?: boolean }>;
+  children: ReactNode;
+  align?: "left" | "right";
+}) {
+  return <DropdownMenu trigger={trigger} align={align} label="Open popover">{children}</DropdownMenu>;
 }
 
 export function ConfirmDialog({
@@ -182,7 +221,7 @@ export function ConfirmDialog({
           disabled={loading}
           aria-busy={loading}
           onClick={onConfirm}
-          className="min-h-11 rounded-[var(--radius-control)] border border-danger bg-danger px-4 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50"
+          className="min-h-11 rounded-[var(--radius-control)] border border-danger bg-danger px-4 text-sm font-semibold text-white hover:bg-danger-hover disabled:opacity-50"
         >
           {loading ? "Working…" : confirmLabel}
         </button>

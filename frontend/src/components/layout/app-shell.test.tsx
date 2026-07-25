@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthenticatedUser } from "@/types/auth";
@@ -48,7 +48,14 @@ describe("premium application shell", () => {
     expect(within(desktop).getByRole("link", { name: "Reports" })).toBeInTheDocument();
     expect(screen.getByText("Network online")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "New Bill" }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toBeInTheDocument();
+    const mobile = screen.getByRole("navigation", { name: "Mobile navigation" });
+    expect(within(mobile).getByRole("link", { name: "Inventory" })).toBeInTheDocument();
+    expect(screen.getByTestId("desktop-sidebar")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-navigation")).toBeInTheDocument();
+    expect(screen.getByLabelText("Open user menu")).toBeInTheDocument();
+    expect(within(desktop).getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
+    fireEvent.click(screen.getByRole("button", { name: "Open account menu" }));
+    expect(screen.getByRole("dialog", { name: "Account" })).toBeInTheDocument();
   });
 
   it("keeps owner-only destinations out of the cashier workspace", () => {
@@ -57,5 +64,8 @@ describe("premium application shell", () => {
     const desktop = screen.getByRole("navigation", { name: "Primary navigation" });
     expect(within(desktop).queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
     expect(within(desktop).getByRole("link", { name: "New Bill" })).toBeInTheDocument();
+    const mobile = screen.getByRole("navigation", { name: "Mobile navigation" });
+    expect(within(mobile).queryByRole("link", { name: "Inventory" })).not.toBeInTheDocument();
+    expect(within(mobile).getByRole("link", { name: "Sales" })).toBeInTheDocument();
   });
 });

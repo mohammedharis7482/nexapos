@@ -1,81 +1,205 @@
 @import "tailwindcss";
 
 :root {
-  --app-background: #f5f7fb;
+  /* NexaPOS brand */
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+
+  /* Semantic surfaces and foreground */
+  --background: #f5f7fa;
   --surface: #ffffff;
-  --surface-secondary: #f8fafd;
+  --surface-subtle: #fafbfc;
+  --surface-muted: #f1f4f8;
   --surface-elevated: #ffffff;
-  --brand-navy: #12233f;
-  --text-primary: #172033;
-  --text-secondary: #526079;
-  --text-muted: #778399;
-  --border: #e5e9f0;
+  --surface-hover: #f7f9fc;
+  --surface-active: #eef4ff;
+  --foreground: #172033;
+  --foreground-secondary: #4f5d73;
+  --foreground-muted: #738096;
+  --foreground-disabled: #9ca6b6;
+  --foreground-inverse: #ffffff;
+
+  /* Borders */
+  --border-subtle: #edf0f4;
+  --border-default: #e2e7ee;
   --border-strong: #d3dae5;
-  --input-border: #c8d0dc;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-active: #1e40af;
-  --primary-soft: #edf4ff;
-  --focus-ring: rgb(37 99 235 / 22%);
-  --success: #16805d;
-  --success-soft: #edf9f4;
-  --warning: #b26108;
-  --warning-soft: #fff7e8;
-  --danger: #cf3346;
-  --danger-soft: #fff1f3;
+  --border-focus: var(--brand-600);
+
+  /* Semantic feedback */
+  --success: #167657;
+  --success-hover: #115f47;
+  --success-active: #0d4d3a;
+  --success-background: #edf8f3;
+  --success-border: #b9e5d2;
+  --warning: #a85c08;
+  --warning-background: #fff7e8;
+  --warning-border: #f4d39b;
+  --danger: #c93446;
+  --danger-hover: #b42335;
+  --danger-active: #951d2c;
+  --danger-background: #fff1f3;
+  --danger-border: #f2bbc3;
   --info: #2563eb;
-  --info-soft: #edf4ff;
-  --disabled: #9aa4b5;
-  --low-stock: #b26108;
-  --out-of-stock: #cf3346;
+  --info-background: #eff6ff;
+  --info-border: #bfdbfe;
+
+  /* Retail status semantics */
+  --stock-in: #167657;
+  --stock-low: #a85c08;
+  --stock-out: #c93446;
+  --stock-uninitialized: #64748b;
+  --sale-completed: #167657;
+  --sale-draft: #2563eb;
+  --sale-cancelled: #64748b;
+  --payment-cash: #167657;
+  --payment-card: #2563eb;
+
+  /* Focus and selection */
+  --focus-ring: rgb(37 99 235 / 24%);
+  --selection-background: #dbeafe;
+
+  /* Spacing rhythm */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Shape and elevation */
   --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 0.875rem;
+  --radius-full: 9999px;
   --radius-control: var(--radius-md);
-  --radius-card: var(--radius-xl);
-  --radius-dialog: 1.125rem;
-  --shadow-sm: 0 1px 2px rgb(18 35 63 / 4%);
-  --shadow-card: 0 1px 2px rgb(18 35 63 / 4%), 0 4px 14px rgb(18 35 63 / 2%);
-  --shadow-elevated: 0 18px 48px rgb(18 35 63 / 15%);
-  --content-max: 90rem;
-  --sidebar-width: 12rem;
+  --radius-card: var(--radius-lg);
+  --radius-dialog: var(--radius-xl);
+  --shadow-xs: 0 1px 2px rgb(15 23 42 / 4%);
+  --shadow-sm: 0 1px 3px rgb(15 23 42 / 6%), 0 1px 2px rgb(15 23 42 / 4%);
+  --shadow-md: 0 14px 36px rgb(15 23 42 / 12%);
+
+  /* Control and shell dimensions */
+  --control-sm: 2.25rem;
+  --control-md: 2.75rem;
+  --control-lg: 3rem;
+  --icon-button-sm: 2.25rem;
+  --icon-button-md: 2.75rem;
+  --icon-button-lg: 3rem;
+  --content-max: 88rem;
+  --content-readable: 56rem;
+  --content-wide: 100rem;
+  --sidebar-width: 12.5rem;
   --header-height: 3.75rem;
-  --mobile-nav-height: 4.25rem;
-  --control-height: 2.625rem;
-  --content-padding: clamp(1rem, 2.2vw, 2rem);
-  --card-padding: clamp(1rem, 1.6vw, 1.375rem);
+  --mobile-nav-height: 4.5rem;
+  --control-height: var(--control-md);
+  --content-padding: clamp(1rem, 2vw, 2rem);
+  --card-padding: 1.25rem;
   --table-row-height: 3.5rem;
-  --transition-fast: 160ms;
+  --navigation-item-height: 2.625rem;
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-default: 180ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* V1 compatibility aliases — migrate consumers to semantic V2 names. */
+  --app-background: var(--background);
+  --surface-secondary: var(--surface-subtle);
+  --brand-navy: var(--foreground);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--foreground-secondary);
+  --text-muted: var(--foreground-muted);
+  --border: var(--border-default);
+  --input-border: var(--border-strong);
+  --primary: var(--brand-600);
+  --primary-hover: var(--brand-700);
+  --primary-active: var(--brand-800);
+  --primary-soft: var(--brand-50);
+  --success-soft: var(--success-background);
+  --warning-soft: var(--warning-background);
+  --danger-soft: var(--danger-background);
+  --info-soft: var(--info-background);
+  --disabled: var(--foreground-disabled);
+  --low-stock: var(--stock-low);
+  --out-of-stock: var(--stock-out);
+  --shadow-card: var(--shadow-xs);
+  --shadow-elevated: var(--shadow-md);
+  --transition-fast: var(--duration-default);
 }
 
 @theme inline {
-  --color-background: var(--app-background);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-background: var(--background);
   --color-surface: var(--surface);
-  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-secondary: var(--surface-subtle);
   --color-surface-elevated: var(--surface-elevated);
-  --color-brand-navy: var(--brand-navy);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
-  --color-border: var(--border);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-disabled: var(--foreground-disabled);
+  --color-foreground-inverse: var(--foreground-inverse);
+  --color-brand-navy: var(--foreground);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--foreground-secondary);
+  --color-text-muted: var(--foreground-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border: var(--border-default);
   --color-border-strong: var(--border-strong);
-  --color-input-border: var(--input-border);
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-active: var(--primary-active);
-  --color-primary-soft: var(--primary-soft);
+  --color-border-focus: var(--border-focus);
+  --color-input-border: var(--border-strong);
+  --color-primary: var(--brand-600);
+  --color-primary-hover: var(--brand-700);
+  --color-primary-active: var(--brand-800);
+  --color-primary-soft: var(--brand-50);
   --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
+  --color-success-hover: var(--success-hover);
+  --color-success-active: var(--success-active);
+  --color-success-soft: var(--success-background);
+  --color-success-border: var(--success-border);
   --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft: var(--warning-background);
+  --color-warning-border: var(--warning-border);
   --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-active: var(--danger-active);
+  --color-danger-soft: var(--danger-background);
+  --color-danger-border: var(--danger-border);
   --color-info: var(--info);
-  --color-info-soft: var(--info-soft);
-  --color-disabled: var(--disabled);
-  --color-low-stock: var(--low-stock);
-  --color-out-of-stock: var(--out-of-stock);
+  --color-info-soft: var(--info-background);
+  --color-info-border: var(--info-border);
+  --color-disabled: var(--foreground-disabled);
+  --color-low-stock: var(--stock-low);
+  --color-out-of-stock: var(--stock-out);
+  --color-stock-in: var(--stock-in);
+  --color-stock-uninitialized: var(--stock-uninitialized);
+  --color-payment-cash: var(--payment-cash);
+  --color-payment-card: var(--payment-card);
   --font-sans: var(--font-inter);
 }
 
@@ -85,15 +209,15 @@
 
 html {
   min-width: 320px;
-  background: var(--app-background);
+  background: var(--background);
   scroll-padding-top: calc(var(--header-height) + 1rem);
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--app-background);
-  color: var(--text-primary);
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--font-inter), Arial, sans-serif;
   font-size: 15px;
   line-height: 1.5;
@@ -108,8 +232,8 @@ textarea {
 }
 
 ::selection {
-  background: #cfe0ff;
-  color: var(--text-primary);
+  background: var(--selection-background);
+  color: var(--foreground);
 }
 
 :focus-visible {
@@ -132,7 +256,8 @@ summary {
 
 button,
 a {
-  transition-duration: var(--transition-fast);
+  transition-duration: var(--duration-default);
+  transition-timing-function: var(--ease-standard);
 }
 
 .tabular-nums {
@@ -145,6 +270,16 @@ a {
   gap: 1.5rem;
   padding-bottom: 1rem;
 }
+
+.type-display { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.04em; }
+.type-page-title { font-size: clamp(1.625rem, 2vw, 1.875rem); font-weight: 700; line-height: 1.2; letter-spacing: -0.025em; }
+.type-section-title { font-size: 1rem; font-weight: 650; line-height: 1.4; letter-spacing: -0.01em; }
+.type-body-lg { font-size: 1rem; line-height: 1.65; }
+.type-body { font-size: 0.9375rem; line-height: 1.55; }
+.type-body-sm { font-size: 0.8125rem; line-height: 1.5; }
+.type-caption { font-size: 0.75rem; line-height: 1.45; }
+.type-eyebrow { font-size: 0.6875rem; font-weight: 700; line-height: 1.4; letter-spacing: 0.12em; text-transform: uppercase; }
+.type-numeric { font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
 
 .data-table th,
 .page-stack table th {

@@ -30,23 +30,23 @@ function subscribeToNetwork(callback: () => void) {
   };
 }
 
-function Brand({ compact = false }: { compact?: boolean }) {
+export function NexaPOSBrand({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/dashboard" className="flex min-h-10 items-center gap-2.5 rounded-xl">
-      <span className="grid size-9 place-items-center rounded-[10px] bg-primary text-white shadow-sm">
+    <Link href="/dashboard" className="flex min-h-11 items-center gap-2.5 rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]">
+      <span className="grid size-9 place-items-center rounded-[var(--radius-md)] bg-primary text-white shadow-[var(--shadow-xs)]">
         <ShoppingCart className="size-[1.1rem]" aria-hidden="true" />
       </span>
       {!compact ? (
         <span>
-          <span className="block text-[15px] font-extrabold tracking-[-0.025em]">NexaPOS</span>
-          <span className="block text-[10px] font-medium text-text-muted">Grocery operations</span>
+          <span className="block text-[15px] font-bold tracking-[-0.025em]">NexaPOS</span>
+          <span className="block text-[11px] font-medium text-foreground-muted">Grocery operations</span>
         </span>
       ) : null}
     </Link>
   );
 }
 
-function NavigationLink({
+export function NavItem({
   item,
   active,
   onNavigate,
@@ -62,15 +62,47 @@ function NavigationLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex min-h-10 items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-semibold transition-colors",
+        "relative flex min-h-[var(--navigation-item-height)] items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]",
         active
-          ? "bg-primary-soft text-primary before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
-          : "text-text-secondary hover:bg-surface-secondary hover:text-text-primary",
-        item.prominent && !active && "border border-blue-200 bg-primary-soft/60 text-primary",
+          ? "bg-surface-active text-primary before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-primary"
+          : "text-foreground-secondary hover:bg-surface-hover hover:text-foreground",
+        item.prominent && !active && "border border-brand-200 bg-primary-soft/60 text-primary",
       )}
     >
       <Icon className="size-[1.1rem] shrink-0" aria-hidden="true" />
       {item.label}
+    </Link>
+  );
+}
+
+export function NavSection({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="mb-2 px-3 type-eyebrow text-foreground-muted">{label}</p>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+export function MobileNavItem({
+  item,
+  active,
+}: {
+  item: (typeof navigationItems)[number];
+  active: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]",
+        active ? "bg-primary-soft text-primary after:absolute after:bottom-1 after:h-0.5 after:w-5 after:rounded-full after:bg-primary" : "text-foreground-muted",
+      )}
+    >
+      <Icon className="size-5" aria-hidden="true" />
+      {item.shortLabel ?? item.label}
     </Link>
   );
 }
@@ -81,6 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, isLoggingOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const networkOnline = useSyncExternalStore(
     subscribeToNetwork,
@@ -101,9 +134,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
   if (!user) return null;
 
-  const mobilePrimary = items.filter((item) =>
-    ["/dashboard", "/billing", "/products", "/sales"].includes(item.href),
-  );
+  const mobileHrefs = user.role === "OWNER"
+    ? ["/dashboard", "/billing", "/products", "/inventory"]
+    : ["/dashboard", "/billing", "/products", "/sales"];
+  const mobilePrimary = items.filter((item) => mobileHrefs.includes(item.href));
   const moreItems = items.filter(
     (item) => !mobilePrimary.some((primary) => primary.href === item.href),
   );
@@ -118,26 +152,28 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-width)] border-r border-border bg-surface px-3 py-4 lg:flex lg:flex-col">
-        <Brand />
-        <p className="mb-2 mt-7 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">Workspace</p>
-        <nav className="flex flex-1 flex-col gap-1" aria-label="Primary navigation">
-          {items.map((item) => (
-            <NavigationLink
+      <aside data-testid="desktop-sidebar" className="fixed inset-y-0 left-0 z-30 hidden w-[var(--sidebar-width)] border-r border-border bg-surface px-3 py-4 lg:flex lg:flex-col">
+        <NexaPOSBrand />
+        <nav className="mt-7 flex flex-1 flex-col" aria-label="Primary navigation">
+          <NavSection label="Workspace">
+            {items.map((item) => (
+            <NavItem
               key={item.href}
               item={item}
               active={pathname.startsWith(item.href)}
             />
           ))}
+          </NavSection>
         </nav>
         <div className="border-t border-border pt-3">
-          <div className="flex items-center gap-2.5 rounded-xl p-2 hover:bg-surface-secondary">
+          <button type="button" aria-label="Open account menu" onClick={() => setAccountOpen(true)} className="flex min-h-11 w-full items-center gap-2.5 rounded-[var(--radius-lg)] p-2 text-left hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]">
             <Avatar name={user.full_name} className="size-9 rounded-[10px] text-xs" />
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold">{user.full_name}</p>
               <p className="truncate text-[10px] text-text-muted">{user.role === "OWNER" ? "Owner" : "Cashier"} · {user.shop.name}</p>
             </div>
-          </div>
+            <ChevronDown className="ml-auto size-3.5 shrink-0 text-foreground-muted" aria-hidden="true" />
+          </button>
         </div>
       </aside>
 
@@ -145,7 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 flex min-h-[var(--header-height)] items-center justify-between border-b border-border bg-surface/95 px-4 backdrop-blur-sm sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <div className="lg:hidden">
-              <Brand compact />
+              <NexaPOSBrand compact />
             </div>
             <div className="min-w-0">
               <p className="hidden text-[10px] font-semibold uppercase tracking-[0.08em] text-text-muted sm:block">Active shop</p>
@@ -163,6 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </time>
             </div>
             <DropdownMenu
+            label="Open user menu"
             trigger={
               <span className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl px-1.5 hover:bg-surface-secondary">
                 <Avatar name={user.full_name} className="size-9 rounded-[10px] text-xs" />
@@ -208,26 +245,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/98 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-6px_20px_rgb(16_42_86_/_0.06)] lg:hidden"
+        data-testid="mobile-navigation"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/98 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_16px_rgb(15_23_42_/_0.05)] lg:hidden"
         aria-label="Mobile navigation"
       >
         <div className="grid grid-cols-5">
           {mobilePrimary.map((item) => {
-            const Icon = item.icon;
             const active = pathname.startsWith(item.href);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-semibold",
-                  active ? "bg-primary-soft text-primary" : "text-text-muted",
-                )}
-              >
-                <Icon className="size-5" />
-                {item.shortLabel ?? item.label}
-              </Link>
+              <MobileNavItem key={item.href} item={item} active={active} />
             );
           })}
           <button
@@ -244,7 +270,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen} title="More">
         <div className="space-y-1">
           {moreItems.map((item) => (
-            <NavigationLink
+            <NavItem
               key={item.href}
               item={item}
               active={pathname.startsWith(item.href)}
@@ -270,6 +296,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             Logout
           </Button>
         </div>
+      </Sheet>
+      <Sheet open={accountOpen} onOpenChange={setAccountOpen} title="Account">
+        <div className="mb-5 flex items-center gap-3 rounded-[var(--radius-lg)] bg-surface-subtle p-3">
+          <Avatar name={user.full_name} />
+          <div className="min-w-0"><p className="truncate font-semibold">{user.full_name}</p><p className="truncate text-sm text-foreground-muted">{user.role === "OWNER" ? "Owner" : "Cashier"} · {user.shop.name}</p></div>
+        </div>
+        <Button variant="secondary" className="w-full" leadingIcon={<KeyRound className="size-4" />} onClick={() => { setAccountOpen(false); setPasswordOpen(true); }}>Change password</Button>
+        <Button variant="destructive" className="mt-3 w-full" loading={isLoggingOut} leadingIcon={<LogOut className="size-4" />} onClick={() => void handleLogout()}>Logout</Button>
       </Sheet>
       <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
     </div>

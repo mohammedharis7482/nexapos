@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/display";
+import { StockStatusBadgeV2 } from "@/components/ui/status";
 import type { StockStatus } from "@/types/inventory";
 
 export const stockStatusLabels: Record<StockStatus, string> = {
@@ -8,26 +8,7 @@ export const stockStatusLabels: Record<StockStatus, string> = {
   OUT_OF_STOCK: "Out of stock",
 };
 
+/** @deprecated Import StockStatusBadgeV2 from the V2 status module in migrated pages. */
 export function StockStatusBadge({ status }: { status: StockStatus }) {
-  const tone = {
-    NOT_INITIALIZED: "neutral",
-    IN_STOCK: "success",
-    LOW_STOCK: "warning",
-    OUT_OF_STOCK: "danger",
-  }[status] as "neutral" | "success" | "warning" | "danger";
-
-  const Icon = {
-    NOT_INITIALIZED: HelpCircle,
-    IN_STOCK: CheckCircle2,
-    LOW_STOCK: AlertTriangle,
-    OUT_OF_STOCK: CircleSlash2,
-  }[status];
-
-  return (
-    <Badge tone={tone}>
-      <Icon className="mr-1.5 size-3.5" aria-hidden="true" />
-      {stockStatusLabels[status]}
-    </Badge>
-  );
+  return <StockStatusBadgeV2 status={status} />;
 }
-import { AlertTriangle, CheckCircle2, CircleSlash2, HelpCircle } from "lucide-react";

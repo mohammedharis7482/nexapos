@@ -1,6 +1,7 @@
 import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
 import { cn, initials } from "@/lib/utils";
+import { formatDateTime, formatMoney, formatPercentage, formatQuantity } from "@/lib/formatters";
 
 export function Badge({
   children,
@@ -175,7 +176,7 @@ export function MoneyDisplay({
 }) {
   return (
     <span className={cn("tabular-nums whitespace-nowrap", className)}>
-      {currency} {Number(value).toFixed(2)}
+      {formatMoney(value, currency)}
     </span>
   );
 }
@@ -191,7 +192,33 @@ export function QuantityDisplay({
 }) {
   return (
     <span className={cn("tabular-nums whitespace-nowrap", className)}>
-      {value}{unit ? ` ${unit.toLowerCase()}` : ""}
+      {formatQuantity(value)}{unit ? ` ${unit.toLowerCase()}` : ""}
     </span>
   );
+}
+
+export const Money = MoneyDisplay;
+export const Quantity = QuantityDisplay;
+
+export function Percentage({
+  value,
+  fractionDigits = 1,
+  className,
+}: {
+  value: string | number;
+  fractionDigits?: number;
+  className?: string;
+}) {
+  return <span className={cn("tabular-nums whitespace-nowrap", className)}>{formatPercentage(value, fractionDigits)}</span>;
+}
+
+export function DateTime({
+  value,
+  className,
+}: {
+  value: string | number | Date;
+  className?: string;
+}) {
+  const date = value instanceof Date ? value : new Date(value);
+  return <time dateTime={Number.isNaN(date.getTime()) ? undefined : date.toISOString()} className={className}>{formatDateTime(value)}</time>;
 }

@@ -24,7 +24,7 @@ export function Spinner({ className }: { className?: string }) {
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={cn("animate-pulse rounded-lg bg-slate-200/80", className)}
+      className={cn("animate-pulse rounded-lg bg-surface-muted", className)}
       aria-hidden="true"
     />
   );
@@ -40,10 +40,10 @@ export function Alert({
   tone?: "danger" | "success" | "warning" | "info";
 }) {
   const toneStyles = {
-    danger: "border-red-200 bg-danger-soft text-danger",
-    success: "border-emerald-200 bg-success-soft text-success",
-    warning: "border-orange-200 bg-warning-soft text-warning",
-    info: "border-blue-200 bg-info-soft text-info",
+    danger: "border-danger-border bg-danger-soft text-danger",
+    success: "border-success-border bg-success-soft text-success",
+    warning: "border-warning-border bg-warning-soft text-warning",
+    info: "border-info-border bg-info-soft text-info",
   };
   const Icon = {
     danger: AlertCircle,
@@ -85,24 +85,68 @@ export function EmptyState({
   title,
   description,
   action,
+  secondaryAction,
+  icon: Icon,
   compact = false,
   tone = "neutral",
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  secondaryAction?: ReactNode;
+  icon?: typeof Inbox;
   compact?: boolean;
   tone?: "neutral" | "success";
 }) {
   return (
-    <div className={cn("rounded-[var(--radius-card)] border border-dashed text-center", compact ? "p-5" : "p-8", tone === "success" ? "border-emerald-200 bg-success-soft/50" : "border-border-strong")}>
-      {tone === "success" ? <CheckCircle2 className="mx-auto mb-2.5 size-7 text-success" aria-hidden="true" /> : <Inbox className="mx-auto mb-2.5 size-7 text-text-muted" aria-hidden="true" />}
+    <div className={cn("rounded-[var(--radius-card)] border border-dashed text-center", compact ? "p-5" : "p-8", tone === "success" ? "border-success-border bg-success-soft/50" : "border-border-strong")}>
+      {tone === "success" ? <CheckCircle2 className="mx-auto mb-2.5 size-7 text-success" aria-hidden="true" /> : Icon ? <Icon className="mx-auto mb-2.5 size-7 text-text-muted" aria-hidden="true" /> : <Inbox className="mx-auto mb-2.5 size-7 text-text-muted" aria-hidden="true" />}
       <h2 className="font-semibold text-text-primary">{title}</h2>
       <p className="mt-1 text-sm text-text-muted">{description}</p>
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+      {action || secondaryAction ? <div className="mt-4 flex flex-wrap justify-center gap-2">{secondaryAction}{action}</div> : null}
     </div>
   );
 }
+
+export function ConnectionStatus({ online }: { online: boolean }) {
+  return (
+    <span role="status" className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", online ? "text-success" : "text-warning")}>
+      <span className={cn("size-1.5 rounded-full", online ? "bg-success" : "bg-warning")} aria-hidden="true" />
+      {online ? "Network online" : "Network offline"}
+    </span>
+  );
+}
+
+export function Toast({
+  title,
+  description,
+  tone = "info",
+}: {
+  title: string;
+  description?: string;
+  tone?: "success" | "info" | "warning" | "danger";
+}) {
+  return (
+    <div role={tone === "danger" ? "alert" : "status"} className="flex max-w-sm items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-[var(--shadow-md)]">
+      <span className={cn("mt-1 size-2 shrink-0 rounded-full", tone === "success" && "bg-success", tone === "info" && "bg-info", tone === "warning" && "bg-warning", tone === "danger" && "bg-danger")} aria-hidden="true" />
+      <div><p className="text-sm font-semibold">{title}</p>{description ? <p className="mt-1 text-sm text-foreground-muted">{description}</p> : null}</div>
+    </div>
+  );
+}
+
+export function CardSkeleton() {
+  return <div aria-label="Loading card" className="rounded-[var(--radius-card)] border border-border bg-surface p-5"><Skeleton className="h-4 w-24" /><Skeleton className="mt-4 h-8 w-36" /><Skeleton className="mt-3 h-3 w-2/3" /></div>;
+}
+
+export function FormSkeleton() {
+  return <div aria-label="Loading form" className="space-y-5 rounded-[var(--radius-card)] border border-border bg-surface p-5">{Array.from({ length: 3 }, (_, index) => <div key={index}><Skeleton className="h-3 w-24" /><Skeleton className="mt-2 h-11 w-full" /></div>)}</div>;
+}
+
+export function PageSkeleton() {
+  return <div aria-label="Loading page" className="space-y-6"><div><Skeleton className="h-3 w-20" /><Skeleton className="mt-3 h-8 w-64" /><Skeleton className="mt-3 h-4 w-96 max-w-full" /></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><CardSkeleton /><CardSkeleton /><CardSkeleton /><CardSkeleton /></div></div>;
+}
+
+export const InlineSpinner = Spinner;
 
 export function ErrorState({
   title = "Something went wrong",
@@ -114,7 +158,7 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-danger-soft p-6 text-center">
+    <div className="rounded-2xl border border-danger-border bg-danger-soft p-6 text-center">
       <AlertCircle className="mx-auto mb-3 size-8 text-danger" />
       <h2 className="font-semibold">{title}</h2>
       <p className="mt-1 text-sm text-text-secondary">{description}</p>
