@@ -7,6 +7,31 @@ sign in, resume and complete onboarding, confirm trial/limits, invite and accept
 a cashier, and verify cashier route restrictions. Resend and revoke separate
 invitations. Deactivate/reactivate the cashier and confirm login behavior.
 
+For registration specifically, inspect Network and confirm one deliberate
+click or Enter press creates one `POST /api/v1/saas/register/` request and a
+`201` response. Double-click while the request is delayed and confirm it still
+creates one POST. After an invalid `400`, correct the fields and retry; the
+success panel must replace all red alerts and invalid-field state. Simulate a
+network failure, confirm values remain available, then retry explicitly.
+Success removes the password fields and Create Shop action and provides
+Go to Sign In. No verification token may appear in the page.
+
+Development uses Django's console email backend. Find the verification URL in
+the terminal running `manage.py runserver`; do not expect external email
+delivery. To verify safely that a synthetic registration exists, use
+placeholders and return counts rather than record contents:
+
+```bash
+cd backend
+.venv/bin/python manage.py shell \
+  --settings=config.settings.development \
+  -c "from apps.accounts.models import User; from apps.shops.models import Shop; email='<TEST_EMAIL>'; print({'users': User.objects.filter(email__iexact=email).count(), 'shops': Shop.objects.filter(email__iexact=email).count()})"
+```
+
+Never paste a real password or verification token into this check. Do not
+delete a tenant automatically; inspect its relationships and use Django Admin
+for an explicitly approved development-only cleanup.
+
 Request password recovery for known and unknown emails and confirm identical
 responses. Use the known account’s one-time link, verify the old password and
 old sessions fail, and sign in with the new password.

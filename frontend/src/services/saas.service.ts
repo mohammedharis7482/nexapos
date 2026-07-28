@@ -5,6 +5,7 @@ import type {
   InvitationsResponse,
   OnboardingResponse,
   Plan,
+  RegistrationResult,
   SubscriptionResponse,
   TeamResponse,
 } from "@/types/saas";
@@ -26,7 +27,7 @@ export const SAAS_ENDPOINTS = {
 
 export const saasService = {
   register(payload: Record<string, string>) {
-    return apiRequest<ApiSuccess<{ shop_id: string; status: string }>>(
+    return apiRequest<ApiSuccess<RegistrationResult>>(
       SAAS_ENDPOINTS.register,
       { method: "POST", body: JSON.stringify(payload) },
     );

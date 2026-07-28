@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import models
 from django.db.models import Q
+from django.db.models.functions import Lower
 
 from common.models import BaseModel
 
@@ -61,7 +62,12 @@ class Shop(BaseModel):
                 condition=Q(default_tax_rate__gte=0)
                 & Q(default_tax_rate__lte=100),
                 name="shops_default_tax_rate_range",
-            )
+            ),
+            models.UniqueConstraint(
+                Lower("email"),
+                condition=~Q(email=""),
+                name="shops_email_ci_uniq",
+            ),
         ]
         indexes = [
             models.Index(fields=["name"], name="shops_name_idx"),

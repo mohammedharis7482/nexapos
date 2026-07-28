@@ -1,5 +1,12 @@
 import type { ApiSuccess, UserRole } from "@/types/auth";
 
+export interface RegistrationResult {
+  shop_id: string;
+  status: string;
+  verification_required: true;
+  email: string;
+}
+
 export interface ManagedUser {
   id: string;
   full_name: string;

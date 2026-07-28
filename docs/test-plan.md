@@ -14,6 +14,14 @@ role-aware navigation, session-context clearing, and all existing operational
 components. Manual acceptance must additionally exercise email links, mobile
 forms, two-shop isolation, and platform-admin lifecycle transitions.
 
+Registration regression coverage verifies HTTP `201` and the safe response
+contract, exact record counts, rollback on validation or email-generation
+failure, duplicate rejection without additional records, one POST for click,
+double-click, and Enter flows, disabled pending controls, field/general error
+clearing on retry, successful form replacement, password-control removal,
+accessible focus, network retry, and mutual exclusion of success and error
+states. Registration uses direct mutation calls with no automatic retry.
+
 Foundation tests cover Shop/User models plus session authentication, CSRF cookie
 initialization and enforcement, owner/cashier login, invalid and cross-shop
 credentials, inactive users and shops, username reuse across shops, session

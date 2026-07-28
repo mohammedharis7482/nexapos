@@ -102,7 +102,25 @@ the valid current session is preserved after a successful change.
 ## SaaS account APIs
 
 - `POST /api/v1/saas/register/`: public atomic shop, primary owner, trial, and
-  verification creation. The client cannot select roles or subscription state.
+  verification creation. A successful request returns HTTP `201`:
+
+  ```json
+  {
+    "success": true,
+    "message": "Shop registered. Check your email to verify the account.",
+    "data": {
+      "shop_id": "00000000-0000-0000-0000-000000000000",
+      "status": "PENDING_VERIFICATION",
+      "verification_required": true,
+      "email": "owner@example.test"
+    }
+  }
+  ```
+
+  Expected validation failures use HTTP `400` and the standard error envelope,
+  with field errors under `errors`. The response never contains passwords,
+  raw verification tokens, session identifiers, or subscription internals.
+  The client cannot select roles or subscription state.
 - `POST /api/v1/auth/email-verification/resend/` and
   `POST /api/v1/auth/email-verification/verify/`: generic resend and one-time
   hashed-token verification.

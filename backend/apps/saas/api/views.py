@@ -1,5 +1,5 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
@@ -43,6 +43,8 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PlanSerializer,
     RegistrationSerializer,
+    RegistrationErrorSerializer,
+    RegistrationResponseSerializer,
     RoleChangeSerializer,
     SubscriptionSerializer,
     TokenSerializer,
@@ -72,7 +74,13 @@ class PublicCsrfViewMixin:
 
 
 class RegisterView(PublicCsrfViewMixin, APIView):
-    @extend_schema(request=RegistrationSerializer, responses={201: RegistrationSerializer})
+    @extend_schema(
+        request=RegistrationSerializer,
+        responses={
+            201: RegistrationResponseSerializer,
+            400: RegistrationErrorSerializer,
+        },
+    )
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -82,9 +90,24 @@ class RegisterView(PublicCsrfViewMixin, APIView):
             shop, _owner = register_shop(**values)
         except (SaasOperationError, DjangoValidationError) as exc:
             operation_error(exc)
+        except IntegrityError as exc:
+            diagnostic = getattr(exc.__cause__, "diag", None)
+            if getattr(diagnostic, "constraint_name", None) == "shops_email_ci_uniq":
+                operation_error(
+                    SaasOperationError(
+                        "An account with this email cannot be registered.",
+                        "owner_email",
+                    )
+                )
+            raise
         return success_response(
             "Shop registered. Check your email to verify the account.",
-            {"shop_id": str(shop.id), "status": shop.status},
+            {
+                "shop_id": str(shop.id),
+                "status": shop.status,
+                "verification_required": True,
+                "email": _owner.email,
+            },
             status_code=status.HTTP_201_CREATED,
         )
 

@@ -1,9 +1,11 @@
 import re
 from datetime import timedelta
+from unittest import mock
 
 from django.core import mail
 from django.core.cache import cache
-from django.db import IntegrityError
+from django.core.mail import EmailMessage
+from django.db import IntegrityError, transaction
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -51,6 +53,7 @@ class SaasFoundationTests(TestCase):
             name="Existing Grocery",
             address="Doha",
             phone="+97450000001",
+            email="owner@existing.test",
             status=Shop.Status.ACTIVE,
             onboarding_completed_at=timezone.now(),
         )
@@ -88,6 +91,12 @@ class SaasFoundationTests(TestCase):
         )
 
     def test_registration_is_atomic_and_creates_hashed_owner_trial_and_token(self):
+        initial_counts = {
+            "shops": Shop.objects.count(),
+            "users": User.objects.count(),
+            "subscriptions": ShopSubscription.objects.count(),
+            "tokens": EmailVerificationToken.objects.count(),
+        }
         response = self.public_post(
             reverse("saas_api:register"),
             {
@@ -105,6 +114,30 @@ class SaasFoundationTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json(),
+            {
+                "success": True,
+                "message": "Shop registered. Check your email to verify the account.",
+                "data": {
+                    "shop_id": response.json()["data"]["shop_id"],
+                    "status": Shop.Status.PENDING_VERIFICATION,
+                    "verification_required": True,
+                    "email": "new-owner@example.test",
+                },
+            },
+        )
+        self.assertNotIn("password", str(response.json()).lower())
+        self.assertNotIn("token", str(response.json()).lower())
+        self.assertNotIn("session", str(response.json()).lower())
+        self.assertEqual(Shop.objects.count(), initial_counts["shops"] + 1)
+        self.assertEqual(User.objects.count(), initial_counts["users"] + 1)
+        self.assertEqual(
+            ShopSubscription.objects.count(), initial_counts["subscriptions"] + 1
+        )
+        self.assertEqual(
+            EmailVerificationToken.objects.count(), initial_counts["tokens"] + 1
+        )
         shop = Shop.objects.get(name="New Grocery")
         owner = shop.primary_owner
         self.assertTrue(owner.check_password(PASSWORD))
@@ -140,6 +173,69 @@ class SaasFoundationTests(TestCase):
             self.public_post(reverse("saas_api:register"), base).status_code, 400
         )
         self.assertFalse(Shop.objects.filter(name="Rejected Grocery").exists())
+
+    def test_duplicate_registration_creates_no_additional_records(self):
+        payload = {
+            "shop_name": "Duplicate Grocery",
+            "owner_full_name": "Duplicate Owner",
+            "owner_email": "duplicate@example.test",
+            "owner_username": "duplicate",
+            "password": PASSWORD,
+            "password_confirm": PASSWORD,
+            "address": "Doha",
+            "phone": "+97450000004",
+        }
+        self.assertEqual(
+            self.public_post(reverse("saas_api:register"), payload).status_code,
+            201,
+        )
+        counts = (
+            Shop.objects.count(),
+            User.objects.count(),
+            ShopSubscription.objects.count(),
+            EmailVerificationToken.objects.count(),
+        )
+        duplicate = self.public_post(reverse("saas_api:register"), payload)
+        self.assertEqual(duplicate.status_code, 400)
+        self.assertEqual(
+            (
+                Shop.objects.count(),
+                User.objects.count(),
+                ShopSubscription.objects.count(),
+                EmailVerificationToken.objects.count(),
+            ),
+            counts,
+        )
+
+    def test_shop_registration_email_has_database_duplicate_protection(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Shop.objects.create(
+                    name="Conflicting Registration",
+                    address="Doha",
+                    phone="+97450000006",
+                    email=self.shop.email.upper(),
+                )
+
+    def test_registration_rolls_back_when_verification_email_fails(self):
+        payload = {
+            "shop_name": "Email Failure Grocery",
+            "owner_full_name": "Email Failure Owner",
+            "owner_email": "email-failure@example.test",
+            "owner_username": "email-failure",
+            "password": PASSWORD,
+            "password_confirm": PASSWORD,
+            "address": "Doha",
+            "phone": "+97450000005",
+        }
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            with mock.patch.object(
+                EmailMessage, "send", side_effect=RuntimeError("email unavailable")
+            ):
+                response = self.public_post(reverse("saas_api:register"), payload)
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["message"], "NexaPOS could not complete the request.")
+        self.assertFalse(Shop.objects.filter(name="Email Failure Grocery").exists())
 
     def test_verification_is_one_time_hashed_and_advances_lifecycle(self):
         self.test_registration_is_atomic_and_creates_hashed_owner_trial_and_token()
