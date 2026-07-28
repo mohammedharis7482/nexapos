@@ -27,6 +27,16 @@ submitting. A valid query takes precedence over a remembered value but remains
 unpersisted until a successful login with Remember Shop ID selected. After
 login, confirm Account and Shop Settings show the immutable ID and copy action.
 
+Before opening the verification link, sign in once with the correct Shop ID,
+username, and password. Confirm a single Verify your email warning replaces the
+generic credential error, the password is cleared, Shop ID and username remain,
+and no `/auth/me/` session succeeds. Use Resend Verification Email and confirm
+the API response remains generic. The new console message supersedes the old
+link. After verification, return through the Shop-ID-prefilled sign-in page and
+confirm the same credentials create a session and route the incomplete primary
+owner to onboarding. Wrong password and wrong Shop ID must never reveal
+verification state.
+
 Development uses Django's console email backend. Find the verification URL in
 the terminal running `manage.py runserver`; do not expect external email
 delivery. To verify safely that a synthetic registration exists, use

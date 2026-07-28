@@ -33,3 +33,17 @@ In development the console email backend writes the verification message and
 URL to the Django server terminal; it does not send a Gmail message. Refreshing
 the registration success page returns to a blank form because completion state
 is intentionally not persisted in browser storage.
+
+Before verification, correct login credentials return safe verification
+guidance rather than a misleading credentials error, but no session is
+created. Verification atomically sets `email_verified_at` and advances the shop
+from `PENDING_VERIFICATION` to `ONBOARDING`. The next successful owner login
+returns lifecycle context, and the protected boundary sends an incomplete
+primary owner to `/onboarding` without rendering protected dashboard content.
+Existing migrated shops remain usable because the verification gate is tied to
+the public-registration pending lifecycle; trusted owner-created cashiers and
+invitation acceptance keep their documented verification policy. Accepting a
+one-time email invitation marks that invited address verified; directly
+owner-created cashiers are trusted accounts under the existing active-shop
+policy. Authenticated session context reports `email_verified` without allowing
+the client to change it.

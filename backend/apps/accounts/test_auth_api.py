@@ -5,6 +5,7 @@ from django.core.management import CommandError, call_command
 from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.shops.models import Shop
@@ -141,6 +142,8 @@ class SessionAuthenticationApiTests(TestCase):
         wrong_shop = self.login(shop=self.other_shop)
         self.assertEqual(wrong_shop.status_code, 401)
         self.assertEqual(wrong_password.json()["message"], wrong_shop.json()["message"])
+        self.assertEqual(wrong_password.json()["code"], "INVALID_CREDENTIALS")
+        self.assertEqual(wrong_shop.json()["code"], "INVALID_CREDENTIALS")
 
     def test_unknown_shop_is_generic(self):
         token = self.csrf_token()
@@ -160,13 +163,95 @@ class SessionAuthenticationApiTests(TestCase):
     def test_inactive_user_and_shop_are_rejected(self):
         self.owner.is_active = False
         self.owner.save(update_fields=["is_active"])
-        self.assertEqual(self.login().status_code, 401)
+        inactive = self.login()
+        self.assertEqual(inactive.status_code, 403)
+        self.assertEqual(inactive.json()["code"], "USER_INACTIVE")
         self.owner.is_active = True
         self.owner.save(update_fields=["is_active"])
 
         self.shop.is_active = False
         self.shop.save(update_fields=["is_active"])
-        self.assertEqual(self.login().status_code, 401)
+        inactive_shop = self.login()
+        self.assertEqual(inactive_shop.status_code, 403)
+        self.assertEqual(inactive_shop.json()["code"], "SHOP_SUSPENDED")
+        self.shop.is_active = True
+        self.shop.status = Shop.Status.CANCELLED
+        self.shop.save(update_fields=["is_active", "status"])
+        cancelled = self.login()
+        self.assertEqual(cancelled.status_code, 403)
+        self.assertEqual(cancelled.json()["code"], "SHOP_CANCELLED")
+
+    def test_unverified_registered_owner_gets_safe_guidance_without_session(self):
+        pending_shop = Shop.objects.create(
+            name="Pending Registration",
+            address="Doha",
+            phone="+97450000999",
+            email="pending-owner@example.test",
+            status=Shop.Status.PENDING_VERIFICATION,
+        )
+        pending_owner = User.objects.create_user(
+            shop=pending_shop,
+            username=" PendingOwner ",
+            password=PASSWORD,
+            full_name="Pending Owner",
+            email="pending-owner@example.test",
+            role=User.Role.OWNER,
+        )
+        pending_shop.primary_owner = pending_owner
+        pending_shop.save(update_fields=["primary_owner", "updated_at"])
+
+        response = self.login(user=pending_owner)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["code"], "EMAIL_NOT_VERIFIED")
+        self.assertEqual(
+            response.json()["errors"], {"can_resend_verification": True}
+        )
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+        wrong_password = self.login(
+            user=pending_owner,
+            password="IncorrectPassword123!",
+        )
+        self.assertEqual(wrong_password.status_code, 401)
+        self.assertEqual(wrong_password.json()["code"], "INVALID_CREDENTIALS")
+
+    def test_verified_registered_owner_can_login_with_normalized_context(self):
+        pending_shop = Shop.objects.create(
+            name="Verified Registration",
+            address="Doha",
+            phone="+97450000998",
+            email="verified-owner@example.test",
+            status=Shop.Status.ONBOARDING,
+        )
+        owner = User.objects.create_user(
+            shop=pending_shop,
+            username="firstowner",
+            password=PASSWORD,
+            full_name="First Owner",
+            email="verified-owner@example.test",
+            email_verified_at=timezone.now(),
+            role=User.Role.OWNER,
+        )
+        pending_shop.primary_owner = owner
+        pending_shop.save(update_fields=["primary_owner", "updated_at"])
+        token = self.csrf_token()
+        response = self.client.post(
+            reverse("accounts_api:login"),
+            {
+                "shop_id": f"  {pending_shop.id}  ",
+                "username": "  FIRSTOWNER  ",
+                "password": PASSWORD,
+            },
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["data"]["user"]["shop"]["status"],
+            Shop.Status.ONBOARDING,
+        )
 
     def test_existing_session_is_invalidated_when_shop_becomes_inactive(self):
         self.assertEqual(self.login().status_code, 200)

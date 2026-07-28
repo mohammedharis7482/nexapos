@@ -8,7 +8,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
-from apps.accounts.api.serializers import SuccessSerializer
+from apps.accounts.api.serializers import ResendVerificationSerializer, SuccessSerializer
 from apps.saas.models import Plan, ShopSubscription
 from apps.saas.selectors import invitations_for_manager, users_for_manager
 from apps.saas.services import (
@@ -55,7 +55,10 @@ from .serializers import (
 
 def operation_error(exc: Exception):
     if isinstance(exc, SaasOperationError):
-        raise serializers.ValidationError({exc.field: exc.message}) from exc
+        detail = {exc.field: exc.message}
+        if exc.code:
+            detail["code"] = exc.code
+        raise serializers.ValidationError(detail) from exc
     if isinstance(exc, DjangoValidationError):
         detail = exc.message_dict if hasattr(exc, "message_dict") else exc.messages
         raise serializers.ValidationError(detail) from exc
@@ -136,11 +139,14 @@ class VerifyEmailView(PublicCsrfViewMixin, APIView):
 
 
 class ResendVerificationView(PublicCsrfViewMixin, APIView):
-    @extend_schema(request=EmailSerializer, responses={200: SuccessSerializer})
+    @extend_schema(
+        request=ResendVerificationSerializer,
+        responses={200: SuccessSerializer},
+    )
     def post(self, request):
-        serializer = EmailSerializer(data=request.data)
+        serializer = ResendVerificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        resend_verification(serializer.validated_data["email"])
+        resend_verification(**serializer.validated_data)
         return success_response(
             "If an unverified account exists, a verification email has been sent."
         )

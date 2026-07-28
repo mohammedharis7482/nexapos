@@ -31,6 +31,7 @@ export class ApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly errors: ApiErrorResponse["errors"] = {},
+    public readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -50,6 +51,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
           : "NexaPOS could not complete the request."),
       response.status,
       error?.errors ?? {},
+      error?.code,
     );
     if (response.status === 401 && typeof window !== "undefined") {
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));

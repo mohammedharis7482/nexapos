@@ -29,6 +29,14 @@ parameters, valid/malformed query behavior, valid-query precedence over
 remembered state, opt-in persistence after login, and read-only Settings
 visibility.
 
+Verification-login regression additionally covers unverified-owner denial
+without a session, credential-gated `EMAIL_NOT_VERIFIED`, generic invalid
+credentials, inactive and terminal shop states, username/Shop-ID whitespace
+normalization, verified first login lifecycle context, generic resend responses,
+token supersession, verified-user resend suppression, distinct invalid/expired/
+used token states, Strict Mode single verification, password clearing, and
+verification-alert/resend UX.
+
 Foundation tests cover Shop/User models plus session authentication, CSRF cookie
 initialization and enforcement, owner/cashier login, invalid and cross-shop
 credentials, inactive users and shops, username reuse across shops, session

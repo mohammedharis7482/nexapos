@@ -13,6 +13,7 @@ def user_session_data(user: User) -> dict:
             "username": user.username,
             "role": user.role,
             "email": user.email,
+            "email_verified": user.email_verified_at is not None,
             "last_login": user.last_login,
             "is_primary_owner": shop.primary_owner_id == user.id,
             "shop": {

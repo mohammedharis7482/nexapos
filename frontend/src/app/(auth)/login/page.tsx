@@ -17,6 +17,7 @@ import {
   type LoginFormValues,
 } from "@/schemas/auth.schema";
 import { useAuth } from "@/providers/auth-provider";
+import { saasService } from "@/services/saas.service";
 
 const REMEMBERED_SHOP_KEY = "nexapos.remembered-shop-id";
 
@@ -25,9 +26,14 @@ export default function LoginPage() {
   const { login, status } = useAuth();
   const shopIdInitialized = useRef(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [resendPending, setResendPending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const verificationAlertRef = useRef<HTMLDivElement>(null);
   const {
     register,
     handleSubmit,
+    getValues,
     setValue,
     setError,
     formState: { errors, isSubmitting },
@@ -62,8 +68,14 @@ export default function LoginPage() {
     if (status === "authenticated") router.replace("/dashboard");
   }, [router, status]);
 
+  useEffect(() => {
+    if (verificationRequired) verificationAlertRef.current?.focus();
+  }, [verificationRequired]);
+
   const submit = handleSubmit(async (values) => {
     setGeneralError(null);
+    setVerificationRequired(false);
+    setResendMessage(null);
     try {
       await login({
         shop_id: values.shop_id,
@@ -77,6 +89,7 @@ export default function LoginPage() {
       }
       router.replace("/dashboard");
     } catch (error) {
+      setValue("password", "");
       if (error instanceof ApiError) {
         Object.entries(error.errors).forEach(([field, messages]) => {
           if (field === "shop_id" || field === "username" || field === "password") {
@@ -85,16 +98,47 @@ export default function LoginPage() {
             });
           }
         });
-        setGeneralError(
-          error.status === 0
-            ? error.message
-            : "The Shop ID, username, or password is incorrect.",
-        );
+        if (error.code === "EMAIL_NOT_VERIFIED") {
+          setVerificationRequired(true);
+        } else if (error.code === "USER_INACTIVE") {
+          setGeneralError("This account is inactive. Ask a shop owner for help.");
+        } else if (error.code === "SHOP_SUSPENDED") {
+          setGeneralError("This shop is not currently active. Contact the shop owner.");
+        } else if (error.code === "SHOP_CANCELLED") {
+          setGeneralError("This shop has been cancelled. Contact support if this is unexpected.");
+        } else if (error.status === 429) {
+          setGeneralError("Too many sign-in attempts. Wait a moment and try again.");
+        } else {
+          setGeneralError(
+            error.status === 0
+              ? error.message
+              : "The Shop ID, username, or password is incorrect.",
+          );
+        }
       } else {
         setGeneralError("NexaPOS cannot reach the server. Try again shortly.");
       }
     }
   });
+
+  async function resendVerification() {
+    if (resendPending) return;
+    const { shop_id, username } = getValues();
+    setResendPending(true);
+    setResendMessage(null);
+    try {
+      const response = await saasService.resendVerification({ shop_id, username });
+      setResendMessage(response.message);
+    } catch (error) {
+      setResendMessage(
+        error instanceof ApiError
+          ? error.message
+          : "Verification could not be requested. Try again.",
+      );
+    } finally {
+      setResendPending(false);
+    }
+  }
 
   if (status === "loading" || status === "authenticated") {
     return <AppLoading message="Checking your secure session…" />;
@@ -157,6 +201,27 @@ export default function LoginPage() {
 
             <form onSubmit={submit} className="space-y-5" noValidate>
               {generalError ? <Alert title={generalError} /> : null}
+              {verificationRequired ? (
+                <div ref={verificationAlertRef} tabIndex={-1}>
+                  <Alert title="Verify your email" tone="warning">
+                    <p>
+                      Your login details are correct, but this owner account must
+                      be verified before signing in.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      loading={resendPending}
+                      onClick={() => void resendVerification()}
+                    >
+                      Resend Verification Email
+                    </Button>
+                    {resendMessage ? <p className="mt-2" role="status">{resendMessage}</p> : null}
+                  </Alert>
+                </div>
+              ) : null}
               <FormField
                 label="Shop ID"
                 htmlFor="shop_id"

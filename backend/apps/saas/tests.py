@@ -153,9 +153,12 @@ class SaasFoundationTests(TestCase):
             14,
         )
         token = token_from_email(mail.outbox[0].body)
+        self.assertEqual(mail.outbox[0].to, [owner.email])
         self.assertIn(str(shop.id), mail.outbox[0].body)
         self.assertIn(shop.name, mail.outbox[0].body)
         self.assertIn(owner.username, mail.outbox[0].body)
+        self.assertIn("expires in 24 hours", mail.outbox[0].body)
+        self.assertNotIn(PASSWORD, mail.outbox[0].body)
         self.assertNotEqual(
             EmailVerificationToken.objects.get(user=owner).token_hash, token
         )
@@ -253,6 +256,7 @@ class SaasFoundationTests(TestCase):
         second = self.public_post(verify_path, {"token": raw})
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 400)
+        self.assertEqual(second.json()["code"], "VERIFICATION_TOKEN_USED")
         shop = Shop.objects.get(name="New Grocery")
         self.assertEqual(
             first.json()["data"],
@@ -263,12 +267,75 @@ class SaasFoundationTests(TestCase):
         self.assertEqual(shop.status, Shop.Status.ONBOARDING)
         self.assertIsNotNone(shop.primary_owner.email_verified_at)
 
+    def test_registration_verification_and_first_login_flow(self):
+        self.test_registration_is_atomic_and_creates_hashed_owner_trial_and_token()
+        shop = Shop.objects.get(name="New Grocery")
+        credentials = {
+            "shop_id": str(shop.id),
+            "username": "  NEWOWNER  ",
+            "password": PASSWORD,
+        }
+        before = self.public_post("/api/v1/auth/login/", credentials)
+        self.assertEqual(before.status_code, 403)
+        self.assertEqual(before.json()["code"], "EMAIL_NOT_VERIFIED")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+        raw = token_from_email(mail.outbox[0].body)
+        verified = self.public_post(
+            "/api/v1/auth/email-verification/verify/",
+            {"token": raw},
+        )
+        self.assertEqual(verified.status_code, 200)
+        after = self.public_post("/api/v1/auth/login/", credentials)
+        self.assertEqual(after.status_code, 200)
+        self.assertIn("_auth_user_id", self.client.session)
+        self.assertEqual(
+            after.json()["data"]["user"]["shop"]["status"],
+            Shop.Status.ONBOARDING,
+        )
+        self.assertFalse(
+            after.json()["data"]["user"]["shop"]["onboarding_completed"]
+        )
+
     def test_verification_resend_is_generic(self):
         path = "/api/v1/auth/email-verification/resend/"
         unknown = self.public_post(path, {"email": "missing@example.test"})
         known = self.public_post(path, {"email": self.owner.email})
         self.assertEqual(unknown.status_code, known.status_code)
         self.assertEqual(unknown.json()["message"], known.json()["message"])
+        self.assertNotIn("token", str(known.json()).lower())
+
+    def test_login_context_resend_supersedes_token_and_skips_verified_user(self):
+        self.test_registration_is_atomic_and_creates_hashed_owner_trial_and_token()
+        shop = Shop.objects.get(name="New Grocery")
+        owner = shop.primary_owner
+        original = EmailVerificationToken.objects.get(user=owner)
+        response = self.public_post(
+            "/api/v1/auth/email-verification/resend/",
+            {"shop_id": str(shop.id), "username": "  NEWOWNER  "},
+        )
+        self.assertEqual(response.status_code, 200)
+        original.refresh_from_db()
+        self.assertIsNotNone(original.used_at)
+        self.assertEqual(
+            EmailVerificationToken.objects.filter(
+                user=owner, used_at__isnull=True
+            ).count(),
+            1,
+        )
+
+        owner.email_verified_at = timezone.now()
+        owner.save(update_fields=["email_verified_at", "updated_at"])
+        token_count = EmailVerificationToken.objects.filter(user=owner).count()
+        verified_response = self.public_post(
+            "/api/v1/auth/email-verification/resend/",
+            {"shop_id": str(shop.id), "username": owner.username},
+        )
+        self.assertEqual(verified_response.status_code, 200)
+        self.assertEqual(
+            EmailVerificationToken.objects.filter(user=owner).count(),
+            token_count,
+        )
 
     def test_expired_and_invalid_verification_tokens_are_rejected(self):
         EmailVerificationToken.objects.create(
@@ -277,14 +344,12 @@ class SaasFoundationTests(TestCase):
             expires_at=timezone.now() - timedelta(minutes=1),
         )
         path = "/api/v1/auth/email-verification/verify/"
-        self.assertEqual(
-            self.public_post(path, {"token": "expired-verification"}).status_code,
-            400,
-        )
-        self.assertEqual(
-            self.public_post(path, {"token": "invalid-verification"}).status_code,
-            400,
-        )
+        expired = self.public_post(path, {"token": "expired-verification"})
+        invalid = self.public_post(path, {"token": "invalid-verification"})
+        self.assertEqual(expired.status_code, 400)
+        self.assertEqual(expired.json()["code"], "VERIFICATION_TOKEN_EXPIRED")
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.json()["code"], "INVALID_VERIFICATION_TOKEN")
 
     def test_primary_owner_and_owner_invitation_permissions_and_hashing(self):
         self.client.force_login(self.owner)

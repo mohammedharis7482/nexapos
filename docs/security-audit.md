@@ -106,3 +106,11 @@ cannot authenticate a user or select authorization scope: username, password,
 CSRF/session controls, lifecycle rules, and server-derived `request.user.shop`
 remain authoritative. Passwords and raw account tokens never accompany the
 Shop ID in URLs or API responses.
+
+The verification-specific login response is credential-gated: Django first
+resolves the user inside the submitted shop and validates the password. Only
+then may `EMAIL_NOT_VERIFIED`, inactive-account, or terminal shop-state guidance
+be returned. Wrong Shop ID, username, or password always uses
+`INVALID_CREDENTIALS`. Denied attempts create no session. Development logs use
+reason categories at debug level and never include passwords, request bodies,
+session identifiers, or account tokens.

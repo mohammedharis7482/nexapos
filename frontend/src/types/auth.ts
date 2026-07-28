@@ -21,6 +21,7 @@ export interface AuthenticatedUser {
   full_name: string;
   username: string;
   email?: string;
+  email_verified?: boolean;
   last_login?: string | null;
   role: UserRole;
   is_primary_owner?: boolean;
@@ -59,6 +60,7 @@ export interface ApiSuccess<T> {
 export interface ApiErrorResponse {
   success: false;
   message: string;
+  code?: string;
   errors: Record<string, string[] | string> | { detail?: string };
 }
 

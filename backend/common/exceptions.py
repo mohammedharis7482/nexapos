@@ -44,12 +44,31 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
 
     detail = response.data
     message = "Please check the entered details."
+    error_code = None
+    response_errors = detail
+    if isinstance(detail, dict) and "code" in detail:
+        error_code = str(detail["code"])
+        safe_detail = detail.get("detail", detail.get("non_field_errors"))
+        if isinstance(safe_detail, (list, tuple)) and safe_detail:
+            safe_detail = safe_detail[0]
+        if safe_detail:
+            message = str(safe_detail)
+        response_errors = {
+            key: value for key, value in detail.items() if key not in {"code", "detail"}
+        }
+        response_errors.update(getattr(exc, "response_context", {}))
     if isinstance(detail, dict) and set(detail) == {"detail"}:
         message = str(detail["detail"])
 
     response.data = {
         "success": False,
         "message": message,
-        "errors": detail if isinstance(detail, (dict, list)) else {"detail": detail},
+        "errors": (
+            response_errors
+            if isinstance(response_errors, (dict, list))
+            else {"detail": response_errors}
+        ),
     }
+    if error_code:
+        response.data["code"] = error_code
     return response

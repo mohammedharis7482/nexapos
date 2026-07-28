@@ -1,33 +1,67 @@
-from django.contrib.auth import authenticate, login, update_session_auth_hash
+import logging
+
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import APIException
 
 from .models import User
 from apps.shops.models import Shop
 
 INVALID_CREDENTIALS_MESSAGE = "Invalid shop or credentials."
+logger = logging.getLogger("nexapos.api")
+
+
+class LoginDenied(APIException):
+    def __init__(self, *, code: str, detail: str, status_code: int, **context):
+        self.status_code = status_code
+        self.response_context = context
+        super().__init__({"code": code, "detail": detail})
+
+
+def deny_login(code: str, detail: str, status_code: int, **context):
+    logger.debug("login_denied", extra={"reason": code})
+    raise LoginDenied(
+        code=code,
+        detail=detail,
+        status_code=status_code,
+        **context,
+    )
 
 
 def login_user(*, request, shop_id, username: str, password: str) -> User:
-    user = authenticate(
-        request=request,
-        shop_id=str(shop_id),
-        username=username,
-        password=password,
-    )
-    if (
-        user is None
-        or not user.shop.is_active
-        or not user.is_active
-        or user.shop.status in (
-            Shop.Status.PENDING_VERIFICATION,
-            Shop.Status.CANCELLED,
+    normalized_username = User.objects.normalize_username(username)
+    try:
+        user = User.objects.select_related("shop").get(
+            shop_id=shop_id,
+            username=normalized_username,
         )
-    ):
-        raise AuthenticationFailed(INVALID_CREDENTIALS_MESSAGE)
+    except User.DoesNotExist:
+        User().set_password(password)
+        deny_login("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE, 401)
 
-    login(request, user)
+    if not user.check_password(password):
+        deny_login("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE, 401)
+    if not user.is_active:
+        deny_login("USER_INACTIVE", "This account is inactive.", 403)
+    if not user.shop.is_active:
+        deny_login("SHOP_SUSPENDED", "This shop is not currently active.", 403)
+    if user.shop.status == Shop.Status.CANCELLED:
+        deny_login("SHOP_CANCELLED", "This shop has been cancelled.", 403)
+    if (
+        user.shop.status == Shop.Status.PENDING_VERIFICATION
+        and user.email_verified_at is None
+    ):
+        deny_login(
+            "EMAIL_NOT_VERIFIED",
+            "Verify your email before signing in.",
+            403,
+            can_resend_verification=True,
+        )
+    if user.shop.status == Shop.Status.PENDING_VERIFICATION:
+        deny_login("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE, 401)
+
+    login(request, user, backend="common.authentication.ShopModelBackend")
     return user
 
 

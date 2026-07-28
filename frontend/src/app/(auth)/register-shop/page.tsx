@@ -82,7 +82,7 @@ export default function RegisterShopPage() {
     setResendPending(true);
     setResendFeedback(null);
     try {
-      const response = await saasService.resendVerification(result.owner_email);
+      const response = await saasService.resendVerification({ email: result.owner_email });
       setResendFeedback(response.message);
     } catch {
       setResendFeedback("Verification email could not be requested. Try again.");
@@ -151,7 +151,11 @@ export default function RegisterShopPage() {
           <p className="mt-2 text-sm text-foreground-secondary">
             <strong>{result.shop.name}</strong> is registered. A verification
             email was created for <strong>{result.owner_email}</strong>.
-            Verify the account before signing in.
+            Email verification is required before your first sign-in.
+          </p>
+          <p className="mt-3 text-sm text-foreground-secondary">
+            Open the verification link from your email. In local development,
+            the message and link appear in the Django server terminal.
           </p>
           <p className="mt-3 text-sm font-medium text-foreground">
             Save this Shop ID. You will use it together with your username and

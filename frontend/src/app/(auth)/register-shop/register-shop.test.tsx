@@ -7,8 +7,12 @@ import { ApiError } from "@/lib/api-client";
 import RegisterShopPage from "./page";
 
 const register = vi.fn();
+const resendVerification = vi.fn();
 vi.mock("@/services/saas.service", () => ({
-  saasService: { register: (...args: unknown[]) => register(...args) },
+  saasService: {
+    register: (...args: unknown[]) => register(...args),
+    resendVerification: (...args: unknown[]) => resendVerification(...args),
+  },
 }));
 
 const success = {
@@ -41,6 +45,12 @@ describe("shop registration", () => {
   beforeEach(() => {
     register.mockReset();
     register.mockResolvedValue(success);
+    resendVerification.mockReset();
+    resendVerification.mockResolvedValue({
+      success: true,
+      message: "If an unverified account exists, a verification email has been sent.",
+      data: null,
+    });
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -86,6 +96,20 @@ describe("shop registration", () => {
     expect(await navigator.clipboard.readText()).toBe(success.data.shop.id);
     expect(screen.getByRole("button", { name: "Shop ID copied" })).toBeInTheDocument();
     expect(screen.getByText("Shop ID copied to clipboard.")).toBeInTheDocument();
+  });
+
+  it("resends verification with the registered email and generic feedback", async () => {
+    render(<RegisterShopPage />);
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Create shop" }));
+    await screen.findByRole("heading", { name: "Shop registered" });
+
+    await user.click(screen.getByRole("button", { name: "Resend Verification Email" }));
+
+    expect(resendVerification).toHaveBeenCalledWith({
+      email: success.data.owner_email,
+    });
+    expect(await screen.findByText(/If an unverified account exists/)).toBeInTheDocument();
   });
 
   it("synchronously guards double submission while the request is pending", async () => {

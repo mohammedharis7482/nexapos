@@ -14,6 +14,7 @@ from common.views import success_response
 
 from .serializers import (
     ChangePasswordSerializer,
+    LoginErrorSerializer,
     LoginSerializer,
     SuccessSerializer,
     AccountProfileSerializer,
@@ -35,7 +36,14 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [LoginIpThrottle, LoginContextThrottle]
 
-    @extend_schema(request=LoginSerializer, responses={200: SuccessSerializer})
+    @extend_schema(
+        request=LoginSerializer,
+        responses={
+            200: SuccessSerializer,
+            401: LoginErrorSerializer,
+            403: LoginErrorSerializer,
+        },
+    )
     def post(self, request):
         enforce_csrf(request)
         serializer = LoginSerializer(data=request.data)

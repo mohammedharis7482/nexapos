@@ -32,9 +32,16 @@ RESET_TOKEN_LIFETIME = timedelta(hours=1)
 
 
 class SaasOperationError(Exception):
-    def __init__(self, message: str, field: str = "non_field_errors"):
+    def __init__(
+        self,
+        message: str,
+        field: str = "non_field_errors",
+        *,
+        code: str | None = None,
+    ):
         self.message = message
         self.field = field
+        self.code = code
         super().__init__(message)
 
 
@@ -196,8 +203,21 @@ def verify_email(raw_token: str) -> User:
         .filter(token_hash=hash_token(raw_token))
         .first()
     )
-    if token is None or token.used_at or token.expires_at <= now:
-        raise SaasOperationError("This verification link is invalid or has expired.")
+    if token is None:
+        raise SaasOperationError(
+            "This verification link is invalid.",
+            code="INVALID_VERIFICATION_TOKEN",
+        )
+    if token.used_at:
+        raise SaasOperationError(
+            "This verification link has already been used.",
+            code="VERIFICATION_TOKEN_USED",
+        )
+    if token.expires_at <= now:
+        raise SaasOperationError(
+            "This verification link has expired.",
+            code="VERIFICATION_TOKEN_EXPIRED",
+        )
     token.used_at = now
     token.save(update_fields=["used_at", "updated_at"])
     user = token.user
@@ -210,8 +230,22 @@ def verify_email(raw_token: str) -> User:
     return user
 
 
-def resend_verification(email: str) -> None:
-    user = User.objects.filter(email__iexact=email.strip(), is_active=True).first()
+def resend_verification(
+    *,
+    email: str | None = None,
+    shop_id=None,
+    username: str | None = None,
+) -> None:
+    users = User.objects.select_related("shop").filter(is_active=True)
+    if email:
+        user = users.filter(email__iexact=email.strip()).first()
+    elif shop_id and username:
+        user = users.filter(
+            shop_id=shop_id,
+            username=User.objects.normalize_username(username),
+        ).first()
+    else:
+        user = None
     if user and user.email and user.email_verified_at is None:
         create_verification_token(user)
 

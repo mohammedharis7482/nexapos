@@ -30,5 +30,13 @@ credential: every request still requires authenticated session state, and
 backend selectors derive tenant scope from `request.user.shop` rather than a
 client-provided Shop ID.
 
+`User.email_verified_at` is the only email-verification state. Public
+registration leaves it null; token verification sets it atomically. Login
+normalizes username using the same trim-and-lowercase manager rule used during
+creation. Shop IDs are trimmed and parsed as UUIDs without reformatting the
+stored identifier. Only a password-validated pending-registration owner
+receives `EMAIL_NOT_VERIFIED`; invalid identifiers, usernames, or passwords
+remain indistinguishable.
+
 Automated payment collection, recurring charging, multi-branch operation,
 impersonation, and custom permission builders are deliberately deferred.

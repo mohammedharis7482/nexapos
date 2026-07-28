@@ -40,6 +40,7 @@ export default function VerifyEmailPage() {
         });
         return;
       }
+      window.history.replaceState({}, "", "/verify-email");
       void saasService.verifyEmail(token).then(
         (response) =>
           setState({

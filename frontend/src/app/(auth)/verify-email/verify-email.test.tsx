@@ -1,7 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { StrictMode } from "react";
 
+import { ApiError } from "@/lib/api-client";
 import VerifyEmailPage from "./page";
 
 const verifyEmail = vi.fn();
@@ -40,6 +42,7 @@ describe("email verification Shop ID handoff", () => {
       `/login?shop_id=${shop.id}`,
     );
     expect(verifyEmail).toHaveBeenCalledOnce();
+    expect(window.location.search).toBe("");
     expect(screen.getByRole("link", { name: "Go to Sign In" }).getAttribute("href")).not.toMatch(
       /token|password|username/,
     );
@@ -63,6 +66,28 @@ describe("email verification Shop ID handoff", () => {
 
     expect(await screen.findByText("This verification link is incomplete.")).toBeInTheDocument();
     expect(verifyEmail).not.toHaveBeenCalled();
+    expect(screen.queryByText(shop.id)).not.toBeInTheDocument();
+  });
+
+  it("makes one verification request under React Strict Mode", async () => {
+    render(
+      <StrictMode>
+        <VerifyEmailPage />
+      </StrictMode>,
+    );
+    await screen.findByRole("heading", { name: "Account verified" });
+    expect(verifyEmail).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["invalid", "This verification link is invalid.", "INVALID_VERIFICATION_TOKEN"],
+    ["expired", "This verification link has expired.", "VERIFICATION_TOKEN_EXPIRED"],
+    ["used", "This verification link has already been used.", "VERIFICATION_TOKEN_USED"],
+  ])("shows the safe %s verification state", async (_state, message, code) => {
+    verifyEmail.mockRejectedValue(new ApiError(message, 400, {}, code));
+    render(<VerifyEmailPage />);
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
     expect(screen.queryByText(shop.id)).not.toBeInTheDocument();
   });
 });

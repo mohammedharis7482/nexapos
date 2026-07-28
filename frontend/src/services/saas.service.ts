@@ -39,10 +39,10 @@ export const saasService = {
       body: JSON.stringify({ token }),
     });
   },
-  resendVerification(email: string) {
+  resendVerification(payload: { email: string } | { shop_id: string; username: string }) {
     return apiRequest<EmptySuccessResponse>(SAAS_ENDPOINTS.resendVerification, {
       method: "POST",
-      body: JSON.stringify({ email }),
+      body: JSON.stringify(payload),
     });
   },
   requestPasswordReset(email: string) {

@@ -93,6 +93,7 @@ describe("API client", () => {
           {
             success: false,
             message: "Invalid shop or credentials.",
+            code: "INVALID_CREDENTIALS",
             errors: { detail: "Invalid shop or credentials." },
           },
           401,
@@ -107,6 +108,7 @@ describe("API client", () => {
     ).rejects.toMatchObject<ApiError>({
       status: 401,
       message: "Invalid shop or credentials.",
+      code: "INVALID_CREDENTIALS",
     });
   });
 

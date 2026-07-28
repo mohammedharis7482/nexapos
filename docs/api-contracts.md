@@ -146,6 +146,33 @@ Shop ID is a public tenant identifier required alongside username and password
 at login. Knowing it grants no access; authentication and shop-scoped
 authorization remain mandatory.
 
+### First login and verification
+
+Public registration creates an active owner record with
+`email_verified_at=null` and a shop in `PENDING_VERIFICATION`. Correct Shop ID,
+username, and password submitted before verification return HTTP `403`:
+
+```json
+{
+  "success": false,
+  "message": "Verify your email before signing in.",
+  "code": "EMAIL_NOT_VERIFIED",
+  "errors": {
+    "can_resend_verification": true
+  }
+}
+```
+
+This code is emitted only after all three credentials have been validated.
+Unknown shops/users and wrong passwords return HTTP `401` with
+`INVALID_CREDENTIALS` and the same generic message. No session is created for
+either response.
+
+`POST /api/v1/auth/email-verification/resend/` accepts either an email or the
+known `shop_id` plus `username`. Its response is always generic. Eligible
+unverified users receive a new message and previous active tokens are
+superseded; verified or unknown accounts reveal nothing.
+
 ### Logout
 
 `POST /api/v1/auth/logout/` requires authentication and CSRF. It deletes the
