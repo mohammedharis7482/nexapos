@@ -47,6 +47,14 @@ class CompletedSaleListView(APIView):
                     parsed_dates[name] = date_field.run_validation(value)
                 except serializers.ValidationError as exc:
                     raise serializers.ValidationError({name: exc.detail}) from exc
+        if (
+            parsed_dates.get("date_from")
+            and parsed_dates.get("date_to")
+            and parsed_dates["date_from"] > parsed_dates["date_to"]
+        ):
+            raise serializers.ValidationError(
+                {"date_to": "End date must be on or after start date."}
+            )
 
         creator = None
         creator_value = request.query_params.get("created_by")

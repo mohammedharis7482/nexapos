@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from "@/types/auth";
 import {
   AuthProvider,
   authReducer,
+  clearUserScopedBrowserState,
   initialAuthState,
   useAuth,
 } from "./auth-provider";
@@ -71,8 +72,10 @@ function LoginProbe() {
 
 describe("authentication state", () => {
   beforeEach(() => {
+    localStorage.clear();
     mockedService.me.mockReset();
     mockedService.login.mockReset();
+    mockedService.logout.mockReset();
   });
 
   it("starts in initial authentication loading", () => {
@@ -169,5 +172,35 @@ describe("authentication state", () => {
     await waitFor(() =>
       expect(screen.getByTestId("user")).toHaveTextContent("ahmed"),
     );
+  });
+
+  it("clears only user-scoped browser state", () => {
+    localStorage.setItem("nexapos.activeDraftId", "draft-id");
+    localStorage.setItem("nexapos.remembered-shop-id", user.shop.id);
+
+    clearUserScopedBrowserState();
+
+    expect(localStorage.getItem("nexapos.activeDraftId")).toBeNull();
+    expect(localStorage.getItem("nexapos.remembered-shop-id")).toBe(user.shop.id);
+  });
+
+  it("clears authenticated state when the API reports an expired session", async () => {
+    mockedService.me.mockResolvedValue({
+      success: true,
+      message: "Current user retrieved.",
+      data: { user },
+    });
+    localStorage.setItem("nexapos.activeDraftId", "draft-id");
+    render(createElement(AuthProvider, null, createElement(StatusProbe)));
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated"),
+    );
+
+    window.dispatchEvent(new Event("nexapos:unauthorized"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("status")).toHaveTextContent("unauthenticated"),
+    );
+    expect(localStorage.getItem("nexapos.activeDraftId")).toBeNull();
   });
 });

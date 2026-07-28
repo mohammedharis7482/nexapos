@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from apps.accounts.selectors import user_session_data
 from apps.accounts.services import change_user_password, login_user
 from common.authentication import ApiSessionAuthentication, enforce_csrf
+from common.throttling import LoginContextThrottle, LoginIpThrottle
 from common.views import success_response
 
 from .serializers import (
@@ -30,6 +31,7 @@ class CsrfView(APIView):
 class LoginView(APIView):
     authentication_classes = [ApiSessionAuthentication]
     permission_classes = [AllowAny]
+    throttle_classes = [LoginIpThrottle, LoginContextThrottle]
 
     @extend_schema(request=LoginSerializer, responses={200: SuccessSerializer})
     def post(self, request):

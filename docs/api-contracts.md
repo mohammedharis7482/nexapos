@@ -15,6 +15,11 @@ with a default size of 25, a `page_size` override, and a maximum of 100.
 It is a process-level liveness response and intentionally does not claim database
 health.
 
+`GET /api/v1/readiness/` is also public. It performs a low-cost database
+`SELECT 1` and returns either HTTP 200 with `status: "ready"` or HTTP 503 with
+`status: "unavailable"`. It never returns database configuration or exception
+details.
+
 ## Errors
 
 Handled DRF errors use:
@@ -28,7 +33,9 @@ Handled DRF errors use:
 ```
 
 Specific authentication and not-found messages may replace the generic message;
-field and detail data remains in `errors`.
+field and detail data remains in `errors`. Unexpected exceptions return HTTP
+500 with `NexaPOS could not complete the request.` and an empty `errors` object.
+Every response includes a non-sensitive `X-Request-ID` for log correlation.
 
 ## Session authentication
 
@@ -69,6 +76,9 @@ session key, and rejects inactive users or shops with the same generic
 credential response. Success returns only user ID, name, username, role, and
 the shop's ID, name, currency, and timezone.
 
+Login is throttled by source IP and by a hashed IP/shop/username context.
+Exceeded limits return HTTP 429 without identifying whether an account exists.
+
 ### Current user
 
 `GET /api/v1/auth/me/` requires authentication and returns the same safe user
@@ -106,13 +116,15 @@ routes.
 2. Read the `csrftoken` cookie.
 3. Send `X-CSRFToken` on POST, PUT, PATCH, and DELETE requests.
 4. Always set `credentials: "include"`.
-5. Redirect to login after HTTP 401.
+5. Clear user-scoped browser state and redirect to login after HTTP 401.
+6. Keep HTTP 403 as a permission error; it does not invalidate the session.
 
 The typed frontend API client performs this sequence automatically for POST,
 PUT, PATCH, and DELETE requests. It parses both the success and error envelopes,
 maps backend field errors to forms, and converts transport failures into a
 user-facing network message. Password values are never logged, and authentication
-tokens or session IDs are never copied into application storage.
+tokens or session IDs are never copied into application storage. Requests have
+a configurable timeout and unsafe mutations are not automatically retried.
 
 The frontend authentication provider requests `/auth/me/` once during
 initialization. Protected routes render a deliberate loading state until that

@@ -109,4 +109,37 @@ describe("API client", () => {
       message: "Invalid shop or credentials.",
     });
   });
+
+  it("signals expired sessions for 401 but not permission-only 403 responses", async () => {
+    const unauthorized = vi.fn();
+    window.addEventListener("nexapos:unauthorized", unauthorized);
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ success: false, message: "Expired", errors: {} }, 401),
+    );
+    await expect(apiRequest("/auth/me/")).rejects.toMatchObject({ status: 401 });
+    expect(unauthorized).toHaveBeenCalledOnce();
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ success: false, message: "Denied", errors: {} }, 403),
+    );
+    await expect(apiRequest("/reports/")).rejects.toMatchObject({ status: 403 });
+    expect(unauthorized).toHaveBeenCalledOnce();
+    window.removeEventListener("nexapos:unauthorized", unauthorized);
+  });
+
+  it("turns an aborted request into a controlled network failure", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new DOMException("Aborted", "AbortError"),
+    );
+
+    await expect(
+      apiRequest("/products/", { signal: controller.signal }),
+    ).rejects.toMatchObject<ApiError>({
+      status: 0,
+      message: "NexaPOS cannot reach the server. Check your connection and try again.",
+    });
+  });
 });

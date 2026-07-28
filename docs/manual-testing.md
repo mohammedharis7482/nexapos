@@ -87,3 +87,18 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 - Render success and error toasts above mobile navigation. Confirm tone icon,
   announcement, long-text wrapping, close action, and provider-level duplicate
   suppression.
+
+## Production-readiness checks
+
+- Over deployed HTTPS, inspect Secure/HttpOnly/SameSite cookie attributes,
+  CSRF mutation behavior, explicit origins, redirect handling, and proxy scheme.
+- Deactivate a disposable pilot shop during an active session and confirm the
+  next API request returns to login without exposing the previous active draft.
+- Exercise edge and application login limits using synthetic accounts; confirm
+  generic HTTP 429 feedback and that normal tills are not blocked.
+- Verify `/health/` remains live when appropriate and `/readiness/` returns 503
+  during a controlled database outage without diagnostic details.
+- Force an unexpected route render error in staging and confirm the safe retry
+  boundary contains no stack trace.
+- Complete the scenarios and sign-off fields in
+  [pilot-acceptance-test.md](pilot-acceptance-test.md).

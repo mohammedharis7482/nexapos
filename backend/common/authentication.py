@@ -3,6 +3,7 @@ from typing import Any
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth import get_user_model
+from django.contrib.auth import logout
 from rest_framework.authentication import SessionAuthentication
 
 
@@ -11,6 +12,16 @@ class ApiSessionAuthentication(SessionAuthentication):
 
     def authenticate_header(self, request) -> str:
         return "Session"
+
+    def authenticate(self, request):
+        authenticated = super().authenticate(request)
+        if authenticated is None:
+            return None
+        user, auth = authenticated
+        if not user.is_active or not user.shop.is_active:
+            logout(request._request)
+            return None
+        return user, auth
 
 
 def enforce_csrf(request) -> None:

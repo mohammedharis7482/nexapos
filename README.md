@@ -28,6 +28,7 @@ required:
 
 ```dotenv
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+NEXT_PUBLIC_API_TIMEOUT_MS=15000
 ```
 
 This is the only public frontend environment value. It contains no backend
@@ -90,7 +91,8 @@ Review `.env` before migration. PostgreSQL is mandatory; SQLite is not a
 fallback. Never change `AUTH_USER_MODEL` after the first migration.
 
 API discovery is available at `/api/schema/`, `/api/docs/`, and `/api/redoc/`.
-The unauthenticated liveness endpoint is `/api/v1/health/`.
+The unauthenticated liveness endpoint is `/api/v1/health/`; database-aware
+deployment readiness is `/api/v1/readiness/`.
 
 Owners can optionally seed a development shop with a small catalogue:
 
@@ -129,7 +131,18 @@ profile data; it never returns the server-side session identifier.
 After authentication, `/auth/me/` restores the in-memory user state on browser
 refresh. The session cookie remains the source of truth; neither sessions nor
 authentication tokens are stored in localStorage. Logout calls the Django
-endpoint, clears in-memory state, and returns to `/login`.
+endpoint, clears in-memory state and the user-specific active draft identifier,
+and returns to `/login`. Login is protected by application-level IP/context
+throttles; production must also provide a shared reverse-proxy/platform limit.
+
+## Production-readiness status
+
+The repository has completed an application-level QA/security audit, but final
+deployment readiness is conditional on environment-specific work: shared edge
+rate limiting, verified HTTPS/cookie topology, CSP staging, provider backups
+with a restore rehearsal, production-like performance measurements, and pilot
+acceptance. Start with [the deployment checklist](docs/deployment-checklist.md),
+[security audit](docs/security-audit.md), and [QA matrix](docs/qa-matrix.md).
 
 Create the first shop and owner interactively:
 

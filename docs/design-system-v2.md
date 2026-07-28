@@ -208,6 +208,10 @@ Use Money, Quantity, Percentage, and DateTime or the functions in `lib/formatter
 
 Every interactive control has a visible focus ring. Touch targets are approximately 44px by default. Fields associate errors and hints with `aria-describedby`. Status is never colour-only. Data tables remain semantic. Dialogs use accessible names. Reduced-motion users receive near-instant transitions. NexaPOS targets practical WCAG AA fundamentals but does not claim certification.
 
+Unexpected route-render failures use the shared recovery surface: a concise,
+production-safe message and one clearly focused Try Again action. Raw exception
+messages, stack traces, and digests are never rendered as customer-facing UI.
+
 ## Development showcase
 
 `/dev/design-system` renders only in development and tests. Production requests receive Next.js `notFound()`. It contains neutral component data only and no credentials, shop identifiers, or private business records.

@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { ApiError } from "@/lib/api-client";
+import { ApiError, UNAUTHORIZED_EVENT } from "@/lib/api-client";
 import { authService } from "@/services/auth.service";
 import type { AuthenticatedUser, LoginRequest } from "@/types/auth";
 
@@ -76,6 +76,13 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const ACTIVE_DRAFT_KEY = "nexapos.activeDraftId";
+
+export function clearUserScopedBrowserState() {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(ACTIVE_DRAFT_KEY);
+  }
+}
 
 function messageFrom(error: unknown) {
   return error instanceof ApiError
@@ -107,6 +114,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshUser();
   }, [refreshUser]);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearUserScopedBrowserState();
+      dispatch({ type: "LOGGED_OUT" });
+    };
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, []);
+
   const login = useCallback(async (payload: LoginRequest) => {
     try {
       const response = await authService.login(payload);
@@ -123,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.logout();
     } finally {
+      clearUserScopedBrowserState();
       dispatch({ type: "LOGGED_OUT" });
     }
   }, []);

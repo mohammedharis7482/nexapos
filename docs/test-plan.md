@@ -150,6 +150,12 @@ spacing, searchable-field clearing, semantic toast announcements and dismissal,
 dynamic stock-adjustment action labels, payment duplicate-submit protection,
 field-associated validation, and sticky shared action footers.
 
+Production-readiness regression covers login IP/context throttling, invalidation
+of sessions for inactive shops, generic unexpected-API failures, request IDs,
+safe readiness success/failure, reversed Sales History dates, bounded
+sales-history query counts, frontend request aborts, 401-versus-403 session
+behavior, active-draft clearing, and route-level unexpected-error recovery.
+
 Manual UI checks use [manual-testing.md](manual-testing.md) across 360–1440px,
 keyboard navigation, reduced motion, mobile safe areas, dialogs, operational
 states, browser console output, and both 80mm and A4 receipt print preview.

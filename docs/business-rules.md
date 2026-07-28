@@ -19,6 +19,9 @@
 12. Inactive users and users belonging to inactive shops cannot log in.
 13. Login failures do not distinguish an unknown shop, username, inactive
     account, or incorrect password.
+13a. Existing sessions become unauthenticated when the user or shop is
+     deactivated. Login attempts are application-throttled, with shared
+     deployment-edge throttling additionally required.
 14. Owners pass owner-only permission checks. Owners and cashiers pass shop
     staff checks. Superusers are owner-equivalent for role checks but remain
     constrained by `IsSameShop` in business APIs.
@@ -119,6 +122,8 @@
     access.
 52. Report date filters are inclusive local dates converted into a half-open
     timezone-aware datetime range. Draft and cancelled sales are excluded.
+52a. Sales History and Reports reject an end date earlier than the start date;
+     report ranges are limited to 367 calendar days.
 53. Sales, product, payment, and cashier reports share date, cashier, category,
     and payment filters. Current inventory respects category only because stock
     is a present-time snapshot rather than a historical valuation.

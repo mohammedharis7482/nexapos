@@ -1,6 +1,8 @@
 from decimal import Decimal
 
+from django.db import connection
 from django.urls import reverse
+from django.test.utils import CaptureQueriesContext
 
 from apps.inventory.models import InventoryBalance, StockMovement
 from apps.payments.models import Payment
@@ -173,6 +175,31 @@ class SaleCompletionTests(DraftBillingApiTestCase):
         self.client.post(reverse("sales_api:draft-cancel", args=[cancelled]))
         self.assertEqual(self.complete(cancelled, payload).status_code, 400)
 
+    def test_completed_sale_cannot_be_reclassified_as_cancelled(self):
+        sale_id = self.create_sale_with_item(self.cashier)
+        self.login(self.cashier)
+        payload = {
+            "payments": [{"method": "CASH", "amount": "21.00"}],
+            "amount_received": "21.00",
+        }
+        self.assertEqual(self.complete(sale_id, payload).status_code, 200)
+
+        cancel = self.client.post(
+            reverse("sales_api:draft-cancel", args=[sale_id]),
+        )
+
+        self.assertEqual(cancel.status_code, 404)
+        sale = Sale.objects.get(pk=sale_id)
+        self.assertEqual(sale.status, Sale.Status.COMPLETED)
+        self.assertEqual(Payment.objects.filter(sale=sale).count(), 1)
+        self.assertEqual(
+            StockMovement.objects.filter(
+                movement_type=StockMovement.Type.SALE,
+                reference=sale.sale_number,
+            ).count(),
+            1,
+        )
+
     def test_insufficient_stock_rolls_back_every_finalization_write(self):
         sale_id = self.create_sale_with_item(quantity="5.000")
         balance = InventoryBalance.objects.get(product=self.exclusive)
@@ -329,6 +356,33 @@ class SalesHistoryAndReceiptTests(DraftBillingApiTestCase):
             {"created_by": str(self.cashier.id)},
         )
         self.assertEqual(owner_response.json()["data"]["count"], 1)
+
+    def test_sales_history_rejects_reversed_date_range(self):
+        self.login(self.owner)
+
+        response = self.client.get(
+            reverse("sales_history_api:list"),
+            {"date_from": "2026-07-24", "date_to": "2026-07-20"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date_to", response.json()["errors"])
+
+    def test_sales_history_query_count_is_bounded_with_prefetched_rows(self):
+        for _ in range(3):
+            sale_id = self.create_sale_with_item(self.cashier, quantity="1.000")
+            self.complete(
+                sale_id,
+                {"payments": [{"method": "CARD", "amount": "10.50"}]},
+            )
+        self.login(self.owner)
+
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(reverse("sales_history_api:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"]["count"], 4)
+        self.assertLessEqual(len(queries), 10)
 
     def test_completed_detail_and_receipt_are_safe_and_frontend_ready(self):
         self.login(self.cashier)

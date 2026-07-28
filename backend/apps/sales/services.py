@@ -232,6 +232,7 @@ def cancel_draft_sale(*, sale_id, user: User) -> Sale:
     sale = _locked_accessible_draft(sale_id=sale_id, user=user)
     if sale.status == Sale.Status.CANCELLED:
         return sale
+    _require_draft(sale)
     sale.status = Sale.Status.CANCELLED
     sale.cancelled_at = timezone.now()
     sale.cancelled_by = user

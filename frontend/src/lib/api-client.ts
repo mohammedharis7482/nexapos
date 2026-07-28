@@ -5,6 +5,11 @@ const configuredBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 const API_BASE_URL = configuredBaseUrl.replace(/\/+$/, "");
 const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const configuredTimeout = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? "15000");
+const API_TIMEOUT_MS = Number.isFinite(configuredTimeout) && configuredTimeout > 0
+  ? configuredTimeout
+  : 15000;
+export const UNAUTHORIZED_EVENT = "nexapos:unauthorized";
 
 export function joinApiUrl(baseUrl: string, path: string): string {
   const normalizedBase = baseUrl.trim().replace(/\/+$/, "");
@@ -38,7 +43,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     const error = payload as ApiErrorResponse | null;
-    throw new ApiError(
+    const apiError = new ApiError(
       error?.message ??
         (response.status === 401
           ? "Your session has expired. Please sign in again."
@@ -46,13 +51,35 @@ async function parseResponse<T>(response: Response): Promise<T> {
       response.status,
       error?.errors ?? {},
     );
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    throw apiError;
   }
 
   return payload as T;
 }
 
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const upstreamSignal = init.signal;
+  const abortFromUpstream = () => controller.abort(upstreamSignal?.reason);
+  if (upstreamSignal?.aborted) abortFromUpstream();
+  else upstreamSignal?.addEventListener("abort", abortFromUpstream, { once: true });
+  const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+    upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+  }
+}
+
 export async function initializeCsrf(): Promise<void> {
-  const response = await fetch(joinApiUrl(API_BASE_URL, "/auth/csrf/"), {
+  const response = await fetchWithTimeout(joinApiUrl(API_BASE_URL, "/auth/csrf/"), {
     method: "GET",
     credentials: "include",
     headers: { Accept: "application/json" },
@@ -85,7 +112,7 @@ export async function apiRequest<T>(
   }
 
   try {
-    const response = await fetch(joinApiUrl(API_BASE_URL, path), {
+    const response = await fetchWithTimeout(joinApiUrl(API_BASE_URL, path), {
       ...options,
       method,
       credentials: "include",

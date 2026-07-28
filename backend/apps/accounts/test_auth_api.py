@@ -2,12 +2,14 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.core.management import CommandError, call_command
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.shops.models import Shop
 from common.permissions import IsCashierOrOwner, IsOwner, IsSameShop
+from common.throttling import LoginContextThrottle, LoginIpThrottle
 
 from .models import User
 
@@ -51,6 +53,7 @@ class SessionAuthenticationApiTests(TestCase):
         )
 
     def setUp(self):
+        cache.clear()
         self.client = Client(enforce_csrf_checks=True)
 
     def csrf_token(self) -> str:
@@ -164,6 +167,33 @@ class SessionAuthenticationApiTests(TestCase):
         self.shop.is_active = False
         self.shop.save(update_fields=["is_active"])
         self.assertEqual(self.login().status_code, 401)
+
+    def test_existing_session_is_invalidated_when_shop_becomes_inactive(self):
+        self.assertEqual(self.login().status_code, 200)
+        self.shop.is_active = False
+        self.shop.save(update_fields=["is_active"])
+
+        response = self.client.get(reverse("accounts_api:me"))
+
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    @patch.object(LoginIpThrottle, "THROTTLE_RATES", {"login_ip": "100/min"})
+    @patch.object(
+        LoginContextThrottle,
+        "THROTTLE_RATES",
+        {"login_context": "2/min"},
+    )
+    def test_login_attempts_are_throttled_without_account_disclosure(self):
+        for _ in range(2):
+            response = self.login(password="IncorrectPassword123!")
+            self.assertEqual(response.status_code, 401)
+
+        throttled = self.login(password="IncorrectPassword123!")
+
+        self.assertEqual(throttled.status_code, 429)
+        self.assertNotIn(self.owner.username, throttled.json()["message"])
+        self.assertNotIn(str(self.shop.id), throttled.json()["message"])
 
     def test_same_username_authenticates_only_selected_shop(self):
         response = self.login(

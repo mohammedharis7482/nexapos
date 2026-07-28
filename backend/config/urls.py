@@ -22,11 +22,12 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from common.views import HealthView
+from common.views import HealthView, ReadinessView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/health/", HealthView.as_view(), name="health"),
+    path("api/v1/readiness/", ReadinessView.as_view(), name="readiness"),
     path("api/v1/auth/", include("apps.accounts.api.urls")),
     path("api/v1/shop/", include("apps.shops.api.urls")),
     path("api/v1/", include("apps.products.api.urls")),

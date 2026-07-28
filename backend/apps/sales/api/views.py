@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from apps.sales.exceptions import BillingOperationError
 from apps.sales.models import Sale
-from apps.sales.selectors import drafts_for_user
+from apps.sales.selectors import billing_sales_for_user, drafts_for_user
 from apps.sales.services import (
     add_product_to_draft,
     cancel_draft_sale,
@@ -169,7 +169,7 @@ class DraftCompleteView(APIView):
         responses={200: CompletedSaleSerializer},
     )
     def post(self, request, sale_id):
-        sale_for_request(request, sale_id)
+        get_object_or_404(billing_sales_for_user(request.user), pk=sale_id)
         serializer = CompleteSaleRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         payments = [

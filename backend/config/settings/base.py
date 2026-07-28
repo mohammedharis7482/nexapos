@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "common.middleware.RequestIdMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -112,6 +113,13 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "common.exceptions.api_exception_handler",
+    "DEFAULT_THROTTLE_RATES": {
+        "login_ip": config("LOGIN_IP_RATE", default="30/min"),
+        "login_context": config("LOGIN_CONTEXT_RATE", default="10/min"),
+    },
+    # Do not trust spoofable X-Forwarded-For values unless the deployment sets
+    # the exact number of trusted proxies.
+    "NUM_PROXIES": config("DRF_NUM_PROXIES", cast=int, default=0),
 }
 
 SESSION_COOKIE_HTTPONLY = True
@@ -122,6 +130,9 @@ CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_AGE = config("SESSION_COOKIE_AGE_SECONDS", cast=int, default=28800)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = config(
     "SESSION_EXPIRE_AT_BROWSER_CLOSE", cast=bool, default=False
+)
+SESSION_SAVE_EVERY_REQUEST = config(
+    "SESSION_SAVE_EVERY_REQUEST", cast=bool, default=False
 )
 SESSION_COOKIE_DOMAIN = config("SESSION_COOKIE_DOMAIN", default=None) or None
 CSRF_COOKIE_DOMAIN = config("CSRF_COOKIE_DOMAIN", default=None) or None
@@ -140,16 +151,25 @@ LOGGING = {
         "verbose": {
             "format": "{levelname} {asctime} {name} {message}",
             "style": "{",
-        }
+        },
+        "json": {"()": "common.logging.SafeJsonFormatter"},
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": config("DJANGO_LOG_FORMAT", default="verbose"),
         }
     },
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "root": {
+        "handlers": ["console"],
+        "level": config("DJANGO_LOG_LEVEL", default="INFO"),
+    },
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "nexapos.api": {
+            "handlers": ["console"],
+            "level": config("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
+        },
     },
 }

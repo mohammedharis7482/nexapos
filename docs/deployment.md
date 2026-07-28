@@ -8,15 +8,15 @@ Copy `backend/.env.example` for development. Required PostgreSQL variables are
 `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`,
 `CORS_ALLOWED_ORIGINS`, and `CSRF_TRUSTED_ORIGINS`.
 
-`ACCESS_TOKEN_MINUTES` and `REFRESH_TOKEN_DAYS` are reserved placeholders. They
-have no effect until a supported authentication design is approved.
-
 Production must set `DJANGO_SETTINGS_MODULE=config.settings.production`, a
 strong secret, explicit hosts, and explicit origins. HTTPS redirect, secure
-cookies, and HSTS default on; `DJANGO_SECURE_SSL_REDIRECT`,
+cookies default on. HSTS intentionally defaults off until the real domain and
+subdomain policy are verified; `DJANGO_SECURE_SSL_REDIRECT`,
 `DJANGO_SESSION_COOKIE_SECURE`, `DJANGO_CSRF_COOKIE_SECURE`,
 `DJANGO_SECURE_HSTS_SECONDS`, `DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS`, and
 `DJANGO_SECURE_HSTS_PRELOAD` allow controlled local validation and rollout.
+Cookie SameSite values, trusted proxy handling, database SSL, login throttle
+rates, and JSON logging are also environment-configurable in `.env.example`.
 
 ## PostgreSQL on macOS with Homebrew
 
@@ -61,6 +61,13 @@ cd backend
 
 Use `collectstatic --noinput` during production release and serve the Django
 application with Gunicorn behind a TLS-terminating reverse proxy.
+
+Before applying migrations, take and record a verified backup, run
+`migrate --plan` against the release configuration, and confirm the migration
+remains compatible with the currently deployed code. Follow
+[deployment-checklist.md](deployment-checklist.md) and
+[rollback-plan.md](rollback-plan.md); never point a validation command at an
+unreviewed production database.
 
 ## Authentication compatibility decision
 
