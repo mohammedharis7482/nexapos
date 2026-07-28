@@ -245,6 +245,21 @@ dialog::backdrop {
   background: rgb(8 22 46 / 52%);
 }
 
+dialog[open] {
+  animation: overlay-enter var(--duration-fast) var(--ease-standard);
+}
+
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 button,
 a,
 input,
@@ -381,6 +396,7 @@ a {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 

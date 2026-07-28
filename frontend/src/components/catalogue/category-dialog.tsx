@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
-import { FormField, Input, Textarea } from "@/components/ui/input";
+import { Checkbox, FormField, Input, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -94,8 +94,18 @@ export function CategoryDialog({
       }}
       title={category ? "Edit category" : "Add category"}
       description="Categories organize products without affecting stock."
+      size="small"
+      dismissible={!isSubmitting}
+      footer={
+        <>
+          <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button form="category-form" type="submit" loading={isSubmitting}>
+            {category ? "Save category" : "Add category"}
+          </Button>
+        </>
+      }
     >
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form id="category-form" className="space-y-4" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
         <FormField label="Category name" htmlFor="category-name" error={errors.name?.message}>
           <Input
@@ -117,16 +127,7 @@ export function CategoryDialog({
             {...register("display_order", { valueAsNumber: true })}
           />
         </FormField>
-        <label className="flex min-h-11 items-center gap-3 text-sm text-text-secondary">
-          <input type="checkbox" className="size-4 accent-primary" {...register("is_active")} />
-          Active category
-        </label>
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}>
-            {category ? "Save category" : "Add category"}
-          </Button>
-        </div>
+        <Checkbox label="Active category" description="Active categories are available when organizing products." {...register("is_active")} />
       </form>
     </Dialog>
   );

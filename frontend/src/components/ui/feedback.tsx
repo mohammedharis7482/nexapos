@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   RefreshCw,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -121,15 +122,24 @@ export function Toast({
   title,
   description,
   tone = "info",
+  onClose,
 }: {
   title: string;
   description?: string;
   tone?: "success" | "info" | "warning" | "danger";
+  onClose?: () => void;
 }) {
+  const Icon = {
+    success: CheckCircle2,
+    info: Info,
+    warning: TriangleAlert,
+    danger: AlertCircle,
+  }[tone];
   return (
-    <div role={tone === "danger" ? "alert" : "status"} className="flex max-w-sm items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-[var(--shadow-md)]">
-      <span className={cn("mt-1 size-2 shrink-0 rounded-full", tone === "success" && "bg-success", tone === "info" && "bg-info", tone === "warning" && "bg-warning", tone === "danger" && "bg-danger")} aria-hidden="true" />
-      <div><p className="text-sm font-semibold">{title}</p>{description ? <p className="mt-1 text-sm text-foreground-muted">{description}</p> : null}</div>
+    <div role={tone === "danger" ? "alert" : "status"} aria-live={tone === "danger" ? "assertive" : "polite"} className="flex w-[min(calc(100vw-2rem),24rem)] items-start gap-3 rounded-[var(--radius-lg)] border border-border bg-surface p-4 shadow-[var(--shadow-md)]">
+      <Icon className={cn("mt-0.5 size-5 shrink-0", tone === "success" && "text-success", tone === "info" && "text-info", tone === "warning" && "text-warning", tone === "danger" && "text-danger")} aria-hidden="true" />
+      <div className="min-w-0 flex-1"><p className="text-sm font-semibold">{title}</p>{description ? <p className="mt-1 break-words text-sm text-foreground-muted">{description}</p> : null}</div>
+      {onClose ? <button type="button" aria-label="Dismiss notification" onClick={onClose} className="-mr-1 -mt-1 grid size-9 shrink-0 place-items-center rounded-[var(--radius-control)] text-foreground-muted hover:bg-surface-hover hover:text-foreground"><X className="size-4" /></button> : null}
     </div>
   );
 }

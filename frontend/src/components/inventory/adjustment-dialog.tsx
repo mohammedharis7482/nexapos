@@ -6,7 +6,7 @@ import { useForm, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
-import { FormField, Input, Select, Textarea } from "@/components/ui/input";
+import { FormField, Input, QuantityInput, Select, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -109,22 +109,37 @@ export function AdjustmentDialog({
   });
 
   const direction = movementOptions.find((option) => option.value === movementType)?.direction;
+  const actionLabel: Record<ManualMovementType, string> = {
+    STOCK_IN: "Add stock",
+    STOCK_OUT: "Remove stock",
+    DAMAGE: "Record damage",
+    EXPIRED: "Record expiry",
+    CORRECTION_IN: "Apply correction",
+    CORRECTION_OUT: "Apply correction",
+  };
   return (
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
       title="Adjust inventory"
       description={`${productName} currently has ${currentQuantity} ${unit}.`}
+      dismissible={!isSubmitting}
+      footer={
+        <>
+          <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button form="adjustment-form" type="submit" loading={isSubmitting} disabled={reductionTooLarge}>{actionLabel[movementType]}</Button>
+        </>
+      }
     >
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form id="adjustment-form" className="space-y-4" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
         <FormField label="Movement type" htmlFor="movement-type" error={errors.movement_type?.message}>
-          <Select id="movement-type" {...register("movement_type")}>
+          <Select id="movement-type" invalid={Boolean(errors.movement_type)} {...register("movement_type")}>
             {movementOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
         </FormField>
         <FormField label="Quantity" htmlFor="adjustment-quantity" error={errors.quantity?.message}>
-          <Input id="adjustment-quantity" inputMode="decimal" {...register("quantity")} />
+          <QuantityInput id="adjustment-quantity" unit={unit} invalid={Boolean(errors.quantity)} {...register("quantity")} />
         </FormField>
         <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-surface-secondary p-4">
           <div><p className="text-xs font-semibold text-text-muted">Current stock</p><p className="mt-1 font-bold tabular-nums">{currentQuantity} {unit.toLowerCase()}</p></div>
@@ -138,10 +153,6 @@ export function AdjustmentDialog({
         <FormField label="Reference (optional)" htmlFor="adjustment-reference" error={errors.reference?.message}>
           <Input id="adjustment-reference" {...register("reference")} />
         </FormField>
-        <div className="flex justify-end gap-3 border-t border-border pt-4">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting} disabled={reductionTooLarge}>Save adjustment</Button>
-        </div>
       </form>
     </Dialog>
   );

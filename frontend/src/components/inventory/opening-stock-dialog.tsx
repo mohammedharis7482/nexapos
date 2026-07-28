@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
-import { FormField, Input, Textarea } from "@/components/ui/input";
+import { FormField, QuantityInput, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -26,12 +26,14 @@ export function OpeningStockDialog({
   onOpenChange,
   productId,
   productName,
+  unit,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   productId: string;
   productName: string;
+  unit?: string;
   onSaved: () => void;
 }) {
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -76,14 +78,21 @@ export function OpeningStockDialog({
       onOpenChange={onOpenChange}
       title="Configure opening stock"
       description={`${productName} can only receive opening stock once.`}
+      dismissible={!isSubmitting}
+      footer={
+        <>
+          <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button form="opening-stock-form" type="submit" loading={isSubmitting}>Initialize stock</Button>
+        </>
+      }
     >
-      <form className="space-y-4" onSubmit={submit} noValidate>
+      <form id="opening-stock-form" className="space-y-4" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
         <FormField label="Opening quantity" htmlFor="opening-quantity" error={errors.quantity?.message}>
-          <Input id="opening-quantity" inputMode="decimal" {...register("quantity")} />
+          <QuantityInput id="opening-quantity" unit={unit} invalid={Boolean(errors.quantity)} {...register("quantity")} />
         </FormField>
         <FormField label="Low-stock threshold" htmlFor="opening-threshold" error={errors.low_stock_threshold?.message}>
-          <Input id="opening-threshold" inputMode="decimal" {...register("low_stock_threshold")} />
+          <QuantityInput id="opening-threshold" unit={unit} invalid={Boolean(errors.low_stock_threshold)} {...register("low_stock_threshold")} />
         </FormField>
         <FormField label="Reason (optional)" htmlFor="opening-reason" error={errors.reason?.message}>
           <Textarea id="opening-reason" {...register("reason")} />
@@ -91,10 +100,6 @@ export function OpeningStockDialog({
         <Alert title="Confirm the physical count before saving." tone="warning">
           Later changes must be recorded as stock movements.
         </Alert>
-        <div className="flex justify-end gap-3 border-t border-border pt-4">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}>Configure stock</Button>
-        </div>
       </form>
     </Dialog>
   );

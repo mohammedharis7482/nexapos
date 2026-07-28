@@ -8,7 +8,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/ui/display";
 import { Alert } from "@/components/ui/feedback";
-import { FormField, Input } from "@/components/ui/input";
+import { FormField, Input, MoneyInput } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -180,8 +180,16 @@ export function PaymentDialog({
       }}
       title="Complete payment"
       description={`${draft.items.length} line items · QAR ${draft.grand_total}`}
+      dismissible={!isSubmitting}
+      size="large"
+      footer={
+        <>
+          <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Back</Button>
+          <Button form="payment-form" type="submit" loading={isSubmitting}>Confirm payment</Button>
+        </>
+      }
     >
-      <form className="space-y-5" onSubmit={submit} noValidate>
+      <form id="payment-form" className="space-y-5" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
         <div className="grid grid-cols-3 gap-2">
           {methods.map(({ value, label, icon: Icon }) => (
@@ -213,10 +221,10 @@ export function PaymentDialog({
             {mode === "SPLIT" ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField label="Cash allocation" htmlFor="cash-allocation" error={errors.cash_amount?.message}>
-                  <Input id="cash-allocation" inputMode="decimal" {...register("cash_amount")} />
+                  <MoneyInput id="cash-allocation" invalid={Boolean(errors.cash_amount)} {...register("cash_amount")} />
                 </FormField>
                 <FormField label="Card allocation" htmlFor="card-allocation" error={errors.card_amount?.message}>
-                  <Input id="card-allocation" inputMode="decimal" {...register("card_amount")} />
+                  <MoneyInput id="card-allocation" invalid={Boolean(errors.card_amount)} {...register("card_amount")} />
                 </FormField>
                 <p className="sm:col-span-2 text-sm text-text-muted">
                   Remaining: QAR {splitRemaining ?? "—"}
@@ -224,7 +232,7 @@ export function PaymentDialog({
               </div>
             ) : null}
             <FormField label="Cash received" htmlFor="cash-received" error={errors.amount_received?.message}>
-              <Input id="cash-received" className="text-lg font-bold tabular-nums" inputMode="decimal" {...register("amount_received")} />
+              <MoneyInput id="cash-received" invalid={Boolean(errors.amount_received)} className="text-lg font-bold" {...register("amount_received")} />
             </FormField>
             <div className="flex flex-wrap gap-2">
               {[draft.grand_total, "10.00", "20.00", "50.00", "100.00"].map((amount, index) => (
@@ -250,10 +258,6 @@ export function PaymentDialog({
           </>
         ) : null}
 
-        <div className="flex justify-end gap-3 border-t border-border pt-4">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Back</Button>
-          <Button type="submit" loading={isSubmitting}>Confirm payment</Button>
-        </div>
       </form>
     </Dialog>
   );

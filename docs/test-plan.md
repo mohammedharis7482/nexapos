@@ -143,6 +143,13 @@ and change behavior, connected filter result/status context, shared pagination
 counts and callbacks, exact report filter submission, formatted monetary and
 quantity values, and the existing responsive desktop/mobile data structures.
 
+Interaction regression covers viewport-constrained Dialog/Sheet anatomy,
+non-dismissible critical mutations, safe confirmation focus, Escape focus
+return in dropdown menus, date-input range constraints, native Select trigger
+spacing, searchable-field clearing, semantic toast announcements and dismissal,
+dynamic stock-adjustment action labels, payment duplicate-submit protection,
+field-associated validation, and sticky shared action footers.
+
 Manual UI checks use [manual-testing.md](manual-testing.md) across 360–1440px,
 keyboard navigation, reduced motion, mobile safe areas, dialogs, operational
 states, browser console output, and both 80mm and A4 receipt print preview.

@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { Button, IconButton } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/feedback";
-import { ConfirmDialog, Dialog } from "@/components/ui/overlay";
+import { EmptyState, Toast } from "@/components/ui/feedback";
+import { Dialog, DropdownMenu, ConfirmDialog } from "@/components/ui/overlay";
 
 describe("shared UI foundation", () => {
   it("exposes disabled and loading button state accessibly", () => {
@@ -32,6 +32,40 @@ describe("shared UI foundation", () => {
     expect(screen.getByRole("button", { name: "Keep working" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cancel draft" }));
     expect(confirm).toHaveBeenCalledOnce();
+  });
+
+  it("prevents a critical dialog from being cancelled while busy", () => {
+    const onOpenChange = vi.fn();
+    render(<Dialog open dismissible={false} onOpenChange={onOpenChange} title="Completing payment">Processing</Dialog>);
+    const dialog = screen.getByRole("dialog", { name: "Completing payment" });
+    const event = new Event("cancel", { cancelable: true });
+    fireEvent(dialog, event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Close dialog" })).toBeDisabled();
+  });
+
+  it("closes a dropdown with Escape and returns focus to its trigger", () => {
+    render(
+      <DropdownMenu label="Actions" trigger={<span>Open actions</span>}>
+        <button type="button">Edit</button>
+        <button type="button">Deactivate</button>
+      </DropdownMenu>,
+    );
+    const trigger = screen.getByLabelText("Actions");
+    const details = trigger.closest("details")!;
+    details.setAttribute("open", "");
+    fireEvent.keyDown(details, { key: "Escape" });
+    expect(details).not.toHaveAttribute("open");
+    expect(trigger).toHaveFocus();
+  });
+
+  it("announces and dismisses actionable toast feedback", () => {
+    const close = vi.fn();
+    render(<Toast title="Product saved" description="Catalogue details were updated." tone="success" onClose={close} />);
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("supports a relevant empty-state action", () => {

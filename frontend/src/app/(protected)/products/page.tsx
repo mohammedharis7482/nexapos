@@ -93,7 +93,7 @@ export default function ProductsPage() {
       {owner ? <Link href="/products/categories" className="text-sm font-semibold text-primary sm:hidden">Manage categories</Link> : null}
       <FilterToolbar
         result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> matching {count === 1 ? "product" : "products"}</>}
-        status={filters.search || filters.category || filters.unit || filters.is_active ? <Badge tone="primary">Filters applied</Badge> : null}
+        status={filters.search || filters.category || filters.unit || filters.is_active ? <div className="flex items-center gap-2"><Badge tone="primary">Filters applied</Badge><Button size="sm" variant="ghost" onClick={() => { setSearchDraft(""); setPage(1); setFilters({ ordering: "name" }); }}>Clear</Button></div> : null}
       >
         <form
           className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_180px_150px_150px_auto]"

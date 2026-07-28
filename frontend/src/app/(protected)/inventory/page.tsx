@@ -122,7 +122,10 @@ export default function InventoryPage() {
           : <MetricCard key={label} label={label} value={value ?? 0} icon={icon} tone={tone} />)}
       </div>
 
-      <FilterToolbar result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> matching inventory {count === 1 ? "product" : "products"}</>}>
+      <FilterToolbar
+        result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> matching inventory {count === 1 ? "product" : "products"}</>}
+        status={filters.search || filters.category || filters.stock_status || filters.is_active ? <Button size="sm" variant="ghost" onClick={() => { setSearchDraft(""); setPage(1); setFilters({}); }}>Clear filters</Button> : null}
+      >
         <form
           className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_200px_190px_150px_auto]"
           onSubmit={(event) => {

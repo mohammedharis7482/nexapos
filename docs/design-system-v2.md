@@ -149,9 +149,42 @@ Use StockStatusBadgeV2, SaleStatusBadge, PaymentMethodBadge, and RoleBadge. Do n
 
 Native dialogs provide focus containment, Escape handling, and focus return. Every dialog needs a title and optional description. Long content scrolls while an optional footer remains visible. `ConfirmDialog` focuses the safe action first. `Drawer`/`Sheet`, DropdownMenu, Popover, and Tooltip share V2 elevation.
 
+Dialog sizes are `small`, `default`, and `large`. Headers and action footers are
+fixed within the viewport-constrained surface while only the content region
+scrolls. Feature forms submit through the shared footer so action ordering and
+mobile stacking remain consistent. Critical mutations set `dismissible=false`
+while submitting; this blocks Escape, backdrop dismissal, and the close button
+without changing the button width.
+
+Sheets use a titled header, optional description, independently scrolling body,
+optional safe-area-aware footer, and a 400px maximum desktop width. Dropdown
+menus have a 16rem minimum width, viewport-bounded height, internal padding,
+subtle elevation, outside-click dismissal, Escape focus return, and arrow-key
+movement between actionable items. Native Select option panels remain
+browser/OS-owned; do not claim or depend on custom checkmarks or menu geometry.
+
 ### Feedback and states
 
 Use Alert for inline feedback, Toast for non-blocking completion feedback, ConnectionStatus for actual browser network state, and ErrorState for recoverable section/page failures. EmptyState supports compact/full modes, custom icon, and two actions. Loading components resemble final content: CardSkeleton, FormSkeleton, PageSkeleton, and TableSkeleton.
+
+Toasts use a semantic tone icon, concise title, optional description, polite
+announcement for normal feedback, assertive announcement for errors, and an
+optional named dismiss action. Render toast stacks above the mobile navigation
+and deduplicate them by event identity in the owning provider. Field-level
+correction errors remain beside the field rather than moving into a toast.
+
+### Interaction controls
+
+- Select triggers reserve a fixed 40px trailing indicator zone and use native
+  keyboard/mobile option selection. Invalid and disabled states apply to the
+  actual select element.
+- DateInput aligns a calendar affordance with other controls. Start/end inputs
+  constrain each other with `min`/`max`; custom invalid ranges block Apply and
+  expose a field-associated plain-language error.
+- FilterToolbar retains entered values, submits text search with Enter, exposes
+  a clear action when filters are active, and never collapses during refresh.
+- SearchInput exposes a named clear action whenever it is controlled and
+  non-empty.
 
 ### Values
 

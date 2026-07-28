@@ -74,8 +74,16 @@ export function ChangePasswordDialog({
       }}
       title="Change password"
       description="Use a strong password you do not use elsewhere."
+      size="small"
+      dismissible={!isSubmitting}
+      footer={
+        <>
+          <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button form="change-password-form" type="submit" loading={isSubmitting}>Change password</Button>
+        </>
+      }
     >
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form id="change-password-form" onSubmit={submit} className="space-y-4" noValidate>
         {success ? (
           <Alert title="Password changed" tone="success">
             Your current session remains active.
@@ -118,14 +126,6 @@ export function ChangePasswordDialog({
             {...register("confirm_password")}
           />
         </FormField>
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={isSubmitting}>
-            Change password
-          </Button>
-        </div>
       </form>
     </Dialog>
   );

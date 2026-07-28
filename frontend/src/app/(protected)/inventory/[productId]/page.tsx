@@ -197,6 +197,7 @@ export default function InventoryDetailPage() {
         onOpenChange={setOpeningOpen}
         productId={productId}
         productName={item.product.name}
+        unit={item.product.unit}
         onSaved={() => void refresh("Opening stock configured.")}
       />
       {item.quantity_on_hand !== null ? (

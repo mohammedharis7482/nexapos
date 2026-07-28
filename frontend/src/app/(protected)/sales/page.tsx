@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MoneyDisplay, PageHeader, PaymentBadge } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { Input, SearchInput, Select } from "@/components/ui/input";
+import { DateInput, SearchInput, Select } from "@/components/ui/input";
 import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
@@ -91,7 +91,10 @@ export default function SalesPage() {
         title="Sales"
         description={owner ? "Review completed sales across your shop." : "Review sales completed by your account."}
       />
-      <FilterToolbar result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> completed {count === 1 ? "sale" : "sales"}</>}>
+      <FilterToolbar
+        result={<><span className="font-semibold tabular-nums text-foreground">{count}</span> completed {count === 1 ? "sale" : "sales"}</>}
+        status={filters.search || filters.date_from || filters.date_to || filters.payment_method || filters.created_by ? <Button size="sm" variant="ghost" onClick={() => { setSearchDraft(""); setPage(1); setFilters({ ordering: "-completed_at" }); }}>Clear filters</Button> : null}
+      >
         <form
           className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_155px_155px_170px_190px_auto]"
           onSubmit={(event) => {
@@ -105,8 +108,8 @@ export default function SalesPage() {
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
           />
-          <Input aria-label="Date from" type="date" value={filters.date_from ?? ""} onChange={(event) => updateFilter("date_from", event.target.value)} />
-          <Input aria-label="Date to" type="date" value={filters.date_to ?? ""} onChange={(event) => updateFilter("date_to", event.target.value)} />
+          <DateInput aria-label="Date from" max={filters.date_to || undefined} value={filters.date_from ?? ""} onChange={(event) => updateFilter("date_from", event.target.value)} />
+          <DateInput aria-label="Date to" min={filters.date_from || undefined} value={filters.date_to ?? ""} onChange={(event) => updateFilter("date_to", event.target.value)} />
           <Select aria-label="Payment method filter" value={filters.payment_method ?? ""} onChange={(event) => updateFilter("payment_method", event.target.value)}>
             <option value="">All payments</option>
             <option value="CASH">Cash</option>

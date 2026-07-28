@@ -7,8 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { Input, Select } from "@/components/ui/input";
+import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { DateInput, Select } from "@/components/ui/input";
 import { FilterToolbar } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
 import { categoryService } from "@/services/category.service";
@@ -112,6 +112,11 @@ export default function ReportsPage() {
     const preset = presetFilters(days);
     return draftFilters.date_from === preset.date_from && draftFilters.date_to === preset.date_to;
   });
+  const invalidDateRange = Boolean(
+    draftFilters.date_from
+      && draftFilters.date_to
+      && draftFilters.date_to < draftFilters.date_from,
+  );
 
   return <div className="page-stack">
     <PageHeader eyebrow="Analytics" title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
@@ -122,16 +127,17 @@ export default function ReportsPage() {
           <button key={label} type="button" aria-pressed={activePreset === Number(days)} className={`min-h-9 rounded-lg border px-3 text-xs font-semibold ${activePreset === Number(days) ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface-secondary"}`} onClick={() => setDraftFilters((current) => ({ ...current, ...presetFilters(Number(days)) }))}>{label}</button>
         ))}
       </div>
-      <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]" onSubmit={(event) => { event.preventDefault(); setFilters(draftFilters); }}>
-      <Input aria-label="Report date from" type="date" value={draftFilters.date_from} onChange={(event) => setDraftFilters((current) => ({ ...current, date_from: event.target.value }))} />
-      <Input aria-label="Report date to" type="date" value={draftFilters.date_to} onChange={(event) => setDraftFilters((current) => ({ ...current, date_to: event.target.value }))} />
+      <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]" onSubmit={(event) => { event.preventDefault(); if (!invalidDateRange) setFilters(draftFilters); }}>
+      <DateInput aria-label="Report date from" max={draftFilters.date_to || undefined} value={draftFilters.date_from} onChange={(event) => setDraftFilters((current) => ({ ...current, date_from: event.target.value }))} />
+      <DateInput aria-label="Report date to" min={draftFilters.date_from || undefined} invalid={invalidDateRange} aria-describedby={invalidDateRange ? "report-date-error" : undefined} value={draftFilters.date_to} onChange={(event) => setDraftFilters((current) => ({ ...current, date_to: event.target.value }))} />
       <Select aria-label="Report cashier" value={draftFilters.cashier ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, cashier: event.target.value }))}><option value="">All cashiers</option>{cashiers.map((cashier) => <option key={cashier.id} value={cashier.id}>{cashier.full_name}</option>)}</Select>
       <Select aria-label="Report category" value={draftFilters.category ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, category: event.target.value }))}><option value="">All categories</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select>
       <Select aria-label="Report payment method" value={draftFilters.payment_method ?? ""} onChange={(event) => setDraftFilters((current) => ({ ...current, payment_method: event.target.value as ReportFilters["payment_method"] }))}><option value="">All payments</option><option value="CASH">Cash</option><option value="CARD">Card</option></Select>
       <div className="grid grid-cols-2 gap-2 md:col-span-2 xl:col-span-1">
         <Button type="button" variant="ghost" onClick={() => { const reset = defaultReportFilters(); setDraftFilters(reset); setFilters(reset); }}>Reset</Button>
-            <Button type="submit">Apply filters</Button>
+            <Button type="submit" disabled={invalidDateRange}>Apply filters</Button>
       </div>
+      {invalidDateRange ? <div className="md:col-span-2 xl:col-span-6"><Alert title="End date must be on or after the start date."><span id="report-date-error">Choose a valid reporting period before applying filters.</span></Alert></div> : null}
     </form></FilterToolbar>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" role="tablist" aria-label="Report type">{tabs.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)} className={`min-h-16 rounded-xl border px-3 text-sm font-semibold shadow-[var(--shadow-sm)] transition-colors ${tab === id ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:border-border-strong hover:bg-surface-secondary"}`}><Icon className="mx-auto mb-1 size-4" />{label}</button>)}</div>
     {loading && !data ? <div aria-label="Loading reports" className="space-y-3"><Skeleton className="h-28" /><Skeleton className="h-72" /></div> : null}

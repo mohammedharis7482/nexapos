@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronDown, Eye, EyeOff, Search } from "lucide-react";
+import { CalendarDays, ChevronDown, Eye, EyeOff, Search, X } from "lucide-react";
 import {
   cloneElement,
   forwardRef,
   useId,
   useState,
+  type ChangeEvent,
   type InputHTMLAttributes,
   type ReactElement,
   type SelectHTMLAttributes,
@@ -140,14 +141,34 @@ export function FormField({
 }
 
 export const SearchInput = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, ...props }, ref) => (
+  ({ className, value, onChange, ...props }, ref) => (
     <div className="relative">
       <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground-muted" aria-hidden="true" />
-      <Input ref={ref} type="search" className={cn("pl-10", className)} {...props} />
+      <Input ref={ref} type="search" className={cn("pl-10", value && onChange ? "pr-11" : "", className)} value={value} onChange={onChange} {...props} />
+      {value && onChange ? (
+        <button
+          type="button"
+          aria-label="Clear search"
+          onClick={() => onChange({ target: { value: "" } } as ChangeEvent<HTMLInputElement>)}
+          className="absolute inset-y-0 right-1 grid w-10 place-items-center rounded-[var(--radius-control)] text-foreground-muted hover:text-foreground"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   ),
 );
 SearchInput.displayName = "SearchInput";
+
+export const DateInput = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, ...props }, ref) => (
+    <div className="relative">
+      <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground-muted" aria-hidden="true" />
+      <Input ref={ref} type="date" className={cn("pl-10 [color-scheme:light]", className)} {...props} />
+    </div>
+  ),
+);
+DateInput.displayName = "DateInput";
 
 export const MoneyInput = forwardRef<HTMLInputElement, InputProps>(
   ({ className, ...props }, ref) => (

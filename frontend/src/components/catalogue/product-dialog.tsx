@@ -117,8 +117,17 @@ export function ProductDialog({
       title={product ? "Edit product" : "Add product"}
       description="Catalogue details only. Stock quantities are managed separately."
       size="large"
+      dismissible={!isSubmitting}
+      footer={
+        <>
+          <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button form="product-form" type="submit" loading={isSubmitting}>
+            {product ? "Save product" : "Add product"}
+          </Button>
+        </>
+      }
     >
-      <form className="space-y-6" onSubmit={submit} noValidate>
+      <form id="product-form" className="space-y-6" onSubmit={submit} noValidate>
         {generalError ? <Alert title={generalError} /> : null}
         <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
           <legend className="px-1 text-sm font-bold text-text-primary">Basic information</legend>
@@ -144,7 +153,7 @@ export function ProductDialog({
           <legend className="px-1 text-sm font-bold text-text-primary">Classification and unit</legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Category" htmlFor="product-category" error={errors.category_id?.message}>
-            <Select id="product-category" {...register("category_id")}>
+            <Select id="product-category" invalid={Boolean(errors.category_id)} {...register("category_id")}>
               <option value="">Uncategorized</option>
               {categories.filter((category) => category.is_active || category.id === product?.category?.id).map((category) => (
                 <option key={category.id} value={category.id}>{category.name}</option>
@@ -152,7 +161,7 @@ export function ProductDialog({
             </Select>
           </FormField>
           <FormField label="Unit" htmlFor="product-unit" error={errors.unit?.message}>
-            <Select id="product-unit" {...register("unit")}>
+            <Select id="product-unit" invalid={Boolean(errors.unit)} {...register("unit")}>
               {PRODUCT_UNITS.map((unit) => <option key={unit} value={unit}>{unit.replaceAll("_", " ")}</option>)}
             </Select>
           </FormField>
@@ -182,12 +191,6 @@ export function ProductDialog({
           <legend className="px-1 text-sm font-bold text-text-primary">Availability</legend>
           <Checkbox label="Active product" {...register("is_active")} />
         </fieldset>
-        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-border bg-surface pt-4">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="submit" loading={isSubmitting}>
-            {product ? "Save product" : "Add product"}
-          </Button>
-        </div>
       </form>
     </Dialog>
   );

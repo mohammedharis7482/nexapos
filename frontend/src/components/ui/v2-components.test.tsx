@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/ui/display";
 import { CardSkeleton, EmptyState } from "@/components/ui/feedback";
-import { Checkbox, FormField, Input, SegmentedControl, Select } from "@/components/ui/input";
+import { Checkbox, DateInput, FormField, Input, SegmentedControl, Select } from "@/components/ui/input";
 import { FilterToolbar, MobileDataCard, Pagination, ResponsiveGrid } from "@/components/ui/layout";
 import { Drawer } from "@/components/ui/overlay";
 import { PaymentMethodBadge, RoleBadge, StockStatusBadgeV2 } from "@/components/ui/status";
@@ -67,6 +67,19 @@ describe("V2 components", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(previous).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledOnce();
+  });
+
+  it("renders aligned date controls with range constraints and invalid state", () => {
+    render(
+      <>
+        <DateInput aria-label="Start date" max="2026-07-25" />
+        <DateInput aria-label="End date" min="2026-07-01" invalid />
+      </>,
+    );
+    expect(screen.getByLabelText("Start date")).toHaveAttribute("type", "date");
+    expect(screen.getByLabelText("Start date")).toHaveAttribute("max", "2026-07-25");
+    expect(screen.getByLabelText("End date")).toHaveAttribute("min", "2026-07-01");
+    expect(screen.getByLabelText("End date")).toHaveAttribute("aria-invalid", "true");
   });
 
   it("renders metric values without truncation and semantic status labels", () => {

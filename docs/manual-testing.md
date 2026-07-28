@@ -64,3 +64,26 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 - Inspect browser console for hydration, key, or runtime warnings.
 - Print a receipt preview at 80mm and A4; confirm only receipt content prints,
   item names wrap, totals align, and nothing clips.
+
+## Interaction overlays
+
+- Open every category, product, opening-stock, adjustment, payment, password,
+  and confirmation dialog at each target viewport. Confirm header/footer
+  visibility, internal scrolling, focus return, Escape behavior, and safe
+  action ordering.
+- During a deliberately delayed mutation, confirm Escape, backdrop click, and
+  the close button cannot dismiss the critical dialog; Cancel and other
+  non-critical flows remain dismissible.
+- In the user dropdown, test outside click, Escape, Arrow Up, Arrow Down, and
+  action-close behavior. Confirm the menu stays inside the viewport.
+- Test native selects in Chrome and Safari. Confirm one arrow, reserved text
+  space, hover/focus/invalid/disabled states, keyboard selection, and the
+  platform-native mobile picker.
+- Sales and Reports dates must align with other controls. Confirm end-before-
+  start cannot be applied, presets remain selected accurately, and Reset
+  restores the default range.
+- Confirm controlled searches expose Clear search and active product,
+  inventory, and sales filters expose a complete clear action.
+- Render success and error toasts above mobile navigation. Confirm tone icon,
+  announcement, long-text wrapping, close action, and provider-level duplicate
+  suppression.

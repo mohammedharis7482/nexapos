@@ -52,7 +52,7 @@ describe("inventory UI foundations", () => {
     fireEvent.change(screen.getByLabelText("Opening quantity"), {
       target: { value: "4.500" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Configure stock" }));
+    fireEvent.click(screen.getByRole("button", { name: "Initialize stock" }));
     await waitFor(() => expect(service.openingStock).toHaveBeenCalledOnce());
     expect(onSaved).toHaveBeenCalledOnce();
   });
@@ -74,7 +74,7 @@ describe("inventory UI foundations", () => {
     fireEvent.change(screen.getByLabelText("Quantity"), {
       target: { value: "2.000" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add stock" }));
     await waitFor(() => expect(service.adjust).toHaveBeenCalledOnce());
     expect(onSaved).toHaveBeenCalledOnce();
   });
@@ -99,7 +99,7 @@ describe("inventory UI foundations", () => {
     fireEvent.change(screen.getByLabelText("Quantity"), {
       target: { value: "2.000" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save adjustment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add stock" }));
     expect(
       await screen.findByText("Insufficient stock for this adjustment."),
     ).toBeInTheDocument();
