@@ -14,7 +14,18 @@ creates one POST. After an invalid `400`, correct the fields and retry; the
 success panel must replace all red alerts and invalid-field state. Simulate a
 network failure, confirm values remain available, then retry explicitly.
 Success removes the password fields and Create Shop action and provides
-Go to Sign In. No verification token may appear in the page.
+Go to Sign In. Confirm the success panel shows the shop name and full Shop ID,
+Copy Shop ID writes the exact UUID, and the sign-in link contains only the
+URL-encoded `shop_id`. No password or verification token may appear in that
+URL.
+
+Open the console verification email and confirm the same shop name, Shop ID,
+and username appear without a password. After verification, confirm the
+success page repeats the same Shop ID and its sign-in action prefills login.
+Test a malformed `shop_id` query and confirm a field error appears without
+submitting. A valid query takes precedence over a remembered value but remains
+unpersisted until a successful login with Remember Shop ID selected. After
+login, confirm Account and Shop Settings show the immutable ID and copy action.
 
 Development uses Django's console email backend. Find the verification URL in
 the terminal running `manage.py runserver`; do not expect external email

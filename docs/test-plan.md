@@ -22,6 +22,13 @@ clearing on retry, successful form replacement, password-control removal,
 accessible focus, network retry, and mutual exclusion of success and error
 states. Registration uses direct mutation calls with no automatic retry.
 
+Shop ID handoff tests cover the UUID returned for only the newly registered
+shop, matching email content, minimum verification response context, copy
+feedback, registration/verification sign-in URLs, absence of credential URL
+parameters, valid/malformed query behavior, valid-query precedence over
+remembered state, opt-in persistence after login, and read-only Settings
+visibility.
+
 Foundation tests cover Shop/User models plus session authentication, CSRF cookie
 initialization and enforcement, owner/cashier login, invalid and cross-shop
 credentials, inactive users and shops, username reuse across shops, session

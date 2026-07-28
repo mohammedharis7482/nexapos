@@ -1,4 +1,5 @@
 export interface ShopSettings {
+  id: string;
   name: string;
   legal_name: string;
   phone: string;
@@ -15,4 +16,4 @@ export interface ShopSettings {
   is_active: boolean;
 }
 
-export type ShopSettingsInput = Omit<ShopSettings, "logo" | "is_active">;
+export type ShopSettingsInput = Omit<ShopSettings, "id" | "logo" | "is_active">;

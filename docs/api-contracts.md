@@ -109,10 +109,12 @@ the valid current session is preserved after a successful change.
     "success": true,
     "message": "Shop registered. Check your email to verify the account.",
     "data": {
-      "shop_id": "00000000-0000-0000-0000-000000000000",
-      "status": "PENDING_VERIFICATION",
+      "shop": {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "name": "Example Grocery"
+      },
       "verification_required": true,
-      "email": "owner@example.test"
+      "owner_email": "owner@example.test"
     }
   }
   ```
@@ -123,7 +125,8 @@ the valid current session is preserved after a successful change.
   The client cannot select roles or subscription state.
 - `POST /api/v1/auth/email-verification/resend/` and
   `POST /api/v1/auth/email-verification/verify/`: generic resend and one-time
-  hashed-token verification.
+  hashed-token verification. Successful verification returns only the verified
+  shop's `id` and `name` so the login handoff does not require another lookup.
 - `POST /api/v1/auth/password-reset/request/` and
   `POST /api/v1/auth/password-reset/confirm/`: enumeration-safe recovery and
   one-time reset.
@@ -138,6 +141,10 @@ the valid current session is preserved after a successful change.
 
 Tokens are accepted only as write-only inputs or URL query input for the public
 invitation preview. Token hashes are never serialized.
+
+Shop ID is a public tenant identifier required alongside username and password
+at login. Knowing it grants no access; authentication and shop-scoped
+authorization remain mandatory.
 
 ### Logout
 

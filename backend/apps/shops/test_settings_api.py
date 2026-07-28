@@ -57,7 +57,7 @@ class ShopSettingsApiTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["data"]["name"], self.shop.name)
-        self.assertNotIn("id", response.json()["data"])
+        self.assertEqual(response.json()["data"]["id"], str(self.shop.id))
 
         self.client.logout()
         self.login(self.other_owner)

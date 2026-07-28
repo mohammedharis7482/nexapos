@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, ChartNoAxesCombined, ReceiptText, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ const REMEMBERED_SHOP_KEY = "nexapos.remembered-shop-id";
 export default function LoginPage() {
   const router = useRouter();
   const { login, status } = useAuth();
+  const shopIdInitialized = useRef(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const {
     register,
@@ -36,12 +37,26 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    if (shopIdInitialized.current) return;
+    shopIdInitialized.current = true;
+    const queryShopId = new URLSearchParams(window.location.search).get("shop_id");
     const remembered = window.localStorage.getItem(REMEMBERED_SHOP_KEY);
-    if (remembered) {
+    if (queryShopId !== null) {
+      const parsed = loginSchema.shape.shop_id.safeParse(queryShopId);
+      if (parsed.success) {
+        setValue("shop_id", parsed.data);
+        setValue("remember_shop", false);
+        return;
+      }
+      setError("shop_id", {
+        message: "The Shop ID in this sign-in link is invalid.",
+      });
+    }
+    if (remembered && loginSchema.shape.shop_id.safeParse(remembered).success) {
       setValue("shop_id", remembered);
       setValue("remember_shop", true);
     }
-  }, [setValue]);
+  }, [setError, setValue]);
 
   useEffect(() => {
     if (status === "authenticated") router.replace("/dashboard");
@@ -146,7 +161,7 @@ export default function LoginPage() {
                 label="Shop ID"
                 htmlFor="shop_id"
                 error={errors.shop_id?.message}
-                hint="Use the Shop ID provided by your administrator."
+                hint="Your Shop ID appears on the registration success page and in your NexaPOS verification email."
               >
                 <Input
                   id="shop_id"

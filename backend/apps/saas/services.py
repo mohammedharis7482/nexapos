@@ -103,6 +103,9 @@ def create_verification_token(user: User) -> EmailVerificationToken:
         template="verify_email",
         context={
             "name": user.full_name,
+            "username": user.username,
+            "shop_name": user.shop.name,
+            "shop_id": str(user.shop_id),
             "action_url": _frontend_url("/verify-email", raw),
             "expires_hours": 24,
         },

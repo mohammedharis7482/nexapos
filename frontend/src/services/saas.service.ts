@@ -8,6 +8,7 @@ import type {
   RegistrationResult,
   SubscriptionResponse,
   TeamResponse,
+  VerificationResult,
 } from "@/types/saas";
 
 export const SAAS_ENDPOINTS = {
@@ -33,7 +34,7 @@ export const saasService = {
     );
   },
   verifyEmail(token: string) {
-    return apiRequest<EmptySuccessResponse>(SAAS_ENDPOINTS.verifyEmail, {
+    return apiRequest<ApiSuccess<VerificationResult>>(SAAS_ENDPOINTS.verifyEmail, {
       method: "POST",
       body: JSON.stringify({ token }),
     });

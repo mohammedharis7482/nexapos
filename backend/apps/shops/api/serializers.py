@@ -9,6 +9,7 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
         fields = (
+            "id",
             "name",
             "legal_name",
             "phone",
@@ -24,7 +25,7 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
             "logo",
             "is_active",
         )
-        read_only_fields = ("logo", "is_active")
+        read_only_fields = ("id", "logo", "is_active")
 
     def validate_name(self, value: str) -> str:
         value = value.strip()

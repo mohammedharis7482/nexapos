@@ -49,6 +49,7 @@ from .serializers import (
     SubscriptionSerializer,
     TokenSerializer,
     UserUpdateSerializer,
+    VerificationResponseSerializer,
 )
 
 
@@ -103,25 +104,35 @@ class RegisterView(PublicCsrfViewMixin, APIView):
         return success_response(
             "Shop registered. Check your email to verify the account.",
             {
-                "shop_id": str(shop.id),
-                "status": shop.status,
+                "shop": {"id": str(shop.id), "name": shop.name},
                 "verification_required": True,
-                "email": _owner.email,
+                "owner_email": _owner.email,
             },
             status_code=status.HTTP_201_CREATED,
         )
 
 
 class VerifyEmailView(PublicCsrfViewMixin, APIView):
-    @extend_schema(request=TokenSerializer, responses={200: SuccessSerializer})
+    @extend_schema(
+        request=TokenSerializer,
+        responses={200: VerificationResponseSerializer},
+    )
     def post(self, request):
         serializer = TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            verify_email(serializer.validated_data["token"])
+            user = verify_email(serializer.validated_data["token"])
         except SaasOperationError as exc:
             operation_error(exc)
-        return success_response("Email verified. You can now sign in.")
+        return success_response(
+            "Email verified. You can now sign in.",
+            {
+                "shop": {
+                    "id": str(user.shop_id),
+                    "name": user.shop.name,
+                }
+            },
+        )
 
 
 class ResendVerificationView(PublicCsrfViewMixin, APIView):

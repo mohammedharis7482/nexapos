@@ -98,3 +98,11 @@ logging. Public resend/reset responses do not reveal whether an account exists.
 Registration, acceptance, role changes, activation, and subscription
 transitions are transactional and backend-authoritative. Public account routes
 have a separate throttle; shared edge controls remain required.
+
+Shop IDs are tenant identifiers, not secrets or authentication factors. They
+may appear in registration and verification responses, verification email,
+login handoff URLs, and authenticated account/settings views. A Shop ID alone
+cannot authenticate a user or select authorization scope: username, password,
+CSRF/session controls, lifecycle rules, and server-derived `request.user.shop`
+remain authoritative. Passwords and raw account tokens never accompany the
+Shop ID in URLs or API responses.

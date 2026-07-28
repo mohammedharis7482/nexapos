@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { PublicAccountPage } from "@/components/auth/public-account-page";
+import { ShopIdDisplay } from "@/components/shops/shop-id-display";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { FormField, Input, PasswordInput, Textarea } from "@/components/ui/input";
@@ -65,6 +66,8 @@ export default function RegisterShopPage() {
   const [result, setResult] = useState<RegistrationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [resendPending, setResendPending] = useState(false);
+  const [resendFeedback, setResendFeedback] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
@@ -73,6 +76,20 @@ export default function RegisterShopPage() {
       successHeadingRef.current?.focus();
     }
   }, [result]);
+
+  async function resendVerification() {
+    if (!result || resendPending) return;
+    setResendPending(true);
+    setResendFeedback(null);
+    try {
+      const response = await saasService.resendVerification(result.owner_email);
+      setResendFeedback(response.message);
+    } catch {
+      setResendFeedback("Verification email could not be requested. Try again.");
+    } finally {
+      setResendPending(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -132,15 +149,27 @@ export default function RegisterShopPage() {
             Shop registered
           </h2>
           <p className="mt-2 text-sm text-foreground-secondary">
-            A verification email was created for <strong>{result.email}</strong>.
+            <strong>{result.shop.name}</strong> is registered. A verification
+            email was created for <strong>{result.owner_email}</strong>.
             Verify the account before signing in.
           </p>
-          <Link
-            href="/login"
-            className="mt-5 inline-flex min-h-[var(--control-md)] w-full items-center justify-center rounded-[var(--radius-control)] border border-primary bg-primary px-4 text-sm font-semibold text-white shadow-sm hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]"
-          >
-            Go to Sign In
-          </Link>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            Save this Shop ID. You will use it together with your username and
+            password when signing in.
+          </p>
+          <ShopIdDisplay shopId={result.shop.id} className="mt-4 text-left" />
+          {resendFeedback ? <p className="mt-3 text-sm text-foreground-secondary" role="status">{resendFeedback}</p> : null}
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            <Button type="button" variant="outline" loading={resendPending} onClick={() => void resendVerification()}>
+              Resend Verification Email
+            </Button>
+            <Link
+              href={`/login?shop_id=${encodeURIComponent(result.shop.id)}`}
+              className="inline-flex min-h-[var(--control-md)] w-full items-center justify-center rounded-[var(--radius-control)] border border-primary bg-primary px-4 text-sm font-semibold text-white shadow-sm hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]"
+            >
+              Go to Sign In
+            </Link>
+          </div>
         </section>
       ) : (
         <>

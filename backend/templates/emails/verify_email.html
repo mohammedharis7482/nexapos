@@ -1,4 +1,13 @@
 <p>Hello {{ name }},</p>
 <p>Verify your email to continue setting up NexaPOS.</p>
 <p><a href="{{ action_url }}">Verify email</a></p>
+<dl>
+  <dt><strong>Shop</strong></dt>
+  <dd>{{ shop_name }}</dd>
+  <dt><strong>Shop ID</strong></dt>
+  <dd><code>{{ shop_id }}</code></dd>
+  <dt><strong>Username</strong></dt>
+  <dd>{{ username }}</dd>
+</dl>
+<p>Save your Shop ID. You will use it with your username and password when signing in.</p>
 <p>This link expires in {{ expires_hours }} hours and can be used once.</p>

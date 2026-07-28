@@ -120,10 +120,12 @@ class SaasFoundationTests(TestCase):
                 "success": True,
                 "message": "Shop registered. Check your email to verify the account.",
                 "data": {
-                    "shop_id": response.json()["data"]["shop_id"],
-                    "status": Shop.Status.PENDING_VERIFICATION,
+                    "shop": {
+                        "id": response.json()["data"]["shop"]["id"],
+                        "name": "New Grocery",
+                    },
                     "verification_required": True,
-                    "email": "new-owner@example.test",
+                    "owner_email": "new-owner@example.test",
                 },
             },
         )
@@ -139,6 +141,8 @@ class SaasFoundationTests(TestCase):
             EmailVerificationToken.objects.count(), initial_counts["tokens"] + 1
         )
         shop = Shop.objects.get(name="New Grocery")
+        self.assertEqual(response.json()["data"]["shop"]["id"], str(shop.id))
+        self.assertNotEqual(response.json()["data"]["shop"]["id"], str(self.shop.id))
         owner = shop.primary_owner
         self.assertTrue(owner.check_password(PASSWORD))
         self.assertFalse(owner.is_superuser)
@@ -149,6 +153,9 @@ class SaasFoundationTests(TestCase):
             14,
         )
         token = token_from_email(mail.outbox[0].body)
+        self.assertIn(str(shop.id), mail.outbox[0].body)
+        self.assertIn(shop.name, mail.outbox[0].body)
+        self.assertIn(owner.username, mail.outbox[0].body)
         self.assertNotEqual(
             EmailVerificationToken.objects.get(user=owner).token_hash, token
         )
@@ -197,6 +204,7 @@ class SaasFoundationTests(TestCase):
         )
         duplicate = self.public_post(reverse("saas_api:register"), payload)
         self.assertEqual(duplicate.status_code, 400)
+        self.assertNotIn("shop", duplicate.json().get("errors", {}))
         self.assertEqual(
             (
                 Shop.objects.count(),
@@ -246,6 +254,12 @@ class SaasFoundationTests(TestCase):
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 400)
         shop = Shop.objects.get(name="New Grocery")
+        self.assertEqual(
+            first.json()["data"],
+            {"shop": {"id": str(shop.id), "name": shop.name}},
+        )
+        self.assertNotIn(str(self.shop.id), str(first.json()))
+        self.assertNotIn("shop", second.json().get("errors", {}))
         self.assertEqual(shop.status, Shop.Status.ONBOARDING)
         self.assertIsNotNone(shop.primary_owner.email_verified_at)
 

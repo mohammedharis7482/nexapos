@@ -15,10 +15,12 @@ const success = {
   success: true,
   message: "Shop registered. Check your email to verify the account.",
   data: {
-    shop_id: "02dccdd7-8182-4554-b1db-60bcaa610002",
-    status: "PENDING_VERIFICATION",
+    shop: {
+      id: "02dccdd7-8182-4554-b1db-60bcaa610002",
+      name: "Test Grocery",
+    },
     verification_required: true as const,
-    email: "owner@example.test",
+    owner_email: "owner@example.test",
   },
 };
 
@@ -39,6 +41,10 @@ describe("shop registration", () => {
   beforeEach(() => {
     register.mockReset();
     register.mockResolvedValue(success);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
   });
 
   it("submits one request and replaces the form with an accessible success panel", async () => {
@@ -57,11 +63,29 @@ describe("shop registration", () => {
     });
     expect(await screen.findByRole("heading", { name: "Shop registered" })).toHaveFocus();
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to Sign In" })).toHaveAttribute("href", "/login");
+    expect(screen.getByText(success.data.shop.id)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to Sign In" })).toHaveAttribute(
+      "href",
+      `/login?shop_id=${success.data.shop.id}`,
+    );
+    expect(screen.getByRole("button", { name: "Resend Verification Email" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create shop" })).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/token/i);
+  });
+
+  it("copies the Shop ID and announces feedback", async () => {
+    render(<RegisterShopPage />);
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Create shop" }));
+    await screen.findByRole("heading", { name: "Shop registered" });
+
+    await user.click(screen.getByRole("button", { name: "Copy Shop ID" }));
+
+    expect(await navigator.clipboard.readText()).toBe(success.data.shop.id);
+    expect(screen.getByRole("button", { name: "Shop ID copied" })).toBeInTheDocument();
+    expect(screen.getByText("Shop ID copied to clipboard.")).toBeInTheDocument();
   });
 
   it("synchronously guards double submission while the request is pending", async () => {

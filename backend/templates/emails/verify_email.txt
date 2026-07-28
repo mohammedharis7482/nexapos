@@ -3,4 +3,10 @@ Hello {{ name }},
 Verify your email to continue setting up NexaPOS:
 {{ action_url }}
 
+Shop: {{ shop_name }}
+Shop ID: {{ shop_id }}
+Username: {{ username }}
+
+Save your Shop ID. You will use it with your username and password when signing in.
+
 This link expires in {{ expires_hours }} hours and can be used once.

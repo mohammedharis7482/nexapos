@@ -26,11 +26,15 @@ class RegistrationSerializer(serializers.Serializer):
         return attrs
 
 
+class PublicShopIdentitySerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField(read_only=True)
+
+
 class RegistrationDataSerializer(serializers.Serializer):
-    shop_id = serializers.UUIDField(read_only=True)
-    status = serializers.CharField(read_only=True)
+    shop = PublicShopIdentitySerializer(read_only=True)
     verification_required = serializers.BooleanField(read_only=True)
-    email = serializers.EmailField(read_only=True)
+    owner_email = serializers.EmailField(read_only=True)
 
 
 class RegistrationResponseSerializer(serializers.Serializer):
@@ -43,6 +47,16 @@ class RegistrationErrorSerializer(serializers.Serializer):
     success = serializers.BooleanField(read_only=True)
     message = serializers.CharField(read_only=True)
     errors = serializers.DictField(read_only=True)
+
+
+class VerificationDataSerializer(serializers.Serializer):
+    shop = PublicShopIdentitySerializer(read_only=True)
+
+
+class VerificationResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(read_only=True)
+    message = serializers.CharField(read_only=True)
+    data = VerificationDataSerializer(read_only=True)
 
 
 class TokenSerializer(serializers.Serializer):

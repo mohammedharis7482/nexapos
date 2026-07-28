@@ -23,5 +23,12 @@ nonblank shop registration email addresses closes the concurrent
 duplicate-registration race while preserving the existing user membership
 rules; application validation provides the normal field-level response.
 
+The Shop UUID is the stable tenant identifier used by the existing login
+contract. It is intentionally visible on registration/verification results,
+verification email, Account, and Shop Settings. It is immutable and is not a
+credential: every request still requires authenticated session state, and
+backend selectors derive tenant scope from `request.user.shop` rather than a
+client-provided Shop ID.
+
 Automated payment collection, recurring charging, multi-branch operation,
 impersonation, and custom permission builders are deliberately deferred.

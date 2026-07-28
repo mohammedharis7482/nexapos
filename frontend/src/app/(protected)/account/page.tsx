@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 import { ChangePasswordDialog } from "@/components/auth/change-password-dialog";
+import { ShopIdDisplay } from "@/components/shops/shop-id-display";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
@@ -39,6 +40,7 @@ export default function AccountPage() {
           <FormField label="Email" htmlFor="account-email" hint="Changing email requires verification."><Input id="account-email" name="email" type="email" defaultValue={user.email ?? ""} /></FormField>
           <FormField label="Username" htmlFor="account-username"><Input id="account-username" value={user.username} readOnly /></FormField>
           <FormField label="Shop" htmlFor="account-shop"><Input id="account-shop" value={user.shop.name} readOnly /></FormField>
+          <ShopIdDisplay shopId={user.shop.id} />
           <div className="flex flex-wrap gap-2"><Button type="submit" loading={busy}>Save profile</Button><Button type="button" variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button></div>
         </form>
       </Card>

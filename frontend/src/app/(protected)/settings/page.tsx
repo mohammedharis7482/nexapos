@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { settingsAccessMode } from "@/components/catalogue/access";
+import { ShopIdDisplay } from "@/components/shops/shop-id-display";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [shopId, setShopId] = useState("");
   const {
     register,
     reset,
@@ -42,6 +44,7 @@ export default function SettingsPage() {
     setLoadError(null);
     try {
       const response = await shopService.getSettings();
+      setShopId(response.data.id);
       reset(response.data);
     } catch (error) {
       setLoadError(error instanceof ApiError ? error.message : "Shop settings could not be loaded.");
@@ -96,6 +99,7 @@ export default function SettingsPage() {
       {success ? <Alert title="Shop settings saved." tone="success" /> : null}
       {submitError ? <Alert title={submitError} /> : null}
       <Card className="max-w-5xl p-5 sm:p-7">
+        <ShopIdDisplay shopId={shopId} className="mb-6" />
         <form onSubmit={submit} className="space-y-6" noValidate>
           <section className="space-y-5" aria-labelledby="business-details-heading">
           <div>
