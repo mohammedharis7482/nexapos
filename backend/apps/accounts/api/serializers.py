@@ -9,14 +9,34 @@ class ShopSessionSerializer(serializers.Serializer):
     name = serializers.CharField(read_only=True)
     currency = serializers.CharField(read_only=True)
     timezone = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    onboarding_completed = serializers.BooleanField(read_only=True)
+
+
+class SubscriptionSessionSerializer(serializers.Serializer):
+    status = serializers.CharField(read_only=True)
+    plan_code = serializers.CharField(read_only=True)
+    trial_ends_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+
+class CapabilitiesSerializer(serializers.Serializer):
+    manage_team = serializers.BooleanField(read_only=True)
+    manage_owners = serializers.BooleanField(read_only=True)
+    view_subscription = serializers.BooleanField(read_only=True)
+    manage_subscription = serializers.BooleanField(read_only=True)
 
 
 class UserSessionSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     full_name = serializers.CharField(read_only=True)
     username = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True, allow_blank=True)
+    last_login = serializers.DateTimeField(read_only=True, allow_null=True)
     role = serializers.ChoiceField(choices=User.Role.choices, read_only=True)
+    is_primary_owner = serializers.BooleanField(read_only=True)
     shop = ShopSessionSerializer(read_only=True)
+    subscription = SubscriptionSessionSerializer(read_only=True, allow_null=True)
+    capabilities = CapabilitiesSerializer(read_only=True)
 
 
 class SessionDataSerializer(serializers.Serializer):
@@ -62,3 +82,13 @@ class ChangePasswordSerializer(serializers.Serializer):
         if hasattr(exc, "message_dict"):
             raise serializers.ValidationError(exc.message_dict)
         raise serializers.ValidationError({"new_password": list(exc.messages)})
+
+
+class AccountProfileSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    full_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField(allow_blank=True)
+    username = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)
+    shop_name = serializers.CharField(read_only=True)
+    last_login = serializers.DateTimeField(read_only=True, allow_null=True)

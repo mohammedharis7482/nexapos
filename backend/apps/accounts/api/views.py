@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.selectors import user_session_data
 from apps.accounts.services import change_user_password, login_user
+from apps.saas.services import create_verification_token, invalidate_user_sessions
 from common.authentication import ApiSessionAuthentication, enforce_csrf
 from common.throttling import LoginContextThrottle, LoginIpThrottle
 from common.views import success_response
@@ -15,6 +16,7 @@ from .serializers import (
     ChangePasswordSerializer,
     LoginSerializer,
     SuccessSerializer,
+    AccountProfileSerializer,
 )
 
 
@@ -82,3 +84,50 @@ class ChangePasswordView(APIView):
         except DjangoValidationError as exc:
             ChangePasswordSerializer.convert_django_validation_error(exc)
         return success_response("Password changed successfully.")
+
+
+class AccountProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def data(user):
+        return {
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+            "shop_name": user.shop.name,
+            "last_login": user.last_login,
+        }
+
+    @extend_schema(responses={200: AccountProfileSerializer})
+    def get(self, request):
+        return success_response("Account retrieved.", self.data(request.user))
+
+    @extend_schema(
+        request=AccountProfileSerializer, responses={200: AccountProfileSerializer}
+    )
+    def patch(self, request):
+        serializer = AccountProfileSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        old_email = user.email
+        user.full_name = serializer.validated_data.get("full_name", user.full_name).strip()
+        user.email = serializer.validated_data.get("email", user.email).strip()
+        if user.email.lower() != old_email.lower():
+            user.email_verified_at = None
+        user.full_clean(exclude=["password"])
+        user.save()
+        if user.email and user.email_verified_at is None:
+            create_verification_token(user)
+        return success_response("Account updated.", self.data(user))
+
+
+class LogoutAllView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(request=None, responses={200: SuccessSerializer})
+    def post(self, request):
+        invalidate_user_sessions(request.user)
+        return success_response("All sessions logged out.")

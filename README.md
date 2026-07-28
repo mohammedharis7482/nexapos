@@ -1,9 +1,11 @@
 # NexaPOS
 
-NexaPOS is a production-oriented grocery point-of-sale and billing application
-for small local grocery shops in Qatar. The MVP is a single-shop operational
-system with owner and cashier roles. It does not include branches, subscription
-billing, or a multi-tenant SaaS control plane.
+NexaPOS is a production-oriented multi-tenant grocery point-of-sale and billing
+SaaS application for small local grocery shops in Qatar. Each Shop is an
+isolated tenant in a shared PostgreSQL database. The product includes owner and
+cashier operations plus registration, onboarding, team invitations, account
+recovery, trials, subscription state, and usage-limit foundations. It does not
+include branches or automated subscription charging.
 
 ## Stack and repository
 
@@ -93,6 +95,18 @@ fallback. Never change `AUTH_USER_MODEL` after the first migration.
 API discovery is available at `/api/schema/`, `/api/docs/`, and `/api/redoc/`.
 The unauthenticated liveness endpoint is `/api/v1/health/`; database-aware
 deployment readiness is `/api/v1/readiness/`.
+
+Before public registration, create the example plan definitions:
+
+```bash
+python manage.py seed_plans
+```
+
+The command is idempotent and never overwrites existing commercial values.
+Example prices are zero placeholders, not commercial commitments. Existing
+shops are prepared automatically by the SaaS data migration; operators can
+idempotently repair a specific shop with
+`python manage.py bootstrap_subscription --shop-id <uuid>`.
 
 Owners can optionally seed a development shop with a small catalogue:
 

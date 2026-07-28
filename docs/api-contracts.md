@@ -99,6 +99,28 @@ shape as login. Missing or expired sessions return HTTP 401.
 Django password validators apply. Validation errors remain field-specific, and
 the valid current session is preserved after a successful change.
 
+## SaaS account APIs
+
+- `POST /api/v1/saas/register/`: public atomic shop, primary owner, trial, and
+  verification creation. The client cannot select roles or subscription state.
+- `POST /api/v1/auth/email-verification/resend/` and
+  `POST /api/v1/auth/email-verification/verify/`: generic resend and one-time
+  hashed-token verification.
+- `POST /api/v1/auth/password-reset/request/` and
+  `POST /api/v1/auth/password-reset/confirm/`: enumeration-safe recovery and
+  one-time reset.
+- `GET|POST /api/v1/invitations/accept/`: safe invitation context and atomic
+  acceptance.
+- `/api/v1/users/` and `/api/v1/users/invitations/`: OWNER-only,
+  current-shop user and invitation management.
+- `GET|PATCH /api/v1/saas/onboarding/` and
+  `POST /api/v1/saas/onboarding/complete/`: primary-owner onboarding progress.
+- `GET /api/v1/saas/subscription/` and `GET /api/v1/saas/plans/`: OWNER-only
+  current subscription, real plan records, and authoritative usage.
+
+Tokens are accepted only as write-only inputs or URL query input for the public
+invitation preview. Token hashes are never serialized.
+
 ### Logout
 
 `POST /api/v1/auth/logout/` requires authentication and CSRF. It deletes the

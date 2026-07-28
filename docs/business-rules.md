@@ -122,6 +122,24 @@
     access.
 52. Report date filters are inclusive local dates converted into a half-open
     timezone-aware datetime range. Draft and cancelled sales are excluded.
+
+## SaaS tenancy and lifecycle
+
+47. One Shop is one tenant. All business and account-management queries derive
+    the shop from the authenticated user.
+48. New shops begin `PENDING_VERIFICATION`, advance to `ONBOARDING` after
+    primary-owner email verification, and enter `TRIAL` when onboarding is
+    completed.
+49. `TRIAL` and `ACTIVE` permit normal operations. `PAST_DUE` permits operations
+    during the configured grace policy. `SUSPENDED` preserves safe reads and
+    blocks business mutations. `CANCELLED` preserves data and blocks tenant use.
+50. Primary ownership is the protected `Shop.primary_owner` relationship.
+    Normal role actions cannot transfer, deactivate, or demote it.
+51. Active users and active products count toward plan limits. Limits are
+    checked by backend services before creation/reactivation and invitation
+    acceptance.
+52. Subscription payments are not connected; lifecycle transitions are
+    platform-admin operations in this foundation.
 52a. Sales History and Reports reject an end date earlier than the start date;
      report ranges are limited to 367 calendar days.
 53. Sales, product, payment, and cashier reports share date, cashier, category,

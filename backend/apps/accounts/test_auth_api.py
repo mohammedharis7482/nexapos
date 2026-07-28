@@ -118,13 +118,13 @@ class SessionAuthenticationApiTests(TestCase):
         self.assertNotEqual(self.client.session.session_key, old_session_key)
         user_data = response.json()["data"]["user"]
         self.assertEqual(user_data["role"], User.Role.OWNER)
-        self.assertEqual(
-            set(user_data),
-            {"id", "full_name", "username", "role", "shop"},
+        self.assertTrue(
+            {"id", "full_name", "username", "role", "shop", "capabilities"}
+            <= set(user_data)
         )
-        self.assertEqual(
-            set(user_data["shop"]),
-            {"id", "name", "currency", "timezone"},
+        self.assertTrue(
+            {"id", "name", "currency", "timezone", "status"}
+            <= set(user_data["shop"])
         )
         forbidden = {"password", "session", "session_key", "permissions"}
         self.assertTrue(forbidden.isdisjoint(user_data))

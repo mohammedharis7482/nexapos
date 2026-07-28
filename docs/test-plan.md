@@ -1,5 +1,19 @@
 # Test plan
 
+## SaaS foundation
+
+PostgreSQL tests cover atomic registration, owner/password/trial creation,
+hashed and one-time verification/reset/invitation tokens, generic public
+responses, primary-owner protections, owner/cashier management boundaries,
+shop isolation, invitation lifecycle, active-user/product limits, resumable
+onboarding, subscription uniqueness, suspension behavior, and existing POS
+regressions.
+
+Frontend tests cover exact SaaS endpoint paths, lifecycle route decisions,
+role-aware navigation, session-context clearing, and all existing operational
+components. Manual acceptance must additionally exercise email links, mobile
+forms, two-shop isolation, and platform-admin lifecycle transitions.
+
 Foundation tests cover Shop/User models plus session authentication, CSRF cookie
 initialization and enforcement, owner/cashier login, invalid and cross-shop
 credentials, inactive users and shops, username reuse across shops, session

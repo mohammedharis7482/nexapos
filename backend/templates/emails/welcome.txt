@@ -1,0 +1,3 @@
+Hello {{ name }},
+
+{{ shop_name }} is ready to use NexaPOS. Your trial access and plan limits are visible in Subscription settings.

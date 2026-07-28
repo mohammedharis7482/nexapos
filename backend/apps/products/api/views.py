@@ -17,6 +17,7 @@ from apps.products.services import (
     update_category,
     update_product,
 )
+from apps.saas.services import SaasOperationError
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
@@ -165,10 +166,15 @@ class ProductListCreateView(StaffReadOwnerWriteMixin, APIView):
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
-        product = create_product(
-            shop=request.user.shop,
-            validated_data=serializer.validated_data,
-        )
+        try:
+            product = create_product(
+                shop=request.user.shop,
+                validated_data=serializer.validated_data,
+            )
+        except SaasOperationError as exc:
+            raise serializers.ValidationError(
+                {"non_field_errors": exc.message}
+            ) from exc
         return success_response(
             "Product created.",
             ProductSerializer(product).data,
@@ -195,10 +201,15 @@ class ProductDetailView(StaffReadOwnerWriteMixin, APIView):
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
-        product = update_product(
-            product=product,
-            validated_data=serializer.validated_data,
-        )
+        try:
+            product = update_product(
+                product=product,
+                validated_data=serializer.validated_data,
+            )
+        except SaasOperationError as exc:
+            raise serializers.ValidationError(
+                {"non_field_errors": exc.message}
+            ) from exc
         return success_response("Product updated.", ProductSerializer(product).data)
 
 

@@ -1,5 +1,22 @@
 # Frontend architecture
 
+## SaaS routes and context
+
+Public account routes are grouped with login and use one branded account
+surface: `/register-shop`, `/verify-email`, `/forgot-password`,
+`/reset-password`, and `/accept-invitation`. Tokens are read only to make the
+required API call and are never persisted.
+
+Authenticated context includes shop lifecycle, onboarding, subscription
+summary, primary ownership, and presentation capabilities. The protected
+boundary prevents content flashes and redirects onboarding, suspended, and
+role-restricted sessions before rendering operational content. Backend
+permissions remain authoritative.
+
+Owner interfaces live at `/team` and `/settings/subscription`; self-service
+profile controls live at `/account`. Onboarding is resumable at `/onboarding`.
+No client cache library or browser authentication authority was introduced.
+
 NexaPOS uses Next.js App Router with TypeScript, React, Tailwind CSS, and
 Vitest. Session state lives in `AuthProvider`; business pages call one
 authoritative fetch client and retain only page-local server data.
@@ -35,4 +52,3 @@ system route calls `notFound()` outside development/test.
 Only `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_API_TIMEOUT_MS` are public.
 The Next build emits baseline security headers. CSP enforcement is deliberately
 deployment-staged as described in [security-audit.md](security-audit.md).
-

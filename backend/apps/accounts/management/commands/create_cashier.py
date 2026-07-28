@@ -7,6 +7,7 @@ from django.db import transaction
 
 from apps.accounts.models import User
 from apps.shops.models import Shop
+from apps.saas.services import SaasOperationError, enforce_user_limit
 
 
 class Command(BaseCommand):
@@ -34,6 +35,10 @@ class Command(BaseCommand):
             raise CommandError("The specified shop does not exist.") from exc
         if not shop.is_active:
             raise CommandError("Cashiers cannot be created for an inactive shop.")
+        try:
+            enforce_user_limit(shop)
+        except SaasOperationError as exc:
+            raise CommandError(exc.message) from exc
 
         username = User.objects.normalize_username(options["username"])
         full_name = options["full_name"].strip()

@@ -22,10 +22,17 @@ appropriate.
 | Cashier filter list | Current-shop staff | Self only | Shop/user filter |
 | Dashboard | Shop-wide | Own financial/recent-sale scope | Role-aware shop-scoped selectors |
 | Reports | Allowed | Denied | `IsOwner`; all aggregations start from user shop |
+| Team users and invitations | Manage cashiers; primary owner also manages owners | Denied | `request.user.shop`, role and primary-owner service checks |
+| Onboarding | Primary owner only | Denied | Explicit `Shop.primary_owner` relationship |
+| Subscription | Read; sensitive actions reserved to primary owner/platform admin | Denied | Current shop OneToOne subscription |
 | Django admin | Staff/superuser only | Denied unless explicitly staff | Django admin permissions |
+
+`PRIMARY_OWNER` is a capability derived from `Shop.primary_owner`, not a third
+tenant role string. This preserves existing OWNER data while enforcing exactly
+one primary owner at the database relationship level. Platform administrators
+are Django staff and are not tenant roles; impersonation is not implemented.
 
 Model `clean()` methods protect cross-shop relationships during normal model
 validation. Database foreign keys protect existence, while production writes
 must continue to use the audited service/API layer because PostgreSQL cannot
 express every cross-table shop-equality rule as a simple check constraint.
-

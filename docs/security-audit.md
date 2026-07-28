@@ -88,3 +88,13 @@ run unless `DEBUG=True`. Environment examples contain placeholders only.
 4. Complete CSP report-only evaluation.
 5. Configure centralized encrypted logs with access/retention controls.
 6. Complete a backup restore rehearsal.
+
+## SaaS account security
+
+Verification, invitation, and password-reset secrets use cryptographically
+secure random values and SHA-256 hashes at rest. They expire, are single-use,
+are never returned by APIs, and are excluded from admin displays and structured
+logging. Public resend/reset responses do not reveal whether an account exists.
+Registration, acceptance, role changes, activation, and subscription
+transitions are transactional and backend-authoritative. Public account routes
+have a separate throttle; shared edge controls remain required.

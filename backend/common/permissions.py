@@ -1,4 +1,25 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS
+
+from apps.shops.models import Shop
+
+
+def tenant_access_allowed(user, method: str) -> bool:
+    """Central tenant lifecycle policy for established business APIs."""
+
+    if not user or not user.is_authenticated or not user.is_active:
+        return False
+    shop = user.shop
+    if not shop.is_active or shop.status == Shop.Status.CANCELLED:
+        return False
+    if method in SAFE_METHODS:
+        return shop.status != Shop.Status.PENDING_VERIFICATION
+    return shop.status in (
+        Shop.Status.ONBOARDING,
+        Shop.Status.TRIAL,
+        Shop.Status.ACTIVE,
+        Shop.Status.PAST_DUE,
+    )
 
 
 class IsOwner(BasePermission):
@@ -11,8 +32,7 @@ class IsOwner(BasePermission):
         return bool(
             user
             and user.is_authenticated
-            and user.is_active
-            and user.shop.is_active
+            and tenant_access_allowed(user, request.method)
             and (user.is_superuser or user.role == user.Role.OWNER)
         )
 
@@ -27,8 +47,7 @@ class IsCashierOrOwner(BasePermission):
         return bool(
             user
             and user.is_authenticated
-            and user.is_active
-            and user.shop.is_active
+            and tenant_access_allowed(user, request.method)
             and (
                 user.is_superuser
                 or user.role in (user.Role.OWNER, user.Role.CASHIER)
@@ -46,8 +65,7 @@ class IsSameShop(BasePermission):
         return bool(
             user
             and user.is_authenticated
-            and user.is_active
-            and user.shop.is_active
+            and tenant_access_allowed(user, request.method)
         )
 
     def has_object_permission(self, request, view, obj) -> bool:

@@ -4,9 +4,12 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.shops.models import Shop
+from apps.saas.models import ShopSubscription
+from apps.saas.services import get_default_plan
 
 
 class Command(BaseCommand):
@@ -63,6 +66,18 @@ class Command(BaseCommand):
                 full_name=prospective_user.full_name,
                 email=prospective_user.email,
                 role=User.Role.OWNER,
+            )
+            shop.primary_owner = owner
+            shop.onboarding_current_step = 7
+            shop.onboarding_completed_at = timezone.now()
+            shop.activated_at = shop.onboarding_completed_at
+            shop.status = Shop.Status.ACTIVE
+            shop.save()
+            ShopSubscription.objects.create(
+                shop=shop,
+                plan=get_default_plan(),
+                status=ShopSubscription.Status.ACTIVE,
+                current_period_start=shop.activated_at,
             )
 
         self.stdout.write(

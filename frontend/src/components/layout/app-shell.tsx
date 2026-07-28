@@ -228,6 +228,22 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <KeyRound className="size-5" /> Change password
             </button>
+            <Link
+              href="/account"
+              role="menuitem"
+              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary"
+            >
+              Account settings
+            </Link>
+            {user.role === "OWNER" ? (
+              <Link
+                href="/settings/subscription"
+                role="menuitem"
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary"
+              >
+                Subscription
+              </Link>
+            ) : null}
             <button
               onClick={() => void handleLogout()}
               disabled={isLoggingOut}

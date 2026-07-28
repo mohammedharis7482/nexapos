@@ -1,5 +1,24 @@
 # Manual UI validation
 
+## SaaS acceptance
+
+Register a synthetic shop, capture the console verification email, verify,
+sign in, resume and complete onboarding, confirm trial/limits, invite and accept
+a cashier, and verify cashier route restrictions. Resend and revoke separate
+invitations. Deactivate/reactivate the cashier and confirm login behavior.
+
+Request password recovery for known and unknown emails and confirm identical
+responses. Use the known account’s one-time link, verify the old password and
+old sessions fail, and sign in with the new password.
+
+Through Django Admin, move a test subscription through TRIAL, ACTIVE, PAST_DUE,
+SUSPENDED, and back to ACTIVE. Confirm suspension preserves safe owner reads,
+blocks POS mutations, and does not delete data.
+
+Repeat registration, onboarding, invitation acceptance, Team, Account, and
+Subscription pages at 360, 390, 430, 768, 1024, and 1440 pixels. Do not use a
+real shop email, password, or production database.
+
 Use real development records; do not create fake analytics or screenshot-only
 data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 

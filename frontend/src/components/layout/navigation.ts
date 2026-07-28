@@ -6,6 +6,7 @@ import {
   ReceiptText,
   Settings,
   ShoppingCart,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "Inventory", href: "/inventory", icon: Boxes, roles: ["OWNER"] },
   { label: "Sales", href: "/sales", icon: ReceiptText, roles: ["OWNER", "CASHIER"] },
   { label: "Reports", href: "/reports", icon: FileBarChart, roles: ["OWNER"] },
+  { label: "Team", href: "/team", icon: Users, roles: ["OWNER"] },
   { label: "Settings", href: "/settings", icon: Settings, roles: ["OWNER"] },
 ];
 

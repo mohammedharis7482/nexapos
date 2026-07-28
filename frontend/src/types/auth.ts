@@ -5,14 +5,37 @@ export interface ShopSummary {
   name: string;
   currency: string;
   timezone: string;
+  status?:
+    | "PENDING_VERIFICATION"
+    | "ONBOARDING"
+    | "TRIAL"
+    | "ACTIVE"
+    | "PAST_DUE"
+    | "SUSPENDED"
+    | "CANCELLED";
+  onboarding_completed?: boolean;
 }
 
 export interface AuthenticatedUser {
   id: string;
   full_name: string;
   username: string;
+  email?: string;
+  last_login?: string | null;
   role: UserRole;
+  is_primary_owner?: boolean;
   shop: ShopSummary;
+  subscription?: {
+    status: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED";
+    plan_code: string;
+    trial_ends_at: string | null;
+  } | null;
+  capabilities?: {
+    manage_team: boolean;
+    manage_owners: boolean;
+    view_subscription: boolean;
+    manage_subscription: boolean;
+  };
 }
 
 export interface LoginRequest {

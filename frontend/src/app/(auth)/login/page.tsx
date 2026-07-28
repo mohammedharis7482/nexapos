@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, ChartNoAxesCombined, ReceiptText, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -194,6 +195,10 @@ export default function LoginPage() {
               >
                 Sign in
               </Button>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <Link className="font-semibold text-primary" href="/forgot-password">Forgot password?</Link>
+                <Link className="font-semibold text-primary" href="/register-shop">Register a shop</Link>
+              </div>
             </form>
           </Card>
           <p className="mt-5 text-center text-xs leading-5 text-text-muted">

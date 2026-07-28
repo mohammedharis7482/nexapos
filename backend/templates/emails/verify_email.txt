@@ -1,0 +1,6 @@
+Hello {{ name }},
+
+Verify your email to continue setting up NexaPOS:
+{{ action_url }}
+
+This link expires in {{ expires_hours }} hours and can be used once.

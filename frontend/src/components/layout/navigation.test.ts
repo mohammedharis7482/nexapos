@@ -7,6 +7,7 @@ describe("role-aware navigation", () => {
     const labels = getNavigationForRole("OWNER").map((item) => item.label);
     expect(labels).toContain("Inventory");
     expect(labels).toContain("Reports");
+    expect(labels).toContain("Team");
     expect(labels).toContain("Settings");
   });
 
@@ -16,6 +17,7 @@ describe("role-aware navigation", () => {
     expect(labels).toContain("Sales");
     expect(labels).not.toContain("Inventory");
     expect(labels).not.toContain("Reports");
+    expect(labels).not.toContain("Team");
     expect(labels).not.toContain("Settings");
   });
 });

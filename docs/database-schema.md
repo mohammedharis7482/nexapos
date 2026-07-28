@@ -1,5 +1,13 @@
 # Database schema
 
+The SaaS extension is described in [data-model.md](data-model.md). It adds Shop
+lifecycle/onboarding/primary-owner fields, User activity fields, and Plan,
+ShopSubscription, ShopInvitation, hashed account-token, and AuditEvent tables.
+The data migration preserves existing operational rows, assigns the earliest
+active owner as primary owner, marks existing shops onboarding-complete and
+ACTIVE, and creates an ACTIVE STARTER subscription. No product, inventory,
+sale, payment, or receipt table is rewritten.
+
 PostgreSQL is required. SQLite is not supported as an implicit development
 fallback.
 

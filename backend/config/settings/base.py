@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "apps.sales.apps.SalesConfig",
     "apps.payments.apps.PaymentsConfig",
     "apps.reports.apps.ReportsConfig",
+    "apps.saas.apps.SaasConfig",
 ]
 
 MIDDLEWARE = [
@@ -116,11 +117,26 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "login_ip": config("LOGIN_IP_RATE", default="30/min"),
         "login_context": config("LOGIN_CONTEXT_RATE", default="10/min"),
+        "public_account": config("PUBLIC_ACCOUNT_RATE", default="10/hour"),
     },
     # Do not trust spoofable X-Forwarded-For values unless the deployment sets
     # the exact number of trusted proxies.
     "NUM_PROXIES": config("DRF_NUM_PROXIES", cast=int, default=0),
 }
+
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:3000")
+DEFAULT_FROM_EMAIL = config("DJANGO_DEFAULT_FROM_EMAIL", default="NexaPOS <noreply@example.com>")
+DEFAULT_SAAS_PLAN_CODE = config("DEFAULT_SAAS_PLAN_CODE", default="STARTER")
+EMAIL_BACKEND = config(
+    "DJANGO_EMAIL_BACKEND",
+    default="django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = config("DJANGO_EMAIL_HOST", default="localhost")
+EMAIL_PORT = config("DJANGO_EMAIL_PORT", cast=int, default=25)
+EMAIL_HOST_USER = config("DJANGO_EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("DJANGO_EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("DJANGO_EMAIL_USE_TLS", cast=bool, default=False)
+EMAIL_USE_SSL = config("DJANGO_EMAIL_USE_SSL", cast=bool, default=False)
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -142,6 +158,11 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API for the NexaPOS grocery point-of-sale platform.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "ShopLifecycleStatusEnum": "apps.shops.models.Shop.Status",
+        "SubscriptionStatusEnum": "apps.saas.models.ShopSubscription.Status",
+        "SaleStatusEnum": "apps.sales.models.Sale.Status",
+    },
 }
 
 LOGGING = {

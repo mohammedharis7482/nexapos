@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.exceptions import AuthenticationFailed
 
 from .models import User
+from apps.shops.models import Shop
 
 INVALID_CREDENTIALS_MESSAGE = "Invalid shop or credentials."
 
@@ -15,7 +16,15 @@ def login_user(*, request, shop_id, username: str, password: str) -> User:
         username=username,
         password=password,
     )
-    if user is None or not user.shop.is_active or not user.is_active:
+    if (
+        user is None
+        or not user.shop.is_active
+        or not user.is_active
+        or user.shop.status in (
+            Shop.Status.PENDING_VERIFICATION,
+            Shop.Status.CANCELLED,
+        )
+    ):
         raise AuthenticationFailed(INVALID_CREDENTIALS_MESSAGE)
 
     login(request, user)
@@ -37,4 +46,9 @@ def change_user_password(
     validate_password(new_password, user=user)
     user.set_password(new_password)
     user.save(update_fields=["password", "updated_at"])
+    from apps.saas.services import invalidate_user_sessions
+
+    invalidate_user_sessions(
+        user, exclude_session_key=request.session.session_key
+    )
     update_session_auth_hash(request, user)

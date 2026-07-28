@@ -98,6 +98,12 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
+    invited_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    role_changed_at = models.DateTimeField(null=True, blank=True)
+    password_changed_at = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 

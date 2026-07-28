@@ -7,6 +7,15 @@ from common.models import BaseModel
 
 
 class Shop(BaseModel):
+    class Status(models.TextChoices):
+        PENDING_VERIFICATION = "PENDING_VERIFICATION", "Pending verification"
+        ONBOARDING = "ONBOARDING", "Onboarding"
+        TRIAL = "TRIAL", "Trial"
+        ACTIVE = "ACTIVE", "Active"
+        PAST_DUE = "PAST_DUE", "Past due"
+        SUSPENDED = "SUSPENDED", "Suspended"
+        CANCELLED = "CANCELLED", "Cancelled"
+
     name = models.CharField(max_length=150)
     legal_name = models.CharField(max_length=200, blank=True)
     address = models.TextField()
@@ -26,6 +35,24 @@ class Shop(BaseModel):
     receipt_footer = models.TextField(blank=True)
     logo = models.ImageField(upload_to="shop-logos/", blank=True)
     is_active = models.BooleanField(default=True, db_index=True)
+    status = models.CharField(
+        max_length=24,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        db_index=True,
+    )
+    primary_owner = models.OneToOneField(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="primary_shop",
+        null=True,
+        blank=True,
+    )
+    onboarding_current_step = models.PositiveSmallIntegerField(default=1)
+    onboarding_completed_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    suspended_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -39,6 +66,7 @@ class Shop(BaseModel):
         indexes = [
             models.Index(fields=["name"], name="shops_name_idx"),
             models.Index(fields=["phone"], name="shops_phone_idx"),
+            models.Index(fields=["status", "created_at"], name="shops_status_created_idx"),
         ]
 
     def __str__(self) -> str:
