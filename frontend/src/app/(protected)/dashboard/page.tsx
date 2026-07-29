@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { DashboardTransactionList } from "@/components/dashboard/dashboard-transaction-list";
+import { CurrentShiftSummary } from "@/components/shifts/current-shift-summary";
 import { Button } from "@/components/ui/button";
 import { Badge, MetricCard, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
@@ -290,6 +291,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
   const owner = data.role === "OWNER";
   return (
     <>
+      <CurrentShiftSummary />
       <CommandStrip owner={owner} />
       <PrimaryMetrics data={data} />
       <div className={`grid items-start gap-5 ${owner ? "xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]" : ""}`}>

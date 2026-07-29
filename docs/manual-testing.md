@@ -86,6 +86,21 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 - Confirm OWNER and CASHIER navigation differs correctly.
 - Check active navigation, More sheet, Change Password, Escape, focus return,
   and mobile safe-area clearance.
+- As Primary Owner/Owner, confirm the desktop sidebar contains exactly
+  Dashboard, New Bill, Products, Inventory, Sales, Reports, and Settings.
+  Confirm Current Shift, Shifts, and Team are absent as primary items.
+- Confirm `/shift`, `/current-shift`, `/shifts`, and `/team` preserve safe query
+  strings while redirecting to their documented canonical routes. Verify
+  browser back/forward does not loop.
+- Confirm Sales remains active on both shift routes and Settings remains active
+  on Team & Access. At mobile widths, verify role-filtered More navigation,
+  accessible touch targets, focus return, and safe-area clearance.
+- With no shift, verify Dashboard offers Open Shift and New Bill shows a focused
+  guard without creating a draft. Open a shift, return to New Bill, and verify
+  the compact shift indicator, View Shift, billing, close, and history flows.
+- As Cashier, confirm only Dashboard, New Bill, Products, and Sales are primary;
+  shift history is own-only, and direct Settings Team/Data URLs return to the
+  permitted workspace.
 
 ## Operations
 

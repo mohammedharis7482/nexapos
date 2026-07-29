@@ -137,6 +137,15 @@ describe("BillingPage", () => {
     expect(billing.create).not.toHaveBeenCalled();
   });
 
+  it("shows a stable shift-required panel without creating a draft or redirect loop", async () => {
+    shifts.current.mockResolvedValue({ success: true, message: "", data: null });
+    render(<BillingPage />);
+    expect(await screen.findByRole("heading", { name: "Open a shift to start billing" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Shift" })).toHaveAttribute("href", "/sales/shifts/current");
+    expect(billing.create).not.toHaveBeenCalled();
+    expect(shifts.current).toHaveBeenCalledTimes(1);
+  });
+
   it("adds an exact barcode match on Enter", async () => {
     render(<BillingPage />);
     const search = await screen.findByLabelText("Product or barcode search");

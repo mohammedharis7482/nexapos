@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { settingsAccessMode } from "@/components/catalogue/access";
+import { ModuleNavigation, settingsNavigation } from "@/components/layout/module-navigation";
 import { ShopIdDisplay } from "@/components/shops/shop-id-display";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -90,9 +91,10 @@ export default function SettingsPage() {
   const disabled = mode === "readonly";
   return (
     <div className="page-stack">
+      <ModuleNavigation label="Settings sections" items={settingsNavigation} />
       <PageHeader
         eyebrow="Administration"
-        title="Shop settings"
+        title="Shop Profile"
         description={disabled ? "You can view your shop profile. Only owners can make changes." : "Manage the profile printed and displayed across NexaPOS."}
       />
       {disabled ? <Alert title="Read-only access" tone="warning">Ask a shop owner to update these settings.</Alert> : null}

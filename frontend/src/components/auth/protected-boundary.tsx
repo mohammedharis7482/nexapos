@@ -34,7 +34,12 @@ export function resolveSaasRoute(user: AuthenticatedUser, pathname: string) {
     !["/settings/subscription", "/account"].includes(pathname)
   ) return user.role === "OWNER" ? "/settings/subscription" : "/account";
   if (
-    (pathname === "/team" || pathname.startsWith("/settings/subscription")) &&
+    (
+      pathname === "/team"
+      || pathname.startsWith("/settings/team")
+      || pathname.startsWith("/settings/data")
+      || pathname.startsWith("/settings/subscription")
+    ) &&
     user.role !== "OWNER"
   ) return "/dashboard";
   return null;

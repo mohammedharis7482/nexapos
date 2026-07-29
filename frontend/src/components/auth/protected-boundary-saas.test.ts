@@ -49,6 +49,8 @@ describe("SaaS lifecycle route guards", () => {
   it("keeps cashier users out of team and subscription routes", () => {
     const cashier = user({ role: "CASHIER", is_primary_owner: false });
     expect(resolveSaasRoute(cashier, "/team")).toBe("/dashboard");
+    expect(resolveSaasRoute(cashier, "/settings/team")).toBe("/dashboard");
+    expect(resolveSaasRoute(cashier, "/settings/data")).toBe("/dashboard");
     expect(resolveSaasRoute(cashier, "/settings/subscription")).toBe("/dashboard");
   });
 });

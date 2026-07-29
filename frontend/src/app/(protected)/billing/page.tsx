@@ -8,7 +8,6 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CartLine } from "@/components/billing/cart-line";
@@ -51,7 +50,6 @@ function apiMessage(error: unknown, fallback: string) {
 }
 
 export default function BillingPage() {
-  const router = useRouter();
   const initializationStarted = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<DraftSale | null>(null);
@@ -71,6 +69,8 @@ export default function BillingPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [holding, setHolding] = useState(false);
+  const [shift, setShift] = useState<import("@/types/shift").CashierShift | null>(null);
+  const [shiftRequired, setShiftRequired] = useState(false);
 
   const createFreshDraft = useCallback(async () => {
     const response = await billingService.create();
@@ -90,9 +90,11 @@ export default function BillingPage() {
     try {
       const currentShift = await shiftService.current();
       if (!currentShift.data) {
-        router.replace("/shift");
+        setShiftRequired(true);
         return;
       }
+      setShift(currentShift.data);
+      setShiftRequired(false);
       const savedId = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (savedId) {
         try {
@@ -112,7 +114,7 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
-  }, [createFreshDraft, loadHeldBills, router]);
+  }, [createFreshDraft, loadHeldBills]);
 
   const searchProducts = useCallback(async (term: string, categoryId = category) => {
     setSearching(true);
@@ -298,6 +300,20 @@ export default function BillingPage() {
   if (state === "error") {
     return <ErrorState title="Billing unavailable" description={error ?? ""} onRetry={() => void initializeDraft()} />;
   }
+  if (shiftRequired) {
+    return (
+      <div className="mx-auto max-w-xl py-8">
+        <Card className="p-6 text-center sm:p-8">
+          <h1 className="text-2xl font-bold">Open a shift to start billing</h1>
+          <p className="mt-2 text-sm leading-6 text-foreground-muted">NexaPOS needs an active cash-drawer shift before a bill can be completed.</p>
+          <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+            <Link className="premium-action-primary justify-center" href="/sales/shifts/current">Open Shift</Link>
+            <Link className="premium-action-secondary justify-center" href="/dashboard">Back to Dashboard</Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
   if (completedSale) {
     const methods = completedSale.payments.map((payment) => payment.method).join(" + ");
     return (
@@ -336,7 +352,7 @@ export default function BillingPage() {
         eyebrow="Point of sale"
         title="New Bill"
         description="Build a draft using live catalogue prices and current stock availability."
-        action={<Badge tone="primary">Draft</Badge>}
+        action={<><Link className="premium-action-secondary" href="/sales/shifts/current">Shift open{shift ? ` · ${new Date(shift.opened_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</Link><Badge tone="primary">Draft</Badge></>}
       />
       {error ? <Alert title={error} /> : null}
       {success ? <Alert title={success} tone="success" /> : null}

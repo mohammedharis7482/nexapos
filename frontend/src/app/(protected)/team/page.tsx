@@ -4,6 +4,7 @@ import { UserPlus, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs, ModuleNavigation, settingsNavigation } from "@/components/layout/module-navigation";
 import { Card, SummaryCard } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, PageSkeleton } from "@/components/ui/feedback";
@@ -133,7 +134,9 @@ export default function TeamPage() {
   if (error) return <ErrorState title="Team unavailable" description={error} onRetry={() => void load()} />;
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Administration" title="Team" description="Create staff accounts, assign roles, and control access to this shop." action={<Button onClick={() => setCreateOpen(true)} leadingIcon={<UserPlus className="size-4" />}>Add team member</Button>} />
+      <Breadcrumbs items={[{ label: "Settings", href: "/settings" }, { label: "Team & Access" }]} />
+      <ModuleNavigation label="Settings sections" items={settingsNavigation} />
+      <PageHeader eyebrow="Administration" title="Team & Access" description="Create staff accounts, assign roles, and control access to this shop." action={<Button onClick={() => setCreateOpen(true)} leadingIcon={<UserPlus className="size-4" />}>Add team member</Button>} />
       {notice ? <Alert title={notice} tone="info" /> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <SummaryCard label="Active users" value={`${usage?.active_users ?? 0} / ${usage?.max_users ?? 0}`} footer="Deactivated users do not consume a seat." />

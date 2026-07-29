@@ -3,10 +3,13 @@
 import {
   CalendarDays,
   ChevronDown,
+  Clock3,
   KeyRound,
   LogOut,
   MoreHorizontal,
+  Settings,
   ShoppingCart,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,7 +22,7 @@ import { DropdownMenu, Sheet } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
-import { getNavigationForRole, navigationItems } from "./navigation";
+import { getNavigationForRole, isNavigationItemActive, navigationItems } from "./navigation";
 
 function subscribeToNetwork(callback: () => void) {
   window.addEventListener("online", callback);
@@ -160,7 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavItem
               key={item.href}
               item={item}
-              active={pathname.startsWith(item.href)}
+              active={isNavigationItemActive(pathname, item.href)}
             />
           ))}
           </NavSection>
@@ -235,6 +238,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               Account settings
             </Link>
+            <Link
+              href="/sales/shifts/current"
+              role="menuitem"
+              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary"
+            >
+              <Clock3 className="size-5" /> Current Shift
+            </Link>
+            {user.role === "OWNER" ? (
+              <>
+                <Link href="/settings/team" role="menuitem" className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary">
+                  <Users className="size-5" /> Team &amp; Access
+                </Link>
+                <Link href="/settings" role="menuitem" className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary">
+                  <Settings className="size-5" /> Settings
+                </Link>
+              </>
+            ) : null}
             {user.role === "OWNER" ? (
               <Link
                 href="/settings/subscription"
@@ -267,7 +287,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <div className="grid grid-cols-5">
           {mobilePrimary.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = isNavigationItemActive(pathname, item.href);
             return (
               <MobileNavItem key={item.href} item={item} active={active} />
             );
@@ -289,10 +309,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavItem
               key={item.href}
               item={item}
-              active={pathname.startsWith(item.href)}
+              active={isNavigationItemActive(pathname, item.href)}
               onNavigate={() => setMobileOpen(false)}
             />
           ))}
+          <NavItem
+            item={{ label: "Current Shift", href: "/sales/shifts/current", icon: Clock3, roles: ["OWNER", "CASHIER"] }}
+            active={pathname === "/sales/shifts/current"}
+            onNavigate={() => setMobileOpen(false)}
+          />
           <button
             onClick={() => {
               setMobileOpen(false);

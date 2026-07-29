@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ModuleNavigation, salesNavigation } from "@/components/layout/module-navigation";
 import { Card } from "@/components/ui/card";
 import { MoneyDisplay, PageHeader, PaymentBadge } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
@@ -86,6 +87,7 @@ export default function SalesPage() {
   const state = salesCollectionState(loading, sales.length, error);
   return (
     <div className="page-stack">
+      <ModuleNavigation label="Sales sections" items={salesNavigation} />
       <PageHeader
         eyebrow="Transactions"
         title="Sales"

@@ -1,9 +1,19 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
+export const compatibilityRedirects = [
+  { source: "/shift", destination: "/sales/shifts/current", permanent: false },
+  { source: "/current-shift", destination: "/sales/shifts/current", permanent: false },
+  { source: "/shifts", destination: "/sales/shifts", permanent: false },
+  { source: "/team", destination: "/settings/team", permanent: false },
+] as const;
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  async redirects() {
+    return [...compatibilityRedirects];
+  },
   async headers() {
     return [
       {

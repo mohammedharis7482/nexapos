@@ -1,9 +1,11 @@
 # Frontend architecture
 
-Billing checks the current shift before preparing a draft and routes to
-`/shift` when none is open. The backend completion service remains
-authoritative. Shift opening, summaries, closing cash and variance use the
-existing responsive cards, dialogs, money inputs, loading and error patterns.
+Billing checks the current shift before preparing a draft. When none is open it
+renders a focused guard with an Open Shift action; it does not create a draft
+or enter a redirect loop. The canonical current route is
+`/sales/shifts/current`, while the backend completion service remains
+authoritative. Dashboard uses a lightweight current-shift request only; the
+application shell never fetches shift history.
 
 ## SaaS routes and context
 
@@ -18,7 +20,8 @@ boundary prevents content flashes and redirects onboarding, suspended, and
 role-restricted sessions before rendering operational content. Backend
 permissions remain authoritative.
 
-Owner interfaces live at `/team` and `/settings/subscription`; self-service
+Owner team management lives at `/settings/team`; subscription management
+remains at `/settings/subscription`, while self-service
 profile controls live at `/account`. Onboarding is resumable at `/onboarding`.
 No client cache library or browser authentication authority was introduced.
 
@@ -51,6 +54,16 @@ covers root failures.
 Lists are server-paginated. Billing search and cart remain eagerly loaded.
 Charts use existing lightweight DOM/CSS rendering. The development design-
 system route calls `notFound()` outside development/test.
+
+## Navigation modules
+
+The seven-item owner sidebar uses boundary-aware parent matching, so `/sales/*`,
+`/settings/*`, and `/products/*` retain the correct active primary item.
+Sales supplies compact Transactions and Shifts secondary navigation. Settings
+supplies Shop Profile, Team & Access, and Data Management. Cashiers see only
+Dashboard, New Bill, Products, and Sales; their shift access is contextual and
+the backend returns only their own shifts. Mobile keeps four primary actions
+plus a role-filtered More sheet. See [navigation.md](navigation.md).
 
 ## Production configuration
 

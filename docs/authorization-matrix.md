@@ -23,6 +23,7 @@ appropriate.
 | Dashboard | Shop-wide | Own financial/recent-sale scope | Role-aware shop-scoped selectors |
 | Reports | Allowed | Denied | `IsOwner`; all aggregations start from user shop |
 | Shifts | All shop shifts | Own shifts only | Shop-scoped selector and cashier identity |
+| Navigation to Settings / Team & Access / Data Management | Allowed | Denied | Protected route guard plus authoritative API permissions |
 | CSV exports | Allowed | Denied | `IsOwner`; no client shop selector |
 | Product import template, validation, history, confirmation, and error report | Allowed | Denied | `IsOwner`; validation/import IDs are shop-scoped |
 | Team direct creation/edit/activation/reset | Manage cashiers; primary owner also manages owners | Denied | `request.user.shop`, role, seat-limit and primary-owner service checks |

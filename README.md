@@ -68,6 +68,13 @@ line, records allocated payments, and exposes read-only sale history and an
 80mm-friendly browser-print receipt. Refunds, returns, purchasing, sensitive
 card capture, and payment-gateway processing are not implemented.
 
+Primary navigation is deliberately limited to Dashboard, New Bill, Products,
+Inventory, Sales, Reports, and Settings, filtered by role. Current Shift is
+contextual on Dashboard and New Bill; shift history lives under
+`/sales/shifts`, and Team & Access lives under `/settings/team`. Temporary
+redirects preserve `/shift`, `/current-shift`, `/shifts`, and `/team`.
+See [navigation architecture](docs/navigation.md).
+
 The protected dashboard is backed by real PostgreSQL aggregates at
 `GET /api/v1/dashboard/`. Owners see shop-wide daily sales, allocated cash/card
 payments, inventory alerts, recent sales, top products, and a seven-day trend.

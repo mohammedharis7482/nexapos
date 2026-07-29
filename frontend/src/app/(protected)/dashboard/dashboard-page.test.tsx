@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dashboardService } from "@/services/dashboard.service";
+import { shiftService } from "@/services/shift.service";
 import type { DashboardData, OwnerDashboardSummary } from "@/types/dashboard";
 
 import DashboardPage from "./page";
@@ -21,7 +22,11 @@ vi.mock("@/providers/auth-provider", () => ({
 vi.mock("@/services/dashboard.service", () => ({
   dashboardService: { get: vi.fn() },
 }));
+vi.mock("@/services/shift.service", () => ({
+  shiftService: { current: vi.fn() },
+}));
 const service = vi.mocked(dashboardService);
+const shifts = vi.mocked(shiftService);
 
 const base: DashboardData = {
   role: "OWNER",
@@ -67,6 +72,7 @@ const base: DashboardData = {
 describe("DashboardPage", () => {
   beforeEach(() => {
     service.get.mockReset();
+    shifts.current.mockResolvedValue({ success: true, message: "", data: null });
     auth.user.full_name = "Shop Owner";
     auth.user.role = "OWNER";
   });
@@ -98,8 +104,34 @@ describe("DashboardPage", () => {
     expect(screen.getByText("View All Sales")).toHaveAttribute("href", "/sales");
     expect(screen.queryByText(/up \\d+%/i)).not.toBeInTheDocument();
     expect(screen.getByText("Keep today's work moving")).toBeInTheDocument();
+    expect(await screen.findByText("Current Shift")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Shift" })).toHaveAttribute("href", "/sales/shifts/current");
     expect(screen.getByRole("img", { name: /Seven-day sales chart/ })).toBeInTheDocument();
     expect(document.body.textContent).not.toContain("...");
+  });
+
+  it("shows active current-shift context without exposing full history", async () => {
+    shifts.current.mockResolvedValue({
+      success: true,
+      message: "",
+      data: {
+        id: "shift-id", status: "OPEN", cashier: { id: "user-id", full_name: "Shop Owner", role: "OWNER" },
+        opened_at: "2026-07-24T08:00:00Z", closed_at: null, opening_cash: "100.00",
+        expected_closing_cash: "125.00", counted_closing_cash: null, cash_difference: null,
+        opening_note: "", closing_note: "",
+        summary: {
+          opening_cash: "100.00", completed_bills: 2, gross_sales: "25.00", cash_sales: "25.00",
+          card_sales: "0.00", split_payment_count: 0, expected_closing_cash: "125.00",
+          counted_closing_cash: null, cash_difference: null, items_sold: "2.000",
+          opened_at: "2026-07-24T08:00:00Z", closed_at: null,
+        },
+      },
+    });
+    service.get.mockResolvedValue({ success: true, message: "", data: base });
+    render(<DashboardPage />);
+    expect(await screen.findByText("2 completed bills")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View Shift" })).toHaveAttribute("href", "/sales/shifts/current");
+    expect(shifts.current).toHaveBeenCalled();
   });
 
   it("renders the role-limited cashier dashboard and personal metrics", async () => {
