@@ -59,6 +59,11 @@ class Product(BaseModel):
         BOTTLE = "BOTTLE", "Bottle"
         CAN = "CAN", "Can"
         BAG = "BAG", "Bag"
+        CUP = "CUP", "Cup"
+        JAR = "JAR", "Jar"
+        ROLL = "ROLL", "Roll"
+        TRAY = "TRAY", "Tray"
+        TUBE = "TUBE", "Tube"
 
     shop = models.ForeignKey(
         "shops.Shop",
@@ -185,6 +190,12 @@ class ProductImport(BaseModel):
     products_skipped = models.PositiveIntegerField(default=0)
     categories_created = models.PositiveIntegerField(default=0)
     inventory_initialized = models.PositiveIntegerField(default=0)
+    warning_rows = models.PositiveIntegerField(default=0)
+    categories_to_create = models.JSONField(default=list)
+    opening_movements_created = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    failure_code = models.CharField(max_length=50, blank=True)
     error_message = models.TextField(blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -215,7 +226,8 @@ class ProductImportRow(BaseModel):
     row_number = models.PositiveIntegerField()
     raw_data = models.JSONField(default=dict)
     normalized_data = models.JSONField(default=dict)
-    errors = models.JSONField(default=dict)
+    errors = models.JSONField(default=list)
+    warnings = models.JSONField(default=list)
     duplicate_fields = models.JSONField(default=list)
     matched_product = models.ForeignKey(
         Product,

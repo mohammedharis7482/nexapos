@@ -7,6 +7,7 @@ from .views import (
     ProductDetailView,
     ProductImportConfirmView,
     ProductImportDetailView,
+    ProductImportErrorReportView,
     ProductImportListCreateView,
     ProductImportTemplateView,
     ProductListCreateView,
@@ -41,6 +42,11 @@ urlpatterns = [
         "products/imports/<uuid:import_id>/confirm/",
         ProductImportConfirmView.as_view(),
         name="product-import-confirm",
+    ),
+    path(
+        "products/imports/<uuid:import_id>/errors/",
+        ProductImportErrorReportView.as_view(),
+        name="product-import-errors",
     ),
     path(
         "products/barcode/<str:barcode>/",

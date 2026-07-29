@@ -11,6 +11,7 @@ from apps.products.import_services import (
     ProductImportError,
     confirm_product_import,
     csv_template,
+    error_report_csv,
     validate_product_import,
 )
 from apps.products.models import Product, ProductImport
@@ -300,10 +301,28 @@ class ProductImportListCreateView(APIView):
                 content=uploaded_file.read(),
             )
         except ProductImportError as exc:
-            raise serializers.ValidationError({"file": str(exc)}) from exc
+            raise serializers.ValidationError(
+                {
+                    "code": exc.code,
+                    "detail": exc.message,
+                    "import_errors": exc.errors,
+                }
+            ) from exc
+        preview_rows = ProductImportRowSerializer(
+            product_import.rows.all()[:25],
+            many=True,
+        ).data
+        response_data = ProductImportSerializer(product_import).data
+        response_data["preview_rows"] = preview_rows
+        response_data["errors"] = [
+            issue for row in preview_rows for issue in row["errors"]
+        ]
+        response_data["warnings"] = [
+            issue for row in preview_rows for issue in row["warnings"]
+        ]
         return success_response(
             "CSV validated.",
-            ProductImportSerializer(product_import).data,
+            response_data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -320,16 +339,63 @@ class ProductImportDetailView(APIView):
         )
 
     @extend_schema(
-        parameters=[OpenApiParameter("page", int), OpenApiParameter("page_size", int)],
+        parameters=[
+            OpenApiParameter("page", int),
+            OpenApiParameter("page_size", int),
+            OpenApiParameter("severity", str, enum=["all", "error", "warning"]),
+            OpenApiParameter("column", str),
+            OpenApiParameter("search", str),
+        ],
         responses={200: ProductImportSerializer},
     )
     def get(self, request, import_id):
         product_import = self.get_object(request, import_id)
+        severity = request.query_params.get("severity", "all")
+        column = request.query_params.get("column", "").strip().casefold()
+        search = request.query_params.get("search", "").strip().casefold()
+        rows = list(product_import.rows.all())
+        if severity == "error":
+            rows = [row for row in rows if row.errors]
+        elif severity == "warning":
+            rows = [row for row in rows if row.warnings]
+        if column:
+            rows = [
+                row
+                for row in rows
+                if any(
+                    issue.get("column", "").casefold() == column
+                    for issue in [*row.errors, *row.warnings]
+                )
+            ]
+        if search:
+            rows = [
+                row
+                for row in rows
+                if search in row.normalized_data.get("name", "").casefold()
+                or any(
+                    search
+                    in " ".join(
+                        (
+                            str(issue.get("column", "")),
+                            str(issue.get("value", "")),
+                            str(issue.get("human_message", "")),
+                        )
+                    ).casefold()
+                    for issue in [*row.errors, *row.warnings]
+                )
+            ]
         paginator = StandardResultsSetPagination()
-        page = paginator.paginate_queryset(product_import.rows.all(), request, view=self)
-        rows = ProductImportRowSerializer(page, many=True).data
+        page = paginator.paginate_queryset(rows, request, view=self)
+        serialized_rows = ProductImportRowSerializer(page, many=True).data
         data = ProductImportSerializer(product_import).data
-        data["rows"] = paginator.get_paginated_data(rows)
+        data["rows"] = paginator.get_paginated_data(serialized_rows)
+        data["preview_rows"] = serialized_rows
+        data["errors"] = [
+            issue for row in serialized_rows for issue in row["errors"]
+        ]
+        data["warnings"] = [
+            issue for row in serialized_rows for issue in row["warnings"]
+        ]
         return success_response("Product import retrieved.", data)
 
 
@@ -355,9 +421,39 @@ class ProductImportConfirmView(APIView):
             )
         except ProductImportError as exc:
             raise serializers.ValidationError(
-                {"non_field_errors": [str(exc)]}
+                {
+                    "code": exc.code,
+                    "detail": exc.message,
+                    "import_errors": exc.errors,
+                }
             ) from exc
         return success_response(
             "Products imported.",
             ProductImportSerializer(completed).data,
         )
+
+
+class ProductImportErrorReportView(APIView):
+    permission_classes = [IsOwner]
+
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description="UTF-8 CSV report containing blocking import errors.",
+            )
+        }
+    )
+    def get(self, request, import_id):
+        product_import = get_object_or_404(
+            ProductImport.objects.filter(shop=request.user.shop),
+            pk=import_id,
+        )
+        response = HttpResponse(
+            error_report_csv(product_import),
+            content_type="text/csv; charset=utf-8",
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="nexapos-import-errors-{product_import.id}.csv"'
+        )
+        return response

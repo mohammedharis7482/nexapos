@@ -30,8 +30,9 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly errors: ApiErrorResponse["errors"] = {},
+    public readonly errors: Record<string, string | string[]> = {},
     public readonly code?: string,
+    public readonly structuredErrors: unknown[] = [],
   ) {
     super(message);
     this.name = "ApiError";
@@ -44,14 +45,26 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
   if (!response.ok) {
     const error = payload as ApiErrorResponse | null;
+    const wireErrors = error?.errors ?? {};
+    const simpleErrors = Object.fromEntries(
+      Object.entries(wireErrors).filter(
+        ([, value]) =>
+          typeof value === "string"
+          || (Array.isArray(value) && value.every((item) => typeof item === "string")),
+      ),
+    ) as Record<string, string | string[]>;
+    const structuredErrors = Array.isArray(wireErrors.import_errors)
+      ? wireErrors.import_errors
+      : [];
     const apiError = new ApiError(
       error?.message ??
         (response.status === 401
           ? "Your session has expired. Please sign in again."
           : "NexaPOS could not complete the request."),
       response.status,
-      error?.errors ?? {},
+      simpleErrors,
       error?.code,
+      structuredErrors,
     );
     if (response.status === 401 && typeof window !== "undefined") {
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));

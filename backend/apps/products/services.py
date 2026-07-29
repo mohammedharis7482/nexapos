@@ -1,6 +1,21 @@
+import uuid
+
 from django.db import transaction
 
 from .models import Product, ProductCategory
+
+
+def generate_product_sku(*, shop, reserved: set[str] | None = None) -> str:
+    """Generate a collision-resistant shop SKU for trusted server workflows."""
+
+    reserved_keys = {value.casefold() for value in (reserved or set())}
+    while True:
+        candidate = f"AUTO-{uuid.uuid4().hex[:12].upper()}"
+        if (
+            candidate.casefold() not in reserved_keys
+            and not Product.objects.filter(shop=shop, sku__iexact=candidate).exists()
+        ):
+            return candidate
 
 
 @transaction.atomic

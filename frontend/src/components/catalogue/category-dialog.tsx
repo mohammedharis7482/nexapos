@@ -73,9 +73,15 @@ export function CategoryDialog({
       if (error instanceof ApiError) {
         const nameError =
           "name" in error.errors ? error.errors.name : undefined;
-        if (nameError) {
+        const nameMessage =
+          typeof nameError === "string"
+            ? nameError
+            : Array.isArray(nameError) && typeof nameError[0] === "string"
+              ? nameError[0]
+              : undefined;
+        if (nameMessage) {
           setError("name", {
-            message: Array.isArray(nameError) ? nameError[0] : nameError,
+            message: nameMessage,
           });
         }
         setGeneralError(error.status === 403 ? "Owner access is required." : error.message);

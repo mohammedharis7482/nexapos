@@ -130,6 +130,34 @@ describe("API client", () => {
     window.removeEventListener("nexapos:unauthorized", unauthorized);
   });
 
+  it("preserves structured import validation issues and HTTP status", async () => {
+    const issue = {
+      row_number: 1,
+      column: "Unit",
+      value: "Bottlee",
+      error_code: "INVALID_UNIT",
+      human_message: "Unit 'Bottlee' is not supported.",
+      suggested_fix: "Use 'Bottle'.",
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse(
+        {
+          success: false,
+          message: "The CSV contains validation errors.",
+          code: "PRODUCT_IMPORT_INVALID",
+          errors: { import_errors: [issue] },
+        },
+        422,
+      ),
+    );
+
+    await expect(apiRequest("/products/imports/")).rejects.toMatchObject({
+      status: 422,
+      code: "PRODUCT_IMPORT_INVALID",
+      structuredErrors: [issue],
+    });
+  });
+
   it("turns an aborted request into a controlled network failure", async () => {
     const controller = new AbortController();
     controller.abort();

@@ -17,11 +17,15 @@ describe("product import service", () => {
     productService.importHistory();
     productService.importDetail("import-id");
     productService.confirmImport("import-id", "SKIP");
+    productService.downloadImportErrors("import-id");
 
     expect(apiDownload).toHaveBeenCalledWith("/products/import-template/");
     expect(apiRequest).toHaveBeenNthCalledWith(
       1,
       "/products/imports/?page=1",
+    );
+    expect(apiDownload).toHaveBeenLastCalledWith(
+      "/products/imports/import-id/errors/",
     );
     expect(apiRequest).toHaveBeenNthCalledWith(
       2,
@@ -32,7 +36,10 @@ describe("product import service", () => {
       "/products/imports/import-id/confirm/",
       {
         method: "POST",
-        body: JSON.stringify({ duplicate_strategy: "SKIP" }),
+        body: JSON.stringify({
+          duplicate_strategy: "SKIP",
+          confirmed: true,
+        }),
         timeoutMs: 300_000,
       },
     );

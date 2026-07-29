@@ -282,13 +282,24 @@ cannot write.
   CSV, and creates a shop-scoped preview without changing products.
 - `GET /api/v1/products/imports/` returns paginated import history.
 - `GET /api/v1/products/imports/{import_id}/` returns an import summary and
-  paginated row preview.
+  paginated row preview. `severity`, `column`, and `search` filter preview
+  issues server-side.
 - `POST /api/v1/products/imports/{import_id}/confirm/` accepts
-  `duplicate_strategy` as `SKIP`, `UPDATE`, or `CANCEL`.
+  `duplicate_strategy` as `SKIP`, `UPDATE`, or `CANCEL` plus
+  `confirmed=true`.
+- `GET /api/v1/products/imports/{import_id}/errors/` downloads a formula-safe
+  UTF-8 CSV error report.
 
 All endpoints require Owner access. Confirm is rejected if any validation row
 has errors. See [product-import.md](product-import.md) for column and transaction
 rules.
+
+The upload response exposes `validation_id`, filename, total/valid/invalid and
+warning rows, categories to create, duplicate counts, `can_import`, expiry,
+history metadata, and a paginated row preview. Each issue contains row number,
+column, original value, stable error code, human message, and suggested fix.
+Header failures use the same public API error envelope with structured
+`errors.import_errors`; tracebacks and internal paths are never returned.
 
 - `GET|POST /api/v1/products/`
 - `GET|PATCH /api/v1/products/{uuid}/`

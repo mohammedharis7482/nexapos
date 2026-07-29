@@ -137,6 +137,12 @@ Inventory is initialized deliberately from `/inventory/{productId}` after a
 product exists. This phase does not provide an inventory seeding command: stock
 counts are operational data and must not be altered implicitly.
 
+Owners can onboard an existing catalogue from **Products → Import Products**.
+The downloadable UTF-8 CSV template and validator share one canonical
+twelve-column contract. Validation is read-only for catalogue/inventory data;
+confirmation uses explicit duplicate handling and one atomic PostgreSQL
+transaction. See [Bulk product import](docs/product-import.md).
+
 ## Session authentication
 
 NexaPOS uses Django server-side sessions with an HttpOnly session cookie and

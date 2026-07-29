@@ -66,7 +66,7 @@ export interface ApiErrorResponse {
   success: false;
   message: string;
   code?: string;
-  errors: Record<string, string[] | string> | { detail?: string };
+  errors: Record<string, unknown>;
 }
 
 export type LoginResponse = ApiSuccess<{ user: AuthenticatedUser }>;

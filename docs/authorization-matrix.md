@@ -24,6 +24,7 @@ appropriate.
 | Reports | Allowed | Denied | `IsOwner`; all aggregations start from user shop |
 | Shifts | All shop shifts | Own shifts only | Shop-scoped selector and cashier identity |
 | CSV exports | Allowed | Denied | `IsOwner`; no client shop selector |
+| Product import template, validation, history, confirmation, and error report | Allowed | Denied | `IsOwner`; validation/import IDs are shop-scoped |
 | Team direct creation/edit/activation/reset | Manage cashiers; primary owner also manages owners | Denied | `request.user.shop`, role, seat-limit and primary-owner service checks |
 | Onboarding | Primary owner only | Denied | Explicit `Shop.primary_owner` relationship |
 | Subscription | Read; sensitive actions reserved to primary owner/platform admin | Denied | Current shop OneToOne subscription |

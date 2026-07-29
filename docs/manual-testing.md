@@ -92,7 +92,9 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 ### Bulk product onboarding
 
 1. Sign in as an Owner and open **Products → Import Products**.
-2. Download the template and confirm it opens as CSV with the documented columns.
+2. Download the template and confirm its headers are Product Name, Category,
+   Unit, SKU, Barcode, Description, Purchase Price (QAR), Selling Price (QAR),
+   Tax Rate, Opening Quantity, Low Stock Threshold, and Status.
 3. Import products with blank SKU/barcode, new categories, decimal opening stock,
    zero opening stock, and blank opening stock.
 4. Confirm generated SKUs are visible in preview and no barcode was generated.
@@ -105,6 +107,16 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
    active products in Billing.
 8. Repeat at mobile width and verify tables remain horizontally usable.
 9. Sign in as Cashier and confirm both the UI and direct API requests deny import.
+10. Upload the downloaded template itself and confirm it validates without a
+    generic error.
+11. Validate a 51-row safe fixture using Piece, Bottle, Pack, Kg, and the other
+    documented units; confirm Tax Exempt, Active, quoted commas, and 13-digit
+    barcodes.
+12. Confirm validation creates no Product, Category, InventoryBalance, or
+    StockMovement. Confirm once, retry the same confirmation, and verify each
+    business record exists exactly once.
+13. Break one header and one unit, verify structured row/column/value/fix
+    messages, filter the issue table, and download the safe error report.
 
 - Dashboard OWNER: verify shop-wide sales, bills, average bill, items sold,
   cash/card allocation, cashier context in Recent Sales, all three inventory

@@ -53,8 +53,23 @@ export const productService = {
       body,
     });
   },
-  importDetail(id: string) {
-    return apiRequest<ApiSuccess<ProductImportDetail>>(`/products/imports/${id}/`);
+  importDetail(
+    id: string,
+    filters: {
+      page?: number;
+      severity?: "all" | "error" | "warning";
+      column?: string;
+      search?: string;
+    } = {},
+  ) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") params.set(key, String(value));
+    });
+    const query = params.toString();
+    return apiRequest<ApiSuccess<ProductImportDetail>>(
+      `/products/imports/${id}/${query ? `?${query}` : ""}`,
+    );
   },
   importHistory(page = 1) {
     return apiRequest<PaginatedResponse<ProductImport>>(
@@ -66,9 +81,15 @@ export const productService = {
       `/products/imports/${id}/confirm/`,
       {
         method: "POST",
-        body: JSON.stringify({ duplicate_strategy: duplicateStrategy }),
+        body: JSON.stringify({
+          duplicate_strategy: duplicateStrategy,
+          confirmed: true,
+        }),
         timeoutMs: 300_000,
       },
     );
+  },
+  downloadImportErrors(id: string) {
+    return apiDownload(`/products/imports/${id}/errors/`);
   },
 };

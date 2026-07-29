@@ -180,3 +180,10 @@ No branches, subscriptions, or SaaS billing rules are part of this foundation.
   overwrites an already initialized inventory balance.
 - Blank opening stock leaves inventory uninitialized. An explicit zero creates
   an initialized out-of-stock balance.
+- The template and parser use one canonical twelve-column CSV contract.
+  Validation records expire after 24 hours and never create catalogue or
+  inventory data.
+- `Tax Exempt` maps to a zero Product tax rate. Human-readable unit names map
+  through the single backend unit map; barcodes remain exact strings.
+- Blocking errors prevent the whole import. Warnings are informational.
+  Confirmation rechecks duplicates and is atomic and idempotent.

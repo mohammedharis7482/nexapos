@@ -10,6 +10,11 @@ export const PRODUCT_UNITS = [
   "BOTTLE",
   "CAN",
   "BAG",
+  "CUP",
+  "JAR",
+  "ROLL",
+  "TRAY",
+  "TUBE",
 ] as const;
 
 export type ProductUnit = (typeof PRODUCT_UNITS)[number];
@@ -76,17 +81,38 @@ export interface ProductImport {
   total_rows: number;
   valid_rows: number;
   error_rows: number;
+  invalid_rows: number;
+  warning_rows: number;
   duplicate_rows: number;
+  duplicate_summary: {
+    existing_rows: number;
+    strategy_required: boolean;
+  };
   products_created: number;
   products_updated: number;
   products_skipped: number;
   categories_created: number;
+  categories_to_create: string[];
   inventory_initialized: number;
+  opening_movements_created: number;
   error_message: string;
+  failure_code: string;
   created_by_name: string;
   started_at: string | null;
   completed_at: string | null;
+  expires_at: string | null;
+  duration_ms: number | null;
   created_at: string;
+  can_import: boolean;
+}
+
+export interface ProductImportIssue {
+  row_number: number;
+  column: string;
+  value: string;
+  error_code: string;
+  human_message: string;
+  suggested_fix: string;
 }
 
 export interface ProductImportRow {
@@ -95,7 +121,9 @@ export interface ProductImportRow {
   raw_data: Record<string, string>;
   normalized_data: {
     name: string;
+    description: string;
     category: string;
+    category_state: "EXISTING" | "NEW" | "NONE";
     sku: string;
     barcode: string | null;
     unit: string;
@@ -104,8 +132,11 @@ export interface ProductImportRow {
     opening_stock: string | null;
     low_stock_alert: string;
     is_active: boolean | null;
+    tax_rate: string;
+    unit_display: string;
   };
-  errors: Record<string, string[]>;
+  errors: ProductImportIssue[];
+  warnings: ProductImportIssue[];
   duplicate_fields: string[];
 }
 

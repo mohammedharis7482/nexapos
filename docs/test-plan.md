@@ -109,6 +109,12 @@ Validate the documented schema:
 - Frontend tests cover multipart upload, trailing-slash routes, validation/error
   preview, duplicate selection, confirmation summary, one controlled failure,
   and owner-only rendering.
+- Contract regression downloads the live template and uploads those exact bytes
+  through the validation endpoint.
+- Parser coverage includes BOM, UTF-8, quoted commas, trailing lines, bad
+  delimiter/quoting, binary content, header aliases/errors, 5 MB and 10,000-row
+  limits, formula-safe reports, every unit, tax/status normalization, exact
+  barcodes, warnings, expiry/idempotency, and transactional rollback.
 
 ## Frontend authentication and shell
 
