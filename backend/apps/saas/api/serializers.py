@@ -137,6 +137,10 @@ class AcceptInvitationSerializer(TokenSerializer):
 class ManagedUserSerializer(serializers.ModelSerializer):
     is_primary_owner = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default=None
+    )
+    available_actions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -147,9 +151,14 @@ class ManagedUserSerializer(serializers.ModelSerializer):
             "email",
             "role",
             "is_primary_owner",
+            "is_active",
+            "must_change_password",
             "status",
             "last_login",
             "date_joined",
+            "created_at",
+            "created_by_name",
+            "available_actions",
         )
         read_only_fields = fields
 
@@ -159,12 +168,58 @@ class ManagedUserSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField())
     def get_status(self, user) -> str:
+        if user.must_change_password and user.is_active:
+            return "PASSWORD_CHANGE_REQUIRED"
         return "ACTIVE" if user.is_active else "INACTIVE"
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_available_actions(self, user) -> list[str]:
+        request = self.context.get("request")
+        actor = getattr(request, "user", None)
+        if not actor or user.id == actor.id or user.shop.primary_owner_id == user.id:
+            return ["edit"] if actor and user.id == actor.id else []
+        if user.role == User.Role.OWNER and user.shop.primary_owner_id != actor.id:
+            return []
+        actions = ["edit", "change_role", "reset_password"]
+        actions.append("deactivate" if user.is_active else "activate")
+        return actions
+
+
+class StaffCreateSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=150)
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(choices=User.Role.choices)
+    temporary_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    temporary_password_confirm = serializers.CharField(
+        write_only=True, trim_whitespace=False
+    )
+
+    def validate(self, attrs):
+        if attrs["temporary_password"] != attrs.pop("temporary_password_confirm"):
+            raise serializers.ValidationError(
+                {"temporary_password_confirm": "Passwords do not match."}
+            )
+        return attrs
+
+
+class StaffPasswordResetSerializer(serializers.Serializer):
+    temporary_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    temporary_password_confirm = serializers.CharField(
+        write_only=True, trim_whitespace=False
+    )
+
+    def validate(self, attrs):
+        if attrs["temporary_password"] != attrs.pop("temporary_password_confirm"):
+            raise serializers.ValidationError(
+                {"temporary_password_confirm": "Passwords do not match."}
+            )
+        return attrs
 
 
 class UserUpdateSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=150, required=False)
-    email = serializers.EmailField(required=False)
+    email = serializers.EmailField(required=False, allow_blank=True)
 
 
 class RoleChangeSerializer(serializers.Serializer):

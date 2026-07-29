@@ -67,6 +67,14 @@ def login_user(*, request, shop_id, username: str, password: str) -> User:
         deny_login("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE, 401)
 
     login(request, user, backend="common.authentication.ShopModelBackend")
+    from apps.saas.models import AuditEvent
+
+    AuditEvent.objects.create(
+        shop=user.shop,
+        actor=user,
+        target_user=user,
+        event=AuditEvent.Event.USER_LOGIN,
+    )
     return user
 
 
@@ -81,13 +89,36 @@ def change_user_password(
         raise ValidationError(
             {"current_password": ["The current password is incorrect."]}
         )
+    if user.check_password(new_password):
+        raise ValidationError(
+            {"new_password": ["Choose a password different from the current one."]}
+        )
 
     validate_password(new_password, user=user)
     user.set_password(new_password)
-    user.save(update_fields=["password", "updated_at"])
+    from django.utils import timezone
+
+    user.must_change_password = False
+    user.password_changed_at = timezone.now()
+    user.save(
+        update_fields=[
+            "password",
+            "must_change_password",
+            "password_changed_at",
+            "updated_at",
+        ]
+    )
     from apps.saas.services import invalidate_user_sessions
 
     invalidate_user_sessions(
         user, exclude_session_key=request.session.session_key
     )
     update_session_auth_hash(request, user)
+    from apps.saas.models import AuditEvent
+
+    AuditEvent.objects.create(
+        shop=user.shop,
+        actor=user,
+        target_user=user,
+        event=AuditEvent.Event.PASSWORD_CHANGED,
+    )

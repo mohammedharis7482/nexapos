@@ -23,6 +23,7 @@ export interface AuthenticatedUser {
   email?: string;
   email_verified?: boolean;
   email_verification_required?: boolean;
+  must_change_password?: boolean;
   last_login?: string | null;
   role: UserRole;
   is_primary_owner?: boolean;
@@ -35,8 +36,11 @@ export interface AuthenticatedUser {
   capabilities?: {
     manage_team: boolean;
     manage_owners: boolean;
+    manage_cashiers: boolean;
     view_subscription: boolean;
     manage_subscription: boolean;
+    adjust_inventory: boolean;
+    view_reports: boolean;
   };
 }
 

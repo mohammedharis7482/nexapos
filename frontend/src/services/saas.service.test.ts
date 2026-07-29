@@ -11,7 +11,7 @@ describe("SaaS endpoint contract", () => {
       requestPasswordReset: "/auth/password-reset/request/",
       confirmPasswordReset: "/auth/password-reset/confirm/",
       invitationAccept: "/invitations/accept/",
-      users: "/users/",
+      users: "/team/users/",
       invitations: "/users/invitations/",
       onboarding: "/saas/onboarding/",
       onboardingComplete: "/saas/onboarding/complete/",

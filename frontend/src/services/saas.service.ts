@@ -7,6 +7,7 @@ import type {
   Plan,
   RegistrationResult,
   SubscriptionResponse,
+  StaffCreateRequest,
   TeamResponse,
   VerificationResult,
 } from "@/types/saas";
@@ -18,7 +19,7 @@ export const SAAS_ENDPOINTS = {
   requestPasswordReset: "/auth/password-reset/request/",
   confirmPasswordReset: "/auth/password-reset/confirm/",
   invitationAccept: "/invitations/accept/",
-  users: "/users/",
+  users: "/team/users/",
   invitations: "/users/invitations/",
   onboarding: "/saas/onboarding/",
   onboardingComplete: "/saas/onboarding/complete/",
@@ -75,22 +76,37 @@ export const saasService = {
   users() {
     return apiRequest<TeamResponse>(SAAS_ENDPOINTS.users);
   },
+  createUser(payload: StaffCreateRequest) {
+    return apiRequest<ApiSuccess<unknown>>(SAAS_ENDPOINTS.users, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
   updateUser(id: string, payload: Record<string, string>) {
-    return apiRequest<ApiSuccess<unknown>>(`/users/${id}/`, {
+    return apiRequest<ApiSuccess<unknown>>(`/team/users/${id}/`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
   },
   userAction(id: string, action: "activate" | "deactivate", payload?: never) {
-    return apiRequest<ApiSuccess<unknown>>(`/users/${id}/${action}/`, {
+    return apiRequest<ApiSuccess<unknown>>(`/team/users/${id}/${action}/`, {
       method: "POST",
       body: payload,
     });
   },
   changeRole(id: string, role: string) {
-    return apiRequest<ApiSuccess<unknown>>(`/users/${id}/change-role/`, {
+    return apiRequest<ApiSuccess<unknown>>(`/team/users/${id}/change-role/`, {
       method: "POST",
       body: JSON.stringify({ role }),
+    });
+  },
+  resetUserPassword(id: string, temporaryPassword: string, confirmation: string) {
+    return apiRequest<ApiSuccess<unknown>>(`/team/users/${id}/reset-password/`, {
+      method: "POST",
+      body: JSON.stringify({
+        temporary_password: temporaryPassword,
+        temporary_password_confirm: confirmation,
+      }),
     });
   },
   invitations() {

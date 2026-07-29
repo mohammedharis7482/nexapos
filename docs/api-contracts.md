@@ -132,8 +132,19 @@ the valid current session is preserved after a successful change.
   one-time reset.
 - `GET|POST /api/v1/invitations/accept/`: safe invitation context and atomic
   acceptance.
-- `/api/v1/users/` and `/api/v1/users/invitations/`: OWNER-only,
-  current-shop user and invitation management.
+- `GET|POST /api/v1/team/users/`: owner-only, current-shop listing and direct
+  staff creation. Direct creation accepts `full_name`, `username`, optional
+  `email`, `role`, `temporary_password`, and confirmation. Password fields are
+  write-only and absent from responses.
+- `GET|PATCH /api/v1/team/users/{user_id}/`: shop-scoped detail/profile update.
+- `POST /api/v1/team/users/{user_id}/{activate|deactivate|change-role}/`:
+  policy-checked lifecycle actions. Role changes and deactivation invalidate
+  affected sessions.
+- `POST /api/v1/team/users/{user_id}/reset-password/`: accepts a temporary
+  password and confirmation, invalidates sessions, and marks password change
+  required. It never returns credentials.
+- Legacy `/api/v1/users/` routes and the existing invitation routes remain
+  available for compatibility.
 - `GET|PATCH /api/v1/saas/onboarding/` and
   `POST /api/v1/saas/onboarding/complete/`: primary-owner onboarding progress.
 - `GET /api/v1/saas/subscription/` and `GET /api/v1/saas/plans/`: OWNER-only

@@ -3,6 +3,7 @@ from typing import Any
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -108,6 +109,14 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     deactivated_at = models.DateTimeField(null=True, blank=True)
     role_changed_at = models.DateTimeField(null=True, blank=True)
     password_changed_at = models.DateTimeField(null=True, blank=True)
+    must_change_password = models.BooleanField(default=False, db_index=True)
+    created_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="staff_accounts_created",
+        null=True,
+        blank=True,
+    )
 
     objects = UserManager()
 
@@ -133,6 +142,17 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
         if self.email:
             self.email = UserManager.normalize_email_address(self.email)
         super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.created_by_id
+            and self.shop_id
+            and self.created_by.shop_id != self.shop_id
+        ):
+            raise ValidationError(
+                {"created_by": "Account creator must belong to the same shop."}
+            )
 
     def __str__(self) -> str:
         return f"{self.username} ({self.shop.name})"

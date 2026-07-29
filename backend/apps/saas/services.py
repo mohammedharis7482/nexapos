@@ -352,6 +352,123 @@ def can_manage_role(actor: User, role: str) -> bool:
 
 
 @transaction.atomic
+def create_staff_user(
+    *,
+    actor: User,
+    full_name: str,
+    username: str,
+    temporary_password: str,
+    role: str,
+    email: str = "",
+) -> User:
+    if not can_manage_role(actor, role):
+        raise PermissionDenied("You cannot create this role.")
+    enforce_user_limit(actor.shop)
+    normalized_username = User.objects.normalize_username(username)
+    normalized_email = (
+        User.objects.normalize_email_address(email) if email.strip() else ""
+    )
+    if User.objects.select_for_update().filter(
+        shop=actor.shop, username__iexact=normalized_username
+    ).exists():
+        raise SaasOperationError(
+            "A user with this username already exists.", "username"
+        )
+    prospective = User(
+        shop=actor.shop,
+        username=normalized_username,
+        full_name=full_name.strip(),
+        email=normalized_email,
+        role=role,
+        created_by=actor,
+    )
+    validate_password(temporary_password, user=prospective)
+    now = timezone.now()
+    user = User.objects.create_user(
+        shop=actor.shop,
+        username=normalized_username,
+        password=temporary_password,
+        full_name=full_name.strip(),
+        email=normalized_email,
+        role=role,
+        created_by=actor,
+        is_active=True,
+        activated_at=now,
+        email_verified_at=now,
+        must_change_password=True,
+    )
+    AuditEvent.objects.create(
+        shop=actor.shop,
+        actor=actor,
+        target_user=user,
+        event=AuditEvent.Event.STAFF_USER_CREATED,
+        detail=role,
+    )
+    return user
+
+
+@transaction.atomic
+def update_staff_profile(
+    *, actor: User, target: User, full_name: str | None, email: str | None
+) -> User:
+    if target.shop_id != actor.shop_id:
+        raise PermissionDenied("User not found.")
+    if target.role == User.Role.OWNER and not user_is_primary_owner(actor):
+        raise PermissionDenied("Only the primary owner can edit owners.")
+    if full_name is not None:
+        target.full_name = full_name.strip()
+    if email is not None:
+        target.email = (
+            User.objects.normalize_email_address(email) if email.strip() else ""
+        )
+    target.full_clean(exclude=["password"])
+    target.save()
+    AuditEvent.objects.create(
+        shop=actor.shop,
+        actor=actor,
+        target_user=target,
+        event=AuditEvent.Event.USER_PROFILE_UPDATED,
+    )
+    return target
+
+
+@transaction.atomic
+def reset_staff_password(
+    *, actor: User, target: User, temporary_password: str
+) -> User:
+    if target.shop_id != actor.shop_id:
+        raise PermissionDenied("User not found.")
+    if target.id == actor.id:
+        raise SaasOperationError("Use your account page to change your password.")
+    if target.shop.primary_owner_id == target.id:
+        raise SaasOperationError(
+            "The primary owner password cannot be reset from Team."
+        )
+    if target.role == User.Role.OWNER and not user_is_primary_owner(actor):
+        raise PermissionDenied("Only the primary owner can reset owner passwords.")
+    validate_password(temporary_password, user=target)
+    target.set_password(temporary_password)
+    target.must_change_password = True
+    target.password_changed_at = timezone.now()
+    target.save(
+        update_fields=[
+            "password",
+            "must_change_password",
+            "password_changed_at",
+            "updated_at",
+        ]
+    )
+    invalidate_user_sessions(target)
+    AuditEvent.objects.create(
+        shop=actor.shop,
+        actor=actor,
+        target_user=target,
+        event=AuditEvent.Event.STAFF_PASSWORD_RESET,
+    )
+    return target
+
+
+@transaction.atomic
 def create_invitation(
     *, actor: User, email: str, role: str, full_name: str = ""
 ) -> ShopInvitation:
@@ -600,6 +717,7 @@ def update_user_role(*, actor: User, target: User, role: str) -> User:
     target.role = role
     target.role_changed_at = timezone.now()
     target.save(update_fields=["role", "role_changed_at", "updated_at"])
+    invalidate_user_sessions(target)
     AuditEvent.objects.create(
         shop=actor.shop,
         actor=actor,

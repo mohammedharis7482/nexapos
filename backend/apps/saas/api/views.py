@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
@@ -17,6 +18,7 @@ from apps.saas.services import (
     complete_onboarding,
     confirm_password_reset,
     create_invitation,
+    create_staff_user,
     invitation_context,
     register_shop,
     request_password_reset,
@@ -24,6 +26,8 @@ from apps.saas.services import (
     resend_verification,
     revoke_invitation,
     set_user_active,
+    reset_staff_password,
+    update_staff_profile,
     update_user_role,
     usage_for_shop,
     user_is_primary_owner,
@@ -31,6 +35,7 @@ from apps.saas.services import (
 )
 from common.authentication import enforce_csrf
 from common.permissions import IsOwner
+from common.pagination import StandardResultsSetPagination
 from common.views import success_response
 
 from .serializers import (
@@ -46,6 +51,8 @@ from .serializers import (
     RegistrationErrorSerializer,
     RegistrationResponseSerializer,
     RoleChangeSerializer,
+    StaffCreateSerializer,
+    StaffPasswordResetSerializer,
     SubscriptionSerializer,
     TokenSerializer,
     UserUpdateSerializer,
@@ -249,15 +256,60 @@ class InvitationAcceptView(PublicCsrfViewMixin, APIView):
 class UserListView(APIView):
     permission_classes = [IsOwner]
 
-    @extend_schema(responses={200: ManagedUserSerializer(many=True)})
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("search", str),
+            OpenApiParameter("role", str),
+            OpenApiParameter("status", str),
+        ],
+        responses={200: ManagedUserSerializer(many=True)},
+    )
     def get(self, request):
         users = users_for_manager(request.user)
+        search = request.query_params.get("search", "").strip()
+        role = request.query_params.get("role", "").upper()
+        account_status = request.query_params.get("status", "").upper()
+        if search:
+            users = users.filter(
+                Q(full_name__icontains=search)
+                | Q(username__icontains=search)
+                | Q(email__icontains=search)
+            )
+        if role in User.Role.values:
+            users = users.filter(role=role)
+        if account_status in ("ACTIVE", "INACTIVE"):
+            users = users.filter(is_active=account_status == "ACTIVE")
+        if account_status == "PASSWORD_CHANGE_REQUIRED":
+            users = users.filter(is_active=True, must_change_password=True)
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(users, request, view=self)
         return success_response(
             "Users retrieved.",
             {
-                "results": ManagedUserSerializer(users, many=True).data,
+                "results": ManagedUserSerializer(
+                    page, many=True, context={"request": request}
+                ).data,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link(),
                 "usage": usage_for_shop(request.user.shop),
             },
+        )
+
+    @extend_schema(request=StaffCreateSerializer, responses={201: ManagedUserSerializer})
+    def post(self, request):
+        serializer = StaffCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            target = create_staff_user(
+                actor=request.user, **serializer.validated_data
+            )
+        except (SaasOperationError, DjangoValidationError) as exc:
+            operation_error(exc)
+        return success_response(
+            "Staff account created.",
+            ManagedUserSerializer(target, context={"request": request}).data,
+            status_code=status.HTTP_201_CREATED,
         )
 
 
@@ -270,24 +322,31 @@ class UserDetailView(APIView):
     @extend_schema(responses={200: ManagedUserSerializer})
     def get(self, request, user_id):
         return success_response(
-            "User retrieved.", ManagedUserSerializer(self.get_object(request, user_id)).data
+            "User retrieved.",
+            ManagedUserSerializer(
+                self.get_object(request, user_id), context={"request": request}
+            ).data,
         )
 
     @extend_schema(request=UserUpdateSerializer, responses={200: ManagedUserSerializer})
     @transaction.atomic
     def patch(self, request, user_id):
         target = self.get_object(request, user_id)
-        if target.role == User.Role.OWNER and not user_is_primary_owner(request.user):
-            raise serializers.ValidationError(
-                {"detail": "Only the primary owner can edit owners."}
-            )
         serializer = UserUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        for field, value in serializer.validated_data.items():
-            setattr(target, field, value.strip())
-        target.full_clean(exclude=["password"])
-        target.save()
-        return success_response("User updated.", ManagedUserSerializer(target).data)
+        try:
+            target = update_staff_profile(
+                actor=request.user,
+                target=target,
+                full_name=serializer.validated_data.get("full_name"),
+                email=serializer.validated_data.get("email"),
+            )
+        except (SaasOperationError, DjangoValidationError) as exc:
+            operation_error(exc)
+        return success_response(
+            "User updated.",
+            ManagedUserSerializer(target, context={"request": request}).data,
+        )
 
 
 class UserActivationView(APIView):
@@ -303,7 +362,7 @@ class UserActivationView(APIView):
             operation_error(exc)
         return success_response(
             "User activated." if self.active else "User deactivated.",
-            ManagedUserSerializer(target).data,
+            ManagedUserSerializer(target, context={"request": request}).data,
         )
 
 
@@ -327,7 +386,34 @@ class UserRoleView(APIView):
             )
         except SaasOperationError as exc:
             operation_error(exc)
-        return success_response("User role updated.", ManagedUserSerializer(target).data)
+        return success_response(
+            "User role updated.",
+            ManagedUserSerializer(target, context={"request": request}).data,
+        )
+
+
+class UserPasswordResetView(APIView):
+    permission_classes = [IsOwner]
+
+    @extend_schema(
+        request=StaffPasswordResetSerializer, responses={200: ManagedUserSerializer}
+    )
+    def post(self, request, user_id):
+        target = get_object_or_404(users_for_manager(request.user), pk=user_id)
+        serializer = StaffPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            target = reset_staff_password(
+                actor=request.user,
+                target=target,
+                temporary_password=serializer.validated_data["temporary_password"],
+            )
+        except (SaasOperationError, DjangoValidationError) as exc:
+            operation_error(exc)
+        return success_response(
+            "Temporary password set. The user must change it at next sign-in.",
+            ManagedUserSerializer(target, context={"request": request}).data,
+        )
 
 
 class InvitationListCreateView(APIView):

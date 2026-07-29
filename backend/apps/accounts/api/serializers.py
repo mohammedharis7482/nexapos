@@ -23,8 +23,11 @@ class SubscriptionSessionSerializer(serializers.Serializer):
 class CapabilitiesSerializer(serializers.Serializer):
     manage_team = serializers.BooleanField(read_only=True)
     manage_owners = serializers.BooleanField(read_only=True)
+    manage_cashiers = serializers.BooleanField(read_only=True)
     view_subscription = serializers.BooleanField(read_only=True)
     manage_subscription = serializers.BooleanField(read_only=True)
+    adjust_inventory = serializers.BooleanField(read_only=True)
+    view_reports = serializers.BooleanField(read_only=True)
 
 
 class UserSessionSerializer(serializers.Serializer):
@@ -34,6 +37,7 @@ class UserSessionSerializer(serializers.Serializer):
     email = serializers.EmailField(read_only=True, allow_blank=True)
     email_verified = serializers.BooleanField(read_only=True)
     email_verification_required = serializers.BooleanField(read_only=True)
+    must_change_password = serializers.BooleanField(read_only=True)
     last_login = serializers.DateTimeField(read_only=True, allow_null=True)
     role = serializers.ChoiceField(choices=User.Role.choices, read_only=True)
     is_primary_owner = serializers.BooleanField(read_only=True)

@@ -9,15 +9,23 @@ from .views import (
     UserDeactivateView,
     UserDetailView,
     UserListView,
+    UserPasswordResetView,
     UserRoleView,
 )
 
 urlpatterns = [
+    path("team/users/", UserListView.as_view(), name="team-users"),
+    path("team/users/<uuid:user_id>/", UserDetailView.as_view(), name="team-user-detail"),
+    path("team/users/<uuid:user_id>/activate/", UserActivationView.as_view(), name="team-user-activate"),
+    path("team/users/<uuid:user_id>/deactivate/", UserDeactivateView.as_view(), name="team-user-deactivate"),
+    path("team/users/<uuid:user_id>/change-role/", UserRoleView.as_view(), name="team-user-role"),
+    path("team/users/<uuid:user_id>/reset-password/", UserPasswordResetView.as_view(), name="team-user-password"),
     path("users/", UserListView.as_view(), name="users"),
     path("users/<uuid:user_id>/", UserDetailView.as_view(), name="user-detail"),
     path("users/<uuid:user_id>/activate/", UserActivationView.as_view(), name="user-activate"),
     path("users/<uuid:user_id>/deactivate/", UserDeactivateView.as_view(), name="user-deactivate"),
     path("users/<uuid:user_id>/change-role/", UserRoleView.as_view(), name="user-role"),
+    path("users/<uuid:user_id>/reset-password/", UserPasswordResetView.as_view(), name="user-password"),
     path("users/invitations/", InvitationListCreateView.as_view(), name="invitations"),
     path(
         "users/invitations/<uuid:invitation_id>/resend/",

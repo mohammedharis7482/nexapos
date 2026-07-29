@@ -59,6 +59,15 @@ class LogoutView(APIView):
 
     @extend_schema(request=None, responses={200: SuccessSerializer})
     def post(self, request):
+        from apps.saas.models import AuditEvent
+
+        user = request.user
+        AuditEvent.objects.create(
+            shop=user.shop,
+            actor=user,
+            target_user=user,
+            event=AuditEvent.Event.USER_LOGOUT,
+        )
         logout(request)
         return success_response("Logout successful.")
 

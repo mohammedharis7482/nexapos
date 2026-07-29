@@ -171,6 +171,12 @@ class AuditEvent(BaseModel):
         USER_DEACTIVATED = "USER_DEACTIVATED", "User deactivated"
         ROLE_CHANGED = "ROLE_CHANGED", "Role changed"
         PASSWORD_RESET = "PASSWORD_RESET", "Password reset"
+        STAFF_USER_CREATED = "STAFF_USER_CREATED", "Staff user created"
+        USER_PROFILE_UPDATED = "USER_PROFILE_UPDATED", "User profile updated"
+        STAFF_PASSWORD_RESET = "STAFF_PASSWORD_RESET", "Staff password reset"
+        PASSWORD_CHANGED = "PASSWORD_CHANGED", "Password changed"
+        USER_LOGIN = "USER_LOGIN", "User login"
+        USER_LOGOUT = "USER_LOGOUT", "User logout"
         SUBSCRIPTION_CHANGED = "SUBSCRIPTION_CHANGED", "Subscription changed"
 
     shop = models.ForeignKey(

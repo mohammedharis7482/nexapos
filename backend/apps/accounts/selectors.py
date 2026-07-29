@@ -17,6 +17,7 @@ def user_session_data(user: User) -> dict:
             "email": user.email,
             "email_verified": user.email_verified_at is not None,
             "email_verification_required": settings.REQUIRE_EMAIL_VERIFICATION,
+            "must_change_password": user.must_change_password,
             "last_login": user.last_login,
             "is_primary_owner": shop.primary_owner_id == user.id,
             "shop": {
@@ -39,8 +40,11 @@ def user_session_data(user: User) -> dict:
             "capabilities": {
                 "manage_team": user.role == User.Role.OWNER,
                 "manage_owners": shop.primary_owner_id == user.id,
+                "manage_cashiers": user.role == User.Role.OWNER,
                 "view_subscription": user.role == User.Role.OWNER,
                 "manage_subscription": shop.primary_owner_id == user.id,
+                "adjust_inventory": user.role == User.Role.OWNER,
+                "view_reports": user.role == User.Role.OWNER,
             },
         }
     }

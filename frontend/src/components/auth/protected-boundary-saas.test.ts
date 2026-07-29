@@ -32,6 +32,14 @@ describe("SaaS lifecycle route guards", () => {
     expect(resolveSaasRoute(onboarding, "/onboarding")).toBeNull();
   });
 
+  it("requires temporary-password users to change it before business routes", () => {
+    const temporary = user({ must_change_password: true });
+    expect(resolveSaasRoute(temporary, "/dashboard")).toBe(
+      "/account/change-password",
+    );
+    expect(resolveSaasRoute(temporary, "/account/change-password")).toBeNull();
+  });
+
   it("restricts suspended users to safe account routes", () => {
     const suspended = user({ shop: { ...user().shop, status: "SUSPENDED" } });
     expect(resolveSaasRoute(suspended, "/billing")).toBe("/settings/subscription");

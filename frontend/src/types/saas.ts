@@ -30,9 +30,14 @@ export interface ManagedUser {
   email: string;
   role: UserRole;
   is_primary_owner: boolean;
-  status: "ACTIVE" | "INACTIVE";
+  is_active: boolean;
+  must_change_password: boolean;
+  status: "ACTIVE" | "INACTIVE" | "PASSWORD_CHANGE_REQUIRED";
   last_login: string | null;
   date_joined: string;
+  created_at: string;
+  created_by_name: string | null;
+  available_actions: Array<"edit" | "change_role" | "reset_password" | "activate" | "deactivate">;
 }
 
 export interface Usage {
@@ -93,7 +98,21 @@ export interface OnboardingState {
   receipt_footer: string;
 }
 
-export type TeamResponse = ApiSuccess<{ results: ManagedUser[]; usage: Usage }>;
+export type TeamResponse = ApiSuccess<{
+  results: ManagedUser[];
+  usage: Usage;
+  count: number;
+  next: string | null;
+  previous: string | null;
+}>;
+export interface StaffCreateRequest {
+  full_name: string;
+  username: string;
+  email?: string;
+  role: UserRole;
+  temporary_password: string;
+  temporary_password_confirm: string;
+}
 export type InvitationsResponse = ApiSuccess<Invitation[]>;
 export type SubscriptionResponse = ApiSuccess<Subscription>;
 export type OnboardingResponse = ApiSuccess<OnboardingState>;

@@ -15,6 +15,16 @@ export function resolveProtectedState(status: AuthStatus) {
 
 export function resolveSaasRoute(user: AuthenticatedUser, pathname: string) {
   if (
+    user.must_change_password &&
+    pathname !== "/account/change-password"
+  ) return "/account/change-password";
+  if (
+    !user.must_change_password &&
+    pathname === "/account/change-password"
+  ) return user.shop.onboarding_completed === false && user.is_primary_owner
+    ? "/onboarding"
+    : "/dashboard";
+  if (
     user.shop.status === "ONBOARDING" &&
     user.is_primary_owner &&
     pathname !== "/onboarding"

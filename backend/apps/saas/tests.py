@@ -9,6 +9,7 @@ from django.db import IntegrityError, transaction
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import User
 from apps.products.models import Product
@@ -24,9 +25,11 @@ from .models import (
 from .services import (
     SaasOperationError,
     accept_invitation,
+    create_staff_user,
     create_invitation,
     hash_token,
     set_user_active,
+    reset_staff_password,
     transition_subscription,
 )
 
@@ -533,6 +536,106 @@ class SaasFoundationTests(TestCase):
         )
         self.client.force_login(cashier)
         self.assertEqual(self.client.get("/api/v1/users/").status_code, 403)
+
+    def test_direct_staff_creation_hashes_password_and_requires_change(self):
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            "/api/v1/team/users/",
+            {
+                "full_name": "Shop Cashier",
+                "username": "ShopCashier",
+                "email": "",
+                "role": "CASHIER",
+                "temporary_password": NEW_PASSWORD,
+                "temporary_password_confirm": NEW_PASSWORD,
+            },
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=self.csrf(),
+        )
+        self.assertEqual(response.status_code, 201)
+        user = User.objects.get(shop=self.shop, username="shopcashier")
+        self.assertTrue(user.check_password(NEW_PASSWORD))
+        self.assertTrue(user.must_change_password)
+        self.assertEqual(user.created_by, self.owner)
+        self.assertNotIn("password", response.json()["data"])
+
+    def test_owner_can_only_create_and_manage_cashiers(self):
+        normal_owner = User.objects.create_user(
+            shop=self.shop, username="manager", password=PASSWORD,
+            full_name="Manager", role=User.Role.OWNER,
+        )
+        cashier = create_staff_user(
+            actor=normal_owner, full_name="Cashier", username="managed",
+            temporary_password=NEW_PASSWORD, role=User.Role.CASHIER,
+        )
+        self.assertEqual(cashier.role, User.Role.CASHIER)
+        with self.assertRaises(PermissionDenied):
+            create_staff_user(
+                actor=normal_owner, full_name="Owner", username="forbidden-owner",
+                temporary_password=NEW_PASSWORD, role=User.Role.OWNER,
+            )
+
+    def test_team_filters_and_cross_shop_detail_is_hidden(self):
+        create_staff_user(
+            actor=self.owner, full_name="Filtered Cashier", username="filtered",
+            temporary_password=NEW_PASSWORD, role=User.Role.CASHIER,
+        )
+        other_shop = Shop.objects.create(name="Separate", address="Doha", phone="9")
+        outsider = User.objects.create_user(
+            shop=other_shop, username="outside", password=PASSWORD, full_name="Outside",
+        )
+        self.client.force_login(self.owner)
+        filtered = self.client.get(
+            "/api/v1/team/users/?search=filtered&role=CASHIER&status=PASSWORD_CHANGE_REQUIRED"
+        )
+        self.assertEqual(filtered.status_code, 200)
+        self.assertEqual(len(filtered.json()["data"]["results"]), 1)
+        self.assertEqual(
+            self.client.get(f"/api/v1/team/users/{outsider.id}/").status_code, 404
+        )
+
+    def test_password_reset_requires_change_and_ends_target_sessions(self):
+        cashier = User.objects.create_user(
+            shop=self.shop, username="reset-me", password=PASSWORD,
+            full_name="Reset Me", role=User.Role.CASHIER,
+        )
+        other_client = Client()
+        other_client.force_login(cashier)
+        self.assertTrue(other_client.session.session_key)
+        reset_staff_password(
+            actor=self.owner, target=cashier, temporary_password=NEW_PASSWORD
+        )
+        cashier.refresh_from_db()
+        self.assertTrue(cashier.must_change_password)
+        self.assertTrue(cashier.check_password(NEW_PASSWORD))
+        self.assertNotIn("_auth_user_id", other_client.session)
+
+    def test_temporary_password_session_is_restricted_until_change(self):
+        cashier = create_staff_user(
+            actor=self.owner, full_name="First Login", username="first-login",
+            temporary_password=PASSWORD, role=User.Role.CASHIER,
+        )
+        csrf_token = self.csrf()
+        self.client.force_login(cashier)
+        blocked = self.client.get("/api/v1/products/")
+        self.assertEqual(blocked.status_code, 403)
+        self.assertEqual(blocked.json()["code"], "PASSWORD_CHANGE_REQUIRED")
+        allowed = self.client.get("/api/v1/auth/me/")
+        self.assertEqual(allowed.status_code, 200)
+        self.assertTrue(allowed.json()["data"]["user"]["must_change_password"])
+        changed = self.client.post(
+            "/api/v1/auth/change-password/",
+            {
+                "current_password": PASSWORD,
+                "new_password": NEW_PASSWORD,
+                "confirm_password": NEW_PASSWORD,
+            },
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(changed.status_code, 200)
+        cashier.refresh_from_db()
+        self.assertFalse(cashier.must_change_password)
 
     def test_primary_owner_and_self_deactivation_are_protected(self):
         with self.assertRaises(SaasOperationError):
