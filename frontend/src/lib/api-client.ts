@@ -65,13 +65,14 @@ async function parseResponse<T>(response: Response): Promise<T> {
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
+  timeoutMs = API_TIMEOUT_MS,
 ): Promise<Response> {
   const controller = new AbortController();
   const upstreamSignal = init.signal;
   const abortFromUpstream = () => controller.abort(upstreamSignal?.reason);
   if (upstreamSignal?.aborted) abortFromUpstream();
   else upstreamSignal?.addEventListener("abort", abortFromUpstream, { once: true });
-  const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } finally {
@@ -91,8 +92,9 @@ export async function initializeCsrf(): Promise<void> {
 
 export async function apiRequest<T>(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit & { timeoutMs?: number } = {},
 ): Promise<T> {
+  const { timeoutMs, ...requestOptions } = options;
   const method = (options.method ?? "GET").toUpperCase();
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
@@ -109,18 +111,46 @@ export async function apiRequest<T>(
     headers.set("X-CSRFToken", csrfToken);
   }
 
-  if (options.body && !headers.has("Content-Type")) {
+  if (
+    options.body &&
+    !(options.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
   }
 
   try {
-    const response = await fetchWithTimeout(joinApiUrl(API_BASE_URL, path), {
-      ...options,
-      method,
-      credentials: "include",
-      headers,
-    });
+    const response = await fetchWithTimeout(
+      joinApiUrl(API_BASE_URL, path),
+      {
+        ...requestOptions,
+        method,
+        credentials: "include",
+        headers,
+      },
+      timeoutMs,
+    );
     return await parseResponse<T>(response);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      "NexaPOS cannot reach the server. Check your connection and try again.",
+      0,
+    );
+  }
+}
+
+export async function apiDownload(path: string): Promise<Blob> {
+  try {
+    const response = await fetchWithTimeout(joinApiUrl(API_BASE_URL, path), {
+      method: "GET",
+      credentials: "include",
+      headers: { Accept: "text/csv" },
+    });
+    if (!response.ok) {
+      await parseResponse(response);
+    }
+    return await response.blob();
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError(

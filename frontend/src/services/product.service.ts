@@ -1,7 +1,14 @@
-import { apiRequest } from "@/lib/api-client";
+import { apiDownload, apiRequest } from "@/lib/api-client";
 import type { PaginatedResponse } from "@/types/api";
 import type { ApiSuccess } from "@/types/auth";
-import type { Product, ProductFilters, ProductInput } from "@/types/product";
+import type {
+  DuplicateStrategy,
+  Product,
+  ProductFilters,
+  ProductImport,
+  ProductImportDetail,
+  ProductInput,
+} from "@/types/product";
 
 export const PRODUCT_ENDPOINT = "/products/";
 
@@ -33,6 +40,35 @@ export const productService = {
   barcode(barcode: string) {
     return apiRequest<ApiSuccess<Product>>(
       `/products/barcode/${encodeURIComponent(barcode)}/`,
+    );
+  },
+  downloadImportTemplate() {
+    return apiDownload("/products/import-template/");
+  },
+  uploadImport(file: File) {
+    const body = new FormData();
+    body.append("file", file);
+    return apiRequest<ApiSuccess<ProductImport>>("/products/imports/", {
+      method: "POST",
+      body,
+    });
+  },
+  importDetail(id: string) {
+    return apiRequest<ApiSuccess<ProductImportDetail>>(`/products/imports/${id}/`);
+  },
+  importHistory(page = 1) {
+    return apiRequest<PaginatedResponse<ProductImport>>(
+      `/products/imports/?page=${page}`,
+    );
+  },
+  confirmImport(id: string, duplicateStrategy: DuplicateStrategy) {
+    return apiRequest<ApiSuccess<ProductImport>>(
+      `/products/imports/${id}/confirm/`,
+      {
+        method: "POST",
+        body: JSON.stringify({ duplicate_strategy: duplicateStrategy }),
+        timeoutMs: 300_000,
+      },
     );
   },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit3, FolderCog, Plus } from "lucide-react";
+import { Edit3, FolderCog, Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -88,6 +88,7 @@ export default function ProductsPage() {
         action={
           <div className="flex gap-2">
             {owner ? <Button variant="secondary" leadingIcon={<FolderCog className="size-4" />} className="hidden sm:inline-flex" onClick={() => { window.location.href = "/products/categories"; }}>Categories</Button> : null}
+            {owner ? <Button variant="secondary" leadingIcon={<Upload className="size-4" />} onClick={() => { window.location.href = "/products/import"; }}>Import Products</Button> : null}
             {owner ? <Button leadingIcon={<Plus className="size-4" />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add Product</Button> : null}
           </div>
         }

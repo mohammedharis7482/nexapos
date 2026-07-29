@@ -167,3 +167,16 @@ no stock and are revalidated on resume. Card success is confirmed externally.
     purchases, refunds, forecasting, or cross-shop analytics.
 
 No branches, subscriptions, or SaaS billing rules are part of this foundation.
+
+## Bulk product import
+
+- Bulk CSV import is owner-only, shop-scoped, and uses a validate-before-confirm
+  workflow. Validation does not mutate the catalogue.
+- Import SKU values may be blank; the importer generates a collision-resistant
+  `AUTO-XXXXXXXXXXXX` SKU. It never generates barcodes.
+- Missing category names are created within the importing shop during a
+  successful confirmation.
+- Existing-product strategies are Skip, Update, and Cancel. Update never
+  overwrites an already initialized inventory balance.
+- Blank opening stock leaves inventory uninitialized. An explicit zero creates
+  an initialized out-of-stock balance.

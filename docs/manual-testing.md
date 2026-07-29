@@ -89,6 +89,23 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 
 ## Operations
 
+### Bulk product onboarding
+
+1. Sign in as an Owner and open **Products → Import Products**.
+2. Download the template and confirm it opens as CSV with the documented columns.
+3. Import products with blank SKU/barcode, new categories, decimal opening stock,
+   zero opening stock, and blank opening stock.
+4. Confirm generated SKUs are visible in preview and no barcode was generated.
+5. Introduce invalid prices, units, statuses, repeated SKU/barcode values, and a
+   positive threshold without opening stock; confirm errors identify source rows
+   and no products are created.
+6. Exercise Skip, Update, and Cancel against existing products. Confirm Update
+   never replaces an existing inventory quantity.
+7. Confirm a valid file, review its summary/history, and search initialized
+   active products in Billing.
+8. Repeat at mobile width and verify tables remain horizontally usable.
+9. Sign in as Cashier and confirm both the UI and direct API requests deny import.
+
 - Dashboard OWNER: verify shop-wide sales, bills, average bill, items sold,
   cash/card allocation, cashier context in Recent Sales, all three inventory
   alert states, top products, action links, and refresh.

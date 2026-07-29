@@ -2,7 +2,13 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.products.models import Product, ProductCategory
+from apps.products.import_services import MAX_IMPORT_BYTES
+from apps.products.models import (
+    Product,
+    ProductCategory,
+    ProductImport,
+    ProductImportRow,
+)
 
 
 class CategorySummarySerializer(serializers.ModelSerializer):
@@ -157,3 +163,63 @@ class ProductSerializer(serializers.ModelSerializer):
         if category is not serializers.empty:
             attrs["category"] = category
         return attrs
+
+
+class ProductImportUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+    def validate_file(self, value):
+        if not value.name.lower().endswith(".csv"):
+            raise serializers.ValidationError("Upload a CSV (.csv) file.")
+        if value.size > MAX_IMPORT_BYTES:
+            raise serializers.ValidationError("CSV files must be 5 MB or smaller.")
+        return value
+
+
+class ProductImportConfirmSerializer(serializers.Serializer):
+    duplicate_strategy = serializers.ChoiceField(
+        choices=ProductImport.DuplicateStrategy.choices
+    )
+
+
+class ProductImportRowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImportRow
+        fields = (
+            "id",
+            "row_number",
+            "raw_data",
+            "normalized_data",
+            "errors",
+            "duplicate_fields",
+        )
+
+
+class ProductImportSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(
+        source="created_by.full_name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = ProductImport
+        fields = (
+            "id",
+            "filename",
+            "status",
+            "duplicate_strategy",
+            "total_rows",
+            "valid_rows",
+            "error_rows",
+            "duplicate_rows",
+            "products_created",
+            "products_updated",
+            "products_skipped",
+            "categories_created",
+            "inventory_initialized",
+            "error_message",
+            "created_by_name",
+            "started_at",
+            "completed_at",
+            "created_at",
+        )

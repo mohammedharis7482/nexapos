@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Any
 
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -140,3 +141,104 @@ class Product(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.sku})"
+
+
+class ProductImport(BaseModel):
+    class Status(models.TextChoices):
+        VALIDATED = "VALIDATED", "Validated"
+        PROCESSING = "PROCESSING", "Processing"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
+
+    class DuplicateStrategy(models.TextChoices):
+        SKIP = "SKIP", "Skip"
+        UPDATE = "UPDATE", "Update"
+        CANCEL = "CANCEL", "Cancel"
+
+    shop = models.ForeignKey(
+        "shops.Shop",
+        on_delete=models.PROTECT,
+        related_name="product_imports",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="product_imports",
+    )
+    filename = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.VALIDATED,
+    )
+    duplicate_strategy = models.CharField(
+        max_length=10,
+        choices=DuplicateStrategy.choices,
+        blank=True,
+    )
+    total_rows = models.PositiveIntegerField(default=0)
+    valid_rows = models.PositiveIntegerField(default=0)
+    error_rows = models.PositiveIntegerField(default=0)
+    duplicate_rows = models.PositiveIntegerField(default=0)
+    products_created = models.PositiveIntegerField(default=0)
+    products_updated = models.PositiveIntegerField(default=0)
+    products_skipped = models.PositiveIntegerField(default=0)
+    categories_created = models.PositiveIntegerField(default=0)
+    inventory_initialized = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["shop", "-created_at"],
+                name="prod_import_shop_time_idx",
+            ),
+            models.Index(
+                fields=["shop", "status"],
+                name="prod_import_shop_status_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.filename} ({self.get_status_display()})"
+
+
+class ProductImportRow(BaseModel):
+    product_import = models.ForeignKey(
+        ProductImport,
+        on_delete=models.CASCADE,
+        related_name="rows",
+    )
+    row_number = models.PositiveIntegerField()
+    raw_data = models.JSONField(default=dict)
+    normalized_data = models.JSONField(default=dict)
+    errors = models.JSONField(default=dict)
+    duplicate_fields = models.JSONField(default=list)
+    matched_product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        related_name="import_rows",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["row_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product_import", "row_number"],
+                name="products_import_row_number_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["product_import", "row_number"],
+                name="prod_import_row_order_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.product_import.filename}: row {self.row_number}"

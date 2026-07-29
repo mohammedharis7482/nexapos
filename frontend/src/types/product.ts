@@ -59,3 +59,61 @@ export interface ProductFilters {
   page?: number;
   page_size?: number;
 }
+
+export type ProductImportStatus =
+  | "VALIDATED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
+
+export type DuplicateStrategy = "SKIP" | "UPDATE" | "CANCEL";
+
+export interface ProductImport {
+  id: string;
+  filename: string;
+  status: ProductImportStatus;
+  duplicate_strategy: DuplicateStrategy | "";
+  total_rows: number;
+  valid_rows: number;
+  error_rows: number;
+  duplicate_rows: number;
+  products_created: number;
+  products_updated: number;
+  products_skipped: number;
+  categories_created: number;
+  inventory_initialized: number;
+  error_message: string;
+  created_by_name: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface ProductImportRow {
+  id: string;
+  row_number: number;
+  raw_data: Record<string, string>;
+  normalized_data: {
+    name: string;
+    category: string;
+    sku: string;
+    barcode: string | null;
+    unit: string;
+    purchase_price: string;
+    selling_price: string | null;
+    opening_stock: string | null;
+    low_stock_alert: string;
+    is_active: boolean | null;
+  };
+  errors: Record<string, string[]>;
+  duplicate_fields: string[];
+}
+
+export interface ProductImportDetail extends ProductImport {
+  rows: {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: ProductImportRow[];
+  };
+}

@@ -1,10 +1,19 @@
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import serializers, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.views import APIView
 
-from apps.products.models import Product
+from apps.products.import_services import (
+    ProductImportError,
+    confirm_product_import,
+    csv_template,
+    validate_product_import,
+)
+from apps.products.models import Product, ProductImport
 from apps.products.selectors import (
     categories_for_user,
     filter_categories,
@@ -22,7 +31,14 @@ from common.pagination import StandardResultsSetPagination
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
 
-from .serializers import ProductCategorySerializer, ProductSerializer
+from .serializers import (
+    ProductCategorySerializer,
+    ProductImportConfirmSerializer,
+    ProductImportRowSerializer,
+    ProductImportSerializer,
+    ProductImportUploadSerializer,
+    ProductSerializer,
+)
 
 LIST_PARAMETERS = [
     OpenApiParameter("search", str),
@@ -226,4 +242,122 @@ class ProductBarcodeView(APIView):
         return success_response(
             "Product retrieved.",
             ProductSerializer(product).data,
+        )
+
+
+class ProductImportTemplateView(APIView):
+    permission_classes = [IsOwner]
+
+    @extend_schema(
+        responses={
+            200: OpenApiResponse(
+                response=OpenApiTypes.BINARY,
+                description="UTF-8 CSV product import template.",
+            )
+        }
+    )
+    def get(self, request):
+        response = HttpResponse(csv_template(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = (
+            'attachment; filename="nexapos-product-import-template.csv"'
+        )
+        return response
+
+
+class ProductImportListCreateView(APIView):
+    permission_classes = [IsOwner]
+    parser_classes = [MultiPartParser, FormParser]
+
+    @extend_schema(
+        parameters=[OpenApiParameter("page", int), OpenApiParameter("page_size", int)],
+        responses={200: ProductImportSerializer(many=True)},
+    )
+    def get(self, request):
+        queryset = ProductImport.objects.filter(shop=request.user.shop).select_related(
+            "created_by"
+        )
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        data = ProductImportSerializer(page, many=True).data
+        return success_response(
+            "Product imports retrieved.",
+            paginator.get_paginated_data(data),
+        )
+
+    @extend_schema(
+        request=ProductImportUploadSerializer,
+        responses={201: ProductImportSerializer},
+    )
+    def post(self, request):
+        serializer = ProductImportUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        uploaded_file = serializer.validated_data["file"]
+        try:
+            product_import = validate_product_import(
+                shop=request.user.shop,
+                created_by=request.user,
+                filename=uploaded_file.name,
+                content=uploaded_file.read(),
+            )
+        except ProductImportError as exc:
+            raise serializers.ValidationError({"file": str(exc)}) from exc
+        return success_response(
+            "CSV validated.",
+            ProductImportSerializer(product_import).data,
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class ProductImportDetailView(APIView):
+    permission_classes = [IsOwner]
+
+    def get_object(self, request, import_id):
+        return get_object_or_404(
+            ProductImport.objects.filter(shop=request.user.shop).select_related(
+                "created_by"
+            ),
+            pk=import_id,
+        )
+
+    @extend_schema(
+        parameters=[OpenApiParameter("page", int), OpenApiParameter("page_size", int)],
+        responses={200: ProductImportSerializer},
+    )
+    def get(self, request, import_id):
+        product_import = self.get_object(request, import_id)
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(product_import.rows.all(), request, view=self)
+        rows = ProductImportRowSerializer(page, many=True).data
+        data = ProductImportSerializer(product_import).data
+        data["rows"] = paginator.get_paginated_data(rows)
+        return success_response("Product import retrieved.", data)
+
+
+class ProductImportConfirmView(APIView):
+    permission_classes = [IsOwner]
+
+    @extend_schema(
+        request=ProductImportConfirmSerializer,
+        responses={200: ProductImportSerializer},
+    )
+    def post(self, request, import_id):
+        product_import = get_object_or_404(
+            ProductImport.objects.filter(shop=request.user.shop),
+            pk=import_id,
+        )
+        serializer = ProductImportConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            completed = confirm_product_import(
+                product_import=product_import,
+                duplicate_strategy=serializer.validated_data["duplicate_strategy"],
+                requested_by=request.user,
+            )
+        except ProductImportError as exc:
+            raise serializers.ValidationError(
+                {"non_field_errors": [str(exc)]}
+            ) from exc
+        return success_response(
+            "Products imported.",
+            ProductImportSerializer(completed).data,
         )

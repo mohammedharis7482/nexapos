@@ -96,6 +96,20 @@ Validate the documented schema:
   --settings=config.settings.development
 ```
 
+## Bulk product import
+
+- Validate the exact CSV header contract, UTF-8 parsing, size/row limits, decimal
+  precision, status and unit choices.
+- Verify blank SKU generation, optional barcode, intra-file duplicates, existing
+  SKU/barcode matches, and cross-shop isolation.
+- Exercise Skip, Update, and Cancel strategies.
+- Verify category auto-creation, optional opening inventory, immutable existing
+  stock, more than one processing batch, fatal rollback, history, and Cashier
+  denial.
+- Frontend tests cover multipart upload, trailing-slash routes, validation/error
+  preview, duplicate selection, confirmation summary, one controlled failure,
+  and owner-only rendering.
+
 ## Frontend authentication and shell
 
 The frontend uses Vitest with jsdom and Testing Library matchers. Tests cover

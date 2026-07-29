@@ -52,6 +52,14 @@ Functional/conditional constraints enforce per-shop SKU and barcode uniqueness;
 check constraints prevent negative prices and tax outside 0–100. There is no
 quantity, supplier, or inventory ledger field.
 
+## ProductImport and ProductImportRow
+
+`ProductImport` stores shop-scoped import status, source filename, selected
+duplicate strategy, validation counts, completion counts, actor, and timestamps.
+`ProductImportRow` stores each preview row's raw and normalized values, errors,
+duplicate fields, and optional matched Product. Import row numbers are unique
+within an import. Source CSV files are not persisted.
+
 ## InventoryBalance
 
 `inventory.InventoryBalance` has an explicit Shop and one-to-one protected

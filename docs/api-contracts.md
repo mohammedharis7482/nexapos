@@ -275,6 +275,21 @@ cannot write.
 
 ## Products
 
+### Bulk product import
+
+- `GET /api/v1/products/import-template/` downloads the canonical UTF-8 CSV.
+- `POST /api/v1/products/imports/` accepts multipart field `file`, validates the
+  CSV, and creates a shop-scoped preview without changing products.
+- `GET /api/v1/products/imports/` returns paginated import history.
+- `GET /api/v1/products/imports/{import_id}/` returns an import summary and
+  paginated row preview.
+- `POST /api/v1/products/imports/{import_id}/confirm/` accepts
+  `duplicate_strategy` as `SKIP`, `UPDATE`, or `CANCEL`.
+
+All endpoints require Owner access. Confirm is rejected if any validation row
+has errors. See [product-import.md](product-import.md) for column and transaction
+rules.
+
 - `GET|POST /api/v1/products/`
 - `GET|PATCH /api/v1/products/{uuid}/`
 - `GET /api/v1/products/barcode/{barcode}/`
