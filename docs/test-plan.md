@@ -4,6 +4,11 @@ Core POS regression covers shift uniqueness/isolation, shift-required
 completion, cash/card/split reconciliation, held/resumed bill behavior,
 receipt-reprint immutability, and export authorization/formula safety.
 
+Manual-product regression covers required normalized SKU, optional barcode,
+same-shop uniqueness, cross-shop reuse, Decimal prices, negative-price
+rejection, owner/cashier permissions, uninitialized inventory, one-time
+opening stock, search/billing eligibility, and weighted quantity precision.
+
 ## SaaS foundation
 
 PostgreSQL tests cover atomic registration, owner/password/trial creation,

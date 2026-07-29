@@ -1,5 +1,16 @@
 # Business rules
 
+Manual catalogue entry requires a shop-scoped SKU, normalized to uppercase and
+unique case-insensitively within the shop. Barcode is optional, trimmed, stored
+as null when blank, and unique only among non-empty values in the same shop.
+Creating a product never silently creates inventory. Opening stock is a
+separate, explicit, one-time operation, so cancelling or retrying that step
+does not duplicate the valid product.
+
+Kilogram, gram, litre, and millilitre quantities use three-decimal Decimal
+storage through inventory, billing, movements, and receipts. Counted units use
+the existing quantity policy.
+
 New completed sales require the completing user's open shift. Expected drawer
 cash is opening cash plus completed cash allocations only. Held bills reserve
 no stock and are revalidated on resume. Card success is confirmed externally.

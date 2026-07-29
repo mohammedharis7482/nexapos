@@ -26,6 +26,7 @@ export function OpeningStockDialog({
   onOpenChange,
   productId,
   productName,
+  productSku,
   unit,
   onSaved,
 }: {
@@ -33,6 +34,7 @@ export function OpeningStockDialog({
   onOpenChange: (open: boolean) => void;
   productId: string;
   productName: string;
+  productSku?: string;
   unit?: string;
   onSaved: () => void;
 }) {
@@ -77,7 +79,7 @@ export function OpeningStockDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Configure opening stock"
-      description={`${productName} can only receive opening stock once.`}
+      description={`${productName}${productSku ? ` · ${productSku}` : ""} · ${unit ?? "unit"} · Not initialized`}
       dismissible={!isSubmitting}
       footer={
         <>

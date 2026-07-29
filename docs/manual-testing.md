@@ -3,6 +3,13 @@
 Use `grocery-pilot-test.md` for release sign-off on the target barcode scanner,
 receipt printer, external terminal, cash process, tablet, and mobile viewport.
 
+For a new catalogue, create one product without a barcode using Save Product
+and verify its inventory is uninitialized. Initialize it later. Create a second
+product with Save & Add Stock and cancel once before retrying. Confirm only one
+product exists. Add a KG product with 18.500 opening quantity, bill 0.750, and
+verify the receipt and remaining balance use exact decimals. Repeat write
+attempts as a cashier and confirm HTTP 403.
+
 ## SaaS acceptance
 
 Register a synthetic shop, capture the console verification email, verify,

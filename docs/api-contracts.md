@@ -171,6 +171,15 @@ authorization remain mandatory.
 Expected cash and variance are response-only calculated fields. Sale completion
 requires the completing user's open shift.
 
+### Manual product entry
+
+`POST /api/v1/products/` is owner-only and derives the shop from the session.
+SKU is required; barcode and category are optional. A successful response
+contains the single created product and does not initialize inventory.
+`POST /api/v1/inventory/products/{product_id}/opening-stock/` is the separate,
+one-time owner action used by both later inventory setup and the frontend
+Save & Add Stock handoff.
+
 ### First login and verification
 
 Public registration creates an active owner record with

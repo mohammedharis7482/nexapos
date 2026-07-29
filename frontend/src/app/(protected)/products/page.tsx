@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { canManageCatalogue } from "@/components/catalogue/access";
 import { ProductDialog } from "@/components/catalogue/product-dialog";
+import { OpeningStockDialog } from "@/components/inventory/opening-stock-dialog";
 import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, MoneyDisplay, PageHeader } from "@/components/ui/display";
@@ -41,6 +42,7 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [stockTarget, setStockTarget] = useState<Product | null>(null);
 
   const loadCategories = useCallback(async () => {
     const response = await categoryService.list("", owner ? "all" : "true");
@@ -119,7 +121,12 @@ export default function ProductsPage() {
 
       {state === "loading" ? <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div> : null}
       {state === "error" ? <ErrorState title="Products unavailable" description={error ?? ""} onRetry={() => void loadProducts()} /> : null}
-      {state === "empty" ? <EmptyState title="No products found" description={filters.search ? "Try a different search or filter." : "Add the first catalogue product when you are ready."} /> : null}
+      {state === "empty" ? <EmptyState
+        title={filters.search ? "No products found" : "Add your first product"}
+        description={filters.search ? "Try a different search or filter." : "Create products manually and add their opening stock before starting billing. Barcode is optional, and products remain searchable by name or SKU."}
+        action={owner && !filters.search ? <Button leadingIcon={<Plus className="size-4" />} onClick={() => { setEditing(null); setDialogOpen(true); }}>Add Product</Button> : undefined}
+        secondaryAction={!filters.search ? <span className="self-center text-xs text-text-muted">Opening stock can be added after saving.</span> : undefined}
+      /> : null}
       {state === "ready" ? (
         <>
           <TableFrame>
@@ -156,7 +163,31 @@ export default function ProductsPage() {
           <Pagination count={count} noun="product" page={page} hasNext={hasNext} onPrevious={() => setPage((value) => value - 1)} onNext={() => setPage((value) => value + 1)} />
         </>
       ) : null}
-      <ProductDialog open={dialogOpen} onOpenChange={setDialogOpen} product={editing} categories={categories} onSaved={() => { void loadProducts(); void loadCategories(); }} />
+      <ProductDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={editing}
+        categories={categories}
+        onSaved={(savedProduct, addStock) => {
+          void loadProducts();
+          void loadCategories();
+          if (addStock) setStockTarget(savedProduct);
+        }}
+      />
+      {stockTarget ? (
+        <OpeningStockDialog
+          open
+          onOpenChange={(next) => { if (!next) setStockTarget(null); }}
+          productId={stockTarget.id}
+          productName={stockTarget.name}
+          productSku={stockTarget.sku}
+          unit={stockTarget.unit}
+          onSaved={() => {
+            setStockTarget(null);
+            void loadProducts();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

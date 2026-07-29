@@ -46,9 +46,10 @@ export function ProductDialog({
   onOpenChange: (open: boolean) => void;
   product: Product | null;
   categories: ProductCategory[];
-  onSaved: () => void;
+  onSaved: (product: Product, addStock: boolean) => void;
 }) {
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [submitAction, setSubmitAction] = useState<"save" | "stock">("save");
   const {
     register,
     reset,
@@ -80,16 +81,17 @@ export function ProductDialog({
     );
   }, [open, product, reset]);
 
-  const submit = handleSubmit(async (values) => {
+  const persist = async (values: ProductFormValues, addStock: boolean) => {
     setGeneralError(null);
     const payload: ProductInput = {
       ...values,
       category_id: values.category_id || null,
     };
     try {
-      if (product) await productService.update(product.id, payload);
-      else await productService.create(payload);
-      onSaved();
+      const response = product
+        ? await productService.update(product.id, payload)
+        : await productService.create(payload);
+      onSaved(response.data, !product && addStock);
       onOpenChange(false);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -105,7 +107,9 @@ export function ProductDialog({
         setGeneralError("The product could not be saved.");
       }
     }
-  });
+  };
+  const submit = handleSubmit((values) => persist(values, false));
+  const submitAndAddStock = handleSubmit((values) => persist(values, true));
 
   return (
     <Dialog
@@ -121,8 +125,30 @@ export function ProductDialog({
       footer={
         <>
           <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button form="product-form" type="submit" loading={isSubmitting}>
-            {product ? "Save product" : "Add product"}
+          {!product ? (
+            <Button
+              type="button"
+              variant="secondary"
+              loading={isSubmitting && submitAction === "stock"}
+              disabled={isSubmitting}
+              onClick={() => {
+                setSubmitAction("stock");
+                void submitAndAddStock();
+              }}
+            >
+              Save &amp; Add Stock
+            </Button>
+          ) : null}
+          <Button
+            form="product-form"
+            type="submit"
+            loading={isSubmitting && submitAction === "save"}
+            disabled={isSubmitting}
+            onClick={() => {
+              setSubmitAction("save");
+            }}
+          >
+            Save Product
           </Button>
         </>
       }
@@ -141,11 +167,19 @@ export function ProductDialog({
         <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
           <legend className="px-1 text-sm font-bold text-text-primary">Product codes</legend>
           <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="SKU" htmlFor="product-sku" error={errors.sku?.message}>
+          <FormField label="SKU" htmlFor="product-sku" hint="Required shop code; saved in uppercase." error={errors.sku?.message}>
             <Input id="product-sku" invalid={Boolean(errors.sku)} {...register("sku")} />
           </FormField>
-          <FormField label="Barcode" htmlFor="product-barcode" error={errors.barcode?.message}>
-            <Input id="product-barcode" inputMode="numeric" invalid={Boolean(errors.barcode)} {...register("barcode")} />
+          <FormField label="Barcode (optional)" htmlFor="product-barcode" hint="Scan or enter a code, or leave blank. Name and SKU remain searchable." error={errors.barcode?.message}>
+            <Input
+              id="product-barcode"
+              inputMode="numeric"
+              invalid={Boolean(errors.barcode)}
+              {...register("barcode")}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.preventDefault();
+              }}
+            />
           </FormField>
         </div>
         </fieldset>
@@ -160,7 +194,7 @@ export function ProductDialog({
               ))}
             </Select>
           </FormField>
-          <FormField label="Unit" htmlFor="product-unit" error={errors.unit?.message}>
+          <FormField label="Unit" htmlFor="product-unit" hint="Kilogram, gram, litre and millilitre support decimal quantities." error={errors.unit?.message}>
             <Select id="product-unit" invalid={Boolean(errors.unit)} {...register("unit")}>
               {PRODUCT_UNITS.map((unit) => <option key={unit} value={unit}>{unit.replaceAll("_", " ")}</option>)}
             </Select>

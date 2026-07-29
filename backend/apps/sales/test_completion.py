@@ -154,6 +154,26 @@ class SaleCompletionTests(DraftBillingApiTestCase):
             Decimal("21.00"),
         )
 
+    def test_weighted_quantity_uses_exact_decimal_through_receipt_and_stock(self):
+        sale_id = self.create_sale_with_item(
+            product=self.inclusive, quantity="0.750"
+        )
+        response = self.complete(
+            sale_id,
+            {"payments": [{"method": "CASH", "amount": "7.50"}],
+             "amount_received": "7.50"},
+        )
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["data"]["items"][0]
+        self.assertEqual(item["quantity"], "0.750")
+        self.assertEqual(item["line_total"], "7.50")
+        balance = InventoryBalance.objects.get(product=self.inclusive)
+        self.assertEqual(balance.quantity_on_hand, Decimal("9.250"))
+        movement = StockMovement.objects.get(
+            product=self.inclusive, movement_type=StockMovement.Type.SALE
+        )
+        self.assertEqual(movement.quantity_delta, Decimal("-0.750"))
+
     def test_invalid_payment_allocations_leave_sale_and_inventory_unchanged(self):
         invalid_payloads = (
             {
