@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.core.management import CommandError, call_command
 from django.core.cache import cache
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -18,6 +18,7 @@ PASSWORD = "FoundationPassword123!"
 NEW_PASSWORD = "ChangedFoundationPassword456!"
 
 
+@override_settings(REQUIRE_EMAIL_VERIFICATION=True)
 class SessionAuthenticationApiTests(TestCase):
     @classmethod
     def setUpTestData(cls):

@@ -174,3 +174,12 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 3. Simulate delivery failure and confirm the Shop ID remains recoverable.
 4. Resend, verify the prior token is superseded, and sign in with the latest.
 5. Run `cleanup_test_tenant` without `--confirm` and verify nothing changes.
+
+# Fresh verification-exempt development flow
+
+1. Preview and explicitly confirm `reset_development_data`.
+2. Confirm only the example Plans remain.
+3. Register one Shop and confirm no verification messaging or resend action.
+4. Copy the Shop ID, continue to sign in, and use the registered credentials.
+5. Confirm onboarding opens, can resume, and completes to Dashboard.
+6. Create a cashier with `create_cashier`, then verify role restrictions.

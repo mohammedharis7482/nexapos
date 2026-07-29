@@ -52,3 +52,7 @@ the client to change it.
 Provider failure leaves the shop `PENDING_VERIFICATION`. Resend creates the one
 current usable token. Verification advances the shop to `ONBOARDING`; the
 original Shop ID, username, and password can then establish a session.
+
+When verification is disabled, registration starts directly at `ONBOARDING`.
+The first primary-owner login is routed there without a verification redirect.
+Completed Shops do not restart onboarding.

@@ -22,6 +22,7 @@ export interface AuthenticatedUser {
   username: string;
   email?: string;
   email_verified?: boolean;
+  email_verification_required?: boolean;
   last_login?: string | null;
   role: UserRole;
   is_primary_owner?: boolean;

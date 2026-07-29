@@ -120,3 +120,7 @@ Email failures are logged using safe event IDs, backend names, states, and
 exception categories. Logs exclude recipients, bodies, action URLs, tokens,
 passwords, SMTP credentials, and sessions. Development cleanup is CLI-only,
 dry-run-first, development-gated, atomic, and business-data-aware.
+
+The full reset is a separate command with a larger blast radius. It requires
+`DEBUG=True`, rejects production settings, defaults to a count-only dry run,
+requires `--confirm`, and preserves schema and migration history.

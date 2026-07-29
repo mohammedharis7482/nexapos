@@ -146,37 +146,48 @@ export default function RegisterShopPage() {
       {result ? (
         <section className="mt-5 rounded-[var(--radius-card)] border border-success-border bg-success-soft p-5 text-center" role="status" aria-live="polite">
           <h2 ref={successHeadingRef} tabIndex={-1} className="text-xl font-bold text-success">
-            Shop registered
+            {result.verification_required
+              ? "Shop registered"
+              : "Shop created successfully"}
           </h2>
           <p className="mt-2 text-sm text-foreground-secondary">
-            <strong>{result.shop.name}</strong> is registered.
-            Email verification is required before your first sign-in.
+            <strong>{result.shop.name}</strong>{" "}
+            {result.verification_required
+              ? "is registered. Email verification is required before your first sign-in."
+              : "is ready. Your NexaPOS workspace is ready."}
           </p>
           <p className="mt-2 text-sm text-foreground-secondary">
             Registration owner: <strong>{result.owner_email}</strong>
           </p>
-          <p className="mt-3 text-sm text-foreground-secondary">
-            {result.email_delivery === "DEVELOPMENT_CONSOLE"
-              ? "In local development, open the verification link shown in the Django server terminal."
-              : result.email_delivery === "EMAIL_DELIVERY_FAILED"
-                ? "The verification email could not be delivered. Request another verification message below."
-                : `A verification email was sent to ${result.owner_email}. Open its link to verify your account.`}
-          </p>
+          {result.verification_required ? (
+            <p className="mt-3 text-sm text-foreground-secondary">
+              {result.email_delivery === "DEVELOPMENT_CONSOLE"
+                ? "In local development, open the verification link shown in the Django server terminal."
+                : result.email_delivery === "EMAIL_DELIVERY_FAILED"
+                  ? "The verification email could not be delivered. Request another verification message below."
+                  : `A verification email was sent to ${result.owner_email}. Open its link to verify your account.`}
+            </p>
+          ) : null}
           <p className="mt-3 text-sm font-medium text-foreground">
             Save this Shop ID. You will use it together with your username and
             password when signing in.
           </p>
+          <p className="mt-2 text-sm text-foreground-secondary">
+            Username: <strong>{result.owner.username}</strong>
+          </p>
           <ShopIdDisplay shopId={result.shop.id} className="mt-4 text-left" />
           {resendFeedback ? <p className="mt-3 text-sm text-foreground-secondary" role="status">{resendFeedback}</p> : null}
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <Button type="button" variant="outline" loading={resendPending} onClick={() => void resendVerification()}>
-              Resend Verification Email
-            </Button>
+          <div className={`mt-5 grid gap-2 ${result.verification_required ? "sm:grid-cols-2" : ""}`}>
+            {result.verification_required ? (
+              <Button type="button" variant="outline" loading={resendPending} onClick={() => void resendVerification()}>
+                Resend Verification Email
+              </Button>
+            ) : null}
             <Link
               href={`/login?shop_id=${encodeURIComponent(result.shop.id)}`}
               className="inline-flex min-h-[var(--control-md)] w-full items-center justify-center rounded-[var(--radius-control)] border border-primary bg-primary px-4 text-sm font-semibold text-white shadow-sm hover:border-primary-hover hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]"
             >
-              Go to Sign In
+              Continue to Sign In
             </Link>
           </div>
         </section>

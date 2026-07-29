@@ -105,21 +105,35 @@ class RegisterView(PublicCsrfViewMixin, APIView):
                     )
                 )
             raise
-        delivery_failed = result.email_delivery.status.value == "EMAIL_DELIVERY_FAILED"
-        message = (
-            "Your shop was created, but the verification email could not be "
-            "delivered. Request another verification message."
-            if delivery_failed
-            else "Shop registered. Verify your email before signing in."
+        delivery_status = (
+            result.email_delivery.status.value
+            if result.email_delivery
+            else "NOT_REQUIRED"
         )
+        delivery_failed = delivery_status == "EMAIL_DELIVERY_FAILED"
+        if not result.verification_required:
+            message = "Shop created successfully."
+        elif delivery_failed:
+            message = (
+                "Your shop was created, but the verification email could not be "
+                "delivered. Request another verification message."
+            )
+        else:
+            message = "Shop created. Verify the owner email before signing in."
         return success_response(
             message,
             {
                 "shop": {"id": str(result.shop.id), "name": result.shop.name},
-                "verification_required": True,
+                "owner": {"username": result.owner.username},
+                "verification_required": result.verification_required,
                 "owner_email": result.owner.email,
-                "registration_status": "PENDING_VERIFICATION",
-                "email_delivery": result.email_delivery.status.value,
+                "registration_status": result.shop.status,
+                "email_delivery": delivery_status,
+                "next_step": (
+                    "VERIFY_EMAIL"
+                    if result.verification_required
+                    else "SIGN_IN"
+                ),
             },
             status_code=status.HTTP_201_CREATED,
         )

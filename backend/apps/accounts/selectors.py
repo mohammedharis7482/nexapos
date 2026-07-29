@@ -1,3 +1,5 @@
+from django.conf import settings
+
 from .models import User
 
 
@@ -14,6 +16,7 @@ def user_session_data(user: User) -> dict:
             "role": user.role,
             "email": user.email,
             "email_verified": user.email_verified_at is not None,
+            "email_verification_required": settings.REQUIRE_EMAIL_VERIFICATION,
             "last_login": user.last_login,
             "is_primary_owner": shop.primary_owner_id == user.id,
             "shop": {

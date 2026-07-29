@@ -214,3 +214,9 @@ Tests cover durable registration on delivery failure, delivery states, generic
 duplicate recovery, token supersession, verification then login, console-mode
 detection, token-free test email, cleanup dry run, confirmation, environment
 refusal, and business-data refusal.
+
+Development-policy coverage verifies immediate login, no token/email, one
+Shop/owner/subscription, response handoff, and atomic validation/duplicate
+failure. Reset coverage verifies dry run, production and `DEBUG=False`
+refusal, related deletion, migration preservation, plan reseeding, idempotency,
+and transaction rollback.

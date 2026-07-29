@@ -6,7 +6,7 @@ from django.core import mail
 from django.core.cache import cache
 from django.core.mail import EmailMessage
 from django.db import IntegrityError, transaction
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -41,6 +41,7 @@ def token_from_email(body: str) -> str:
     return match.group(1)
 
 
+@override_settings(REQUIRE_EMAIL_VERIFICATION=True)
 class SaasFoundationTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -118,16 +119,18 @@ class SaasFoundationTests(TestCase):
             response.json(),
             {
                 "success": True,
-                "message": "Shop registered. Verify your email before signing in.",
+                "message": "Shop created. Verify the owner email before signing in.",
                 "data": {
                     "shop": {
                         "id": response.json()["data"]["shop"]["id"],
                         "name": "New Grocery",
                     },
+                    "owner": {"username": "newowner"},
                     "verification_required": True,
                     "owner_email": "new-owner@example.test",
                     "registration_status": "PENDING_VERIFICATION",
                     "email_delivery": "EMAIL_SENT",
+                    "next_step": "VERIFY_EMAIL",
                 },
             },
         )
@@ -693,3 +696,133 @@ class SaasFoundationTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 400)
+
+
+@override_settings(REQUIRE_EMAIL_VERIFICATION=False)
+class DevelopmentRegistrationTests(TestCase):
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=True)
+
+    def public_post(self, path, data):
+        csrf = self.client.get(reverse("accounts_api:csrf")).cookies[
+            "csrftoken"
+        ].value
+        return self.client.post(
+            path,
+            data,
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+
+    @staticmethod
+    def payload(**overrides):
+        data = {
+            "shop_name": "Immediate Login Grocery",
+            "owner_full_name": "Development Owner",
+            "owner_email": "development-owner@example.test",
+            "owner_username": " DevOwner ",
+            "password": PASSWORD,
+            "password_confirm": PASSWORD,
+            "address": "Doha",
+            "phone": "+97450000900",
+            "country": "Qatar",
+            "timezone": "Asia/Qatar",
+            "currency": "QAR",
+        }
+        data.update(overrides)
+        return data
+
+    def test_registration_is_login_ready_without_token_or_email(self):
+        before = (
+            Shop.objects.count(),
+            User.objects.count(),
+            ShopSubscription.objects.count(),
+        )
+        response = self.public_post(
+            reverse("saas_api:register"), self.payload()
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()["data"]
+        self.assertFalse(data["verification_required"])
+        self.assertEqual(data["next_step"], "SIGN_IN")
+        self.assertEqual(data["email_delivery"], "NOT_REQUIRED")
+        self.assertEqual(data["owner"]["username"], "devowner")
+        self.assertNotIn("password", str(response.json()).lower())
+        self.assertNotIn("token", str(response.json()).lower())
+
+        shop = Shop.objects.get(pk=data["shop"]["id"])
+        owner = shop.primary_owner
+        self.assertEqual(shop.status, Shop.Status.ONBOARDING)
+        self.assertTrue(owner.is_active)
+        self.assertIsNotNone(owner.email_verified_at)
+        self.assertFalse(
+            EmailVerificationToken.objects.filter(user=owner).exists()
+        )
+        self.assertEqual(
+            (
+                Shop.objects.count(),
+                User.objects.count(),
+                ShopSubscription.objects.count(),
+            ),
+            tuple(value + 1 for value in before),
+        )
+
+        login_response = self.public_post(
+            "/api/v1/auth/login/",
+            {
+                "shop_id": f"  {shop.id}  ",
+                "username": "  DEVOWNER ",
+                "password": PASSWORD,
+            },
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn("_auth_user_id", self.client.session)
+        user_data = login_response.json()["data"]["user"]
+        self.assertFalse(user_data["email_verification_required"])
+        self.assertEqual(user_data["shop"]["status"], Shop.Status.ONBOARDING)
+
+    def test_invalid_and_duplicate_submissions_create_no_partial_tenant(self):
+        counts = (
+            Shop.objects.count(),
+            User.objects.count(),
+            ShopSubscription.objects.count(),
+        )
+        invalid = self.public_post(
+            reverse("saas_api:register"),
+            self.payload(
+                shop_name="Invalid Development Grocery",
+                owner_email="invalid-development@example.test",
+                password="short",
+                password_confirm="short",
+            ),
+        )
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(
+            (
+                Shop.objects.count(),
+                User.objects.count(),
+                ShopSubscription.objects.count(),
+            ),
+            counts,
+        )
+
+        first = self.public_post(reverse("saas_api:register"), self.payload())
+        self.assertEqual(first.status_code, 201)
+        after_first = (
+            Shop.objects.count(),
+            User.objects.count(),
+            ShopSubscription.objects.count(),
+        )
+        duplicate = self.public_post(
+            reverse("saas_api:register"), self.payload()
+        )
+        self.assertEqual(duplicate.status_code, 400)
+        self.assertEqual(duplicate.json()["code"], "ACCOUNT_MAY_EXIST")
+        self.assertEqual(
+            (
+                Shop.objects.count(),
+                User.objects.count(),
+                ShopSubscription.objects.count(),
+            ),
+            after_first,
+        )

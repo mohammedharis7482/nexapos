@@ -30,6 +30,9 @@ EMAIL_BACKEND = config(
     "DJANGO_EMAIL_BACKEND",
     default="django.core.mail.backends.console.EmailBackend",
 )
+REQUIRE_EMAIL_VERIFICATION = config(
+    "REQUIRE_EMAIL_VERIFICATION", cast=bool, default=False
+)
 
 if EMAIL_USE_TLS and EMAIL_USE_SSL:  # noqa: F405
     raise ImproperlyConfigured(

@@ -395,3 +395,9 @@ provider errors are never returned.
 Possible duplicate registration returns generic `ACCOUNT_MAY_EXIST` guidance
 and creates no additional core records. Resend intentionally returns the same
 generic acknowledgement for eligible and unknown contexts.
+
+When `REQUIRE_EMAIL_VERIFICATION=False`, registration returns an `ONBOARDING`
+Shop, normalized `owner.username`, `verification_required: false`,
+`email_delivery: NOT_REQUIRED`, and `next_step: SIGN_IN`. When enabled it
+returns `PENDING_VERIFICATION`, `verification_required: true`, and
+`next_step: VERIFY_EMAIL`.

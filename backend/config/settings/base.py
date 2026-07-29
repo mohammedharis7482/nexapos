@@ -138,6 +138,9 @@ EMAIL_HOST_PASSWORD = config("DJANGO_EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("DJANGO_EMAIL_USE_TLS", cast=bool, default=False)
 EMAIL_USE_SSL = config("DJANGO_EMAIL_USE_SSL", cast=bool, default=False)
 EMAIL_TIMEOUT = config("DJANGO_EMAIL_TIMEOUT", cast=int, default=10)
+REQUIRE_EMAIL_VERIFICATION = config(
+    "REQUIRE_EMAIL_VERIFICATION", cast=bool, default=True
+)
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

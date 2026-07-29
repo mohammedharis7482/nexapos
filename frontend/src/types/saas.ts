@@ -2,13 +2,16 @@ import type { ApiSuccess, UserRole } from "@/types/auth";
 
 export interface RegistrationResult {
   shop: PublicShopIdentity;
-  verification_required: true;
+  owner: { username: string };
+  verification_required: boolean;
   owner_email: string;
-  registration_status: "PENDING_VERIFICATION";
+  registration_status: "PENDING_VERIFICATION" | "ONBOARDING";
   email_delivery:
+    | "NOT_REQUIRED"
     | "DEVELOPMENT_CONSOLE"
     | "EMAIL_SENT"
     | "EMAIL_DELIVERY_FAILED";
+  next_step: "SIGN_IN" | "VERIFY_EMAIL";
 }
 
 export interface PublicShopIdentity {

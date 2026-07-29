@@ -36,3 +36,9 @@ Model `clean()` methods protect cross-shop relationships during normal model
 validation. Database foreign keys protect existence, while production writes
 must continue to use the audited service/API layer because PostgreSQL cannot
 express every cross-table shop-equality rule as a simple check constraint.
+# Primary-owner representation
+
+`PRIMARY_OWNER` is a capability derived from `Shop.primary_owner`; stored roles
+remain `OWNER` and `CASHIER`. Only the primary owner manages owners and the
+subscription. Owners may manage cashiers. Cashiers have operational access but
+no team, subscription, or owner-settings management.

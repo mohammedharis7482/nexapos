@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -49,7 +50,8 @@ def login_user(*, request, shop_id, username: str, password: str) -> User:
     if user.shop.status == Shop.Status.CANCELLED:
         deny_login("SHOP_CANCELLED", "This shop has been cancelled.", 403)
     if (
-        user.shop.status == Shop.Status.PENDING_VERIFICATION
+        settings.REQUIRE_EMAIL_VERIFICATION
+        and user.shop.status == Shop.Status.PENDING_VERIFICATION
         and user.email_verified_at is None
     ):
         deny_login(
@@ -58,7 +60,10 @@ def login_user(*, request, shop_id, username: str, password: str) -> User:
             403,
             can_resend_verification=True,
         )
-    if user.shop.status == Shop.Status.PENDING_VERIFICATION:
+    if (
+        settings.REQUIRE_EMAIL_VERIFICATION
+        and user.shop.status == Shop.Status.PENDING_VERIFICATION
+    ):
         deny_login("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE, 401)
 
     login(request, user, backend="common.authentication.ShopModelBackend")

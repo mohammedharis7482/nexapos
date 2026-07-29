@@ -1,6 +1,8 @@
 from django.contrib.auth import logout
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.conf import settings
 from django.middleware.csrf import get_token
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
@@ -124,10 +126,16 @@ class AccountProfileView(APIView):
         user.full_name = serializer.validated_data.get("full_name", user.full_name).strip()
         user.email = serializer.validated_data.get("email", user.email).strip()
         if user.email.lower() != old_email.lower():
-            user.email_verified_at = None
+            user.email_verified_at = (
+                None if settings.REQUIRE_EMAIL_VERIFICATION else timezone.now()
+            )
         user.full_clean(exclude=["password"])
         user.save()
-        if user.email and user.email_verified_at is None:
+        if (
+            settings.REQUIRE_EMAIL_VERIFICATION
+            and user.email
+            and user.email_verified_at is None
+        ):
             create_verification_token(user)
         return success_response("Account updated.", self.data(user))
 

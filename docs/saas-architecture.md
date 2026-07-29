@@ -46,3 +46,7 @@ Core registration is one PostgreSQL transaction. Email is attempted after
 commit because no transactional outbox exists. Delivery failure is represented
 honestly and the pending tenant remains recoverable. No recurring deletion job
 is enabled.
+
+The transaction conditionally creates the verification token. Development
+creates the owner as verified/exempt and starts `ONBOARDING`; production keeps
+the pending verification lifecycle.

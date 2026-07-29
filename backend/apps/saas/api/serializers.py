@@ -31,12 +31,20 @@ class PublicShopIdentitySerializer(serializers.Serializer):
     name = serializers.CharField(read_only=True)
 
 
+class PublicOwnerIdentitySerializer(serializers.Serializer):
+    username = serializers.CharField(read_only=True)
+
+
 class RegistrationDataSerializer(serializers.Serializer):
     shop = PublicShopIdentitySerializer(read_only=True)
+    owner = PublicOwnerIdentitySerializer(read_only=True)
     verification_required = serializers.BooleanField(read_only=True)
     owner_email = serializers.EmailField(read_only=True)
     registration_status = serializers.CharField(read_only=True)
     email_delivery = serializers.CharField(read_only=True)
+    next_step = serializers.ChoiceField(
+        choices=("SIGN_IN", "VERIFY_EMAIL"), read_only=True
+    )
 
 
 class RegistrationResponseSerializer(serializers.Serializer):

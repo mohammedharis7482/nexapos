@@ -40,10 +40,10 @@
 # Authentication email delivery
 
 - Configure a real non-console `DJANGO_EMAIL_BACKEND`.
+- Set `REQUIRE_EMAIL_VERIFICATION=True`.
 - Store SMTP/provider credentials in the deployment secret store.
 - Set `DJANGO_DEFAULT_FROM_EMAIL`, `FRONTEND_BASE_URL`, and
   `DJANGO_EMAIL_TIMEOUT`.
 - Confirm TLS and SSL are not both enabled.
 - Run the production deployment check and a provider delivery smoke test.
 - Never run `cleanup_test_tenant` in production.
-

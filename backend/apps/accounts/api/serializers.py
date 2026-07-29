@@ -33,6 +33,7 @@ class UserSessionSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True, allow_blank=True)
     email_verified = serializers.BooleanField(read_only=True)
+    email_verification_required = serializers.BooleanField(read_only=True)
     last_login = serializers.DateTimeField(read_only=True, allow_null=True)
     role = serializers.ChoiceField(choices=User.Role.choices, read_only=True)
     is_primary_owner = serializers.BooleanField(read_only=True)

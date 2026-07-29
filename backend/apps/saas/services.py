@@ -49,7 +49,8 @@ class SaasOperationError(Exception):
 class RegistrationResult:
     shop: Shop
     owner: User
-    email_delivery: DeliveryResult
+    email_delivery: DeliveryResult | None
+    verification_required: bool
 
 
 def hash_token(raw_token: str) -> str:
@@ -183,6 +184,7 @@ def register_shop(
     with transaction.atomic():
         plan = get_default_plan()
         now = timezone.now()
+        verification_required = settings.REQUIRE_EMAIL_VERIFICATION
         shop = Shop.objects.create(
             name=shop_name.strip(),
             address=address.strip(),
@@ -191,7 +193,11 @@ def register_shop(
             country=country,
             timezone=timezone_name,
             currency=currency,
-            status=Shop.Status.PENDING_VERIFICATION,
+            status=(
+                Shop.Status.PENDING_VERIFICATION
+                if verification_required
+                else Shop.Status.ONBOARDING
+            ),
             is_active=True,
         )
         owner = User.objects.create_user(
@@ -203,6 +209,7 @@ def register_shop(
             role=User.Role.OWNER,
             is_active=True,
             activated_at=now,
+            email_verified_at=None if verification_required else now,
         )
         shop.primary_owner = owner
         shop.save(update_fields=["primary_owner", "updated_at"])
@@ -219,9 +226,16 @@ def register_shop(
             event=AuditEvent.Event.SHOP_REGISTERED,
             target_user=owner,
         )
-        _token, raw = _create_verification_token_record(owner)
-    delivery = send_verification_email(owner, raw)
-    return RegistrationResult(shop=shop, owner=owner, email_delivery=delivery)
+        raw = None
+        if verification_required:
+            _token, raw = _create_verification_token_record(owner)
+    delivery = send_verification_email(owner, raw) if raw else None
+    return RegistrationResult(
+        shop=shop,
+        owner=owner,
+        email_delivery=delivery,
+        verification_required=verification_required,
+    )
 
 
 @transaction.atomic
@@ -278,6 +292,8 @@ def resend_verification(
     shop_id=None,
     username: str | None = None,
 ) -> DeliveryResult | None:
+    if not settings.REQUIRE_EMAIL_VERIFICATION:
+        return None
     users = User.objects.select_related("shop").filter(is_active=True)
     if email:
         user = users.filter(email__iexact=email.strip()).first()

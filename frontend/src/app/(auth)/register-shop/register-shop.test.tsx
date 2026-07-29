@@ -23,10 +23,12 @@ const success = {
       id: "02dccdd7-8182-4554-b1db-60bcaa610002",
       name: "Test Grocery",
     },
+    owner: { username: "owner" },
     verification_required: true as const,
     owner_email: "owner@example.test",
     registration_status: "PENDING_VERIFICATION" as const,
     email_delivery: "DEVELOPMENT_CONSOLE" as const,
+    next_step: "VERIFY_EMAIL" as const,
   },
 };
 
@@ -76,7 +78,7 @@ describe("shop registration", () => {
     expect(await screen.findByRole("heading", { name: "Shop registered" })).toHaveFocus();
     expect(screen.getByText("owner@example.test")).toBeInTheDocument();
     expect(screen.getByText(success.data.shop.id)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to Sign In" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Continue to Sign In" })).toHaveAttribute(
       "href",
       `/login?shop_id=${success.data.shop.id}`,
     );
@@ -85,6 +87,39 @@ describe("shop registration", () => {
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create shop" })).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/token/i);
+  });
+
+  it("shows an immediate sign-in handoff when verification is disabled", async () => {
+    register.mockResolvedValue({
+      ...success,
+      message: "Shop created successfully.",
+      data: {
+        ...success.data,
+        verification_required: false,
+        registration_status: "ONBOARDING",
+        email_delivery: "NOT_REQUIRED",
+        next_step: "SIGN_IN",
+      },
+    });
+    render(<RegisterShopPage />);
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Create shop" }));
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Shop created successfully",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/workspace is ready/i)).toBeInTheDocument();
+    expect(screen.getByText(success.data.shop.id)).toBeInTheDocument();
+    expect(screen.getByText(/Username:/)).toHaveTextContent("owner");
+    expect(
+      screen.getByRole("link", { name: "Continue to Sign In" }),
+    ).toHaveAttribute("href", `/login?shop_id=${success.data.shop.id}`);
+    expect(
+      screen.queryByRole("button", { name: "Resend Verification Email" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/verification link/i)).not.toBeInTheDocument();
   });
 
   it("copies the Shop ID and announces feedback", async () => {

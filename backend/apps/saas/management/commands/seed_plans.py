@@ -39,24 +39,29 @@ PLANS = (
 )
 
 
+def seed_example_plans() -> tuple[int, int]:
+    created = 0
+    for definition in PLANS:
+        _, was_created = Plan.objects.get_or_create(
+            code=definition["code"],
+            defaults={
+                **definition,
+                "monthly_price": Decimal("0.00"),
+                "yearly_price": Decimal("0.00"),
+                "currency": "QAR",
+            },
+        )
+        created += int(was_created)
+    return created, len(PLANS) - created
+
+
 class Command(BaseCommand):
     help = "Create missing example SaaS plans without overwriting existing plans."
 
     def handle(self, *args, **options):
-        created = 0
-        for definition in PLANS:
-            _, was_created = Plan.objects.get_or_create(
-                code=definition["code"],
-                defaults={
-                    **definition,
-                    "monthly_price": Decimal("0.00"),
-                    "yearly_price": Decimal("0.00"),
-                    "currency": "QAR",
-                },
-            )
-            created += int(was_created)
+        created, unchanged = seed_example_plans()
         self.stdout.write(
             self.style.SUCCESS(
-                f"Plan seed complete: {created} created, {len(PLANS) - created} unchanged."
+                f"Plan seed complete: {created} created, {unchanged} unchanged."
             )
         )

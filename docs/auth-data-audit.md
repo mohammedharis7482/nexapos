@@ -1,18 +1,23 @@
 # Authentication data audit
 
-Audit date: 2026-07-28. The audit used read-only ORM counts and did not print
+Audit updated: 2026-07-29. The audit used read-only ORM counts and did not print
 emails, Shop IDs, usernames, token hashes, raw tokens, passwords, or sessions.
 
-The local PostgreSQL database contained six tenants:
+Before the authorized full development reset, the local PostgreSQL database
+contained seven Shops, eight users, seven subscriptions, fifteen products,
+eighteen sales, seventeen payments, and twelve verification tokens. Some
+tenants contained business data, so the earlier targeted-cleanup workflow did
+not delete them.
 
-- five `UNVERIFIED_RECENT` registrations;
-- one `HAS_BUSINESS_DATA` tenant;
-- no inconsistent tenants;
-- no expired or empty abandoned tenant that was automatically safe to remove.
+The explicitly authorized `reset_development_data --confirm` execution removed
+all tenant and business records, sessions, and Plans inside one transaction,
+then reseeded three example Plans. Migration history and schema remained.
 
-No records were deleted. The tenant with business data must be preserved. A
-developer may inspect one known test tenant with `cleanup_test_tenant`; the
-command is a dry run unless `--confirm` is supplied.
+Post-reset verification found zero Shops, users, subscriptions, products,
+inventory balances, movements, sales, payments, invitations, and verification
+tokens, plus three Plans. A subsequent clean-flow validation intentionally
+created one Shop, one primary owner, one cashier, and one subscription with no
+verification token.
 
 Classification considers shop lifecycle, primary-owner verification,
 subscription presence, users, products, inventory balances, stock movements,
