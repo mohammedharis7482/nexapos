@@ -1,5 +1,9 @@
 # Test plan
 
+Core POS regression covers shift uniqueness/isolation, shift-required
+completion, cash/card/split reconciliation, held/resumed bill behavior,
+receipt-reprint immutability, and export authorization/formula safety.
+
 ## SaaS foundation
 
 PostgreSQL tests cover atomic registration, owner/password/trial creation,

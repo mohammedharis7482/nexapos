@@ -2,7 +2,7 @@ import type { PaginatedResponse } from "@/types/api";
 import type { UserRole } from "@/types/auth";
 import type { ProductUnit } from "@/types/product";
 
-export type SaleStatus = "DRAFT" | "COMPLETED" | "CANCELLED";
+export type SaleStatus = "DRAFT" | "HELD" | "COMPLETED" | "CANCELLED";
 
 export interface DraftCreator {
   id: string;
@@ -43,6 +43,8 @@ export interface DraftSale {
   cancelled_by: DraftCreator | null;
   created_at: string;
   updated_at: string;
+  held_at: string | null;
+  shift: string | null;
 }
 
 export interface AddItemRequest {

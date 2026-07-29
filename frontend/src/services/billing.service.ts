@@ -52,6 +52,16 @@ export const billingService = {
       { method: "POST" },
     );
   },
+  hold(saleId: string, note = "") {
+    return apiRequest<ApiSuccess<DraftSale>>(`/billing/drafts/${saleId}/hold/`, {
+      method: "POST", body: JSON.stringify({ note }),
+    });
+  },
+  resume(saleId: string) {
+    return apiRequest<ApiSuccess<DraftSale>>(`/billing/drafts/${saleId}/resume/`, {
+      method: "POST",
+    });
+  },
   complete(saleId: string, payload: CompleteSaleRequest) {
     return apiRequest<ApiSuccess<CompletedSale>>(
       `/billing/drafts/${saleId}/complete/`,

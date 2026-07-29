@@ -1,6 +1,19 @@
 from django.contrib import admin
 
-from .models import Sale, SaleItem, SaleSequence
+from .models import CashierShift, Sale, SaleItem, SaleSequence
+
+
+@admin.register(CashierShift)
+class CashierShiftAdmin(admin.ModelAdmin):
+    list_display = (
+        "cashier", "shop", "status", "opened_at", "closed_at",
+        "opening_cash", "expected_closing_cash", "cash_difference",
+    )
+    list_filter = ("status", "shop")
+    search_fields = ("cashier__username", "cashier__full_name", "shop__name")
+    readonly_fields = (
+        "expected_closing_cash", "cash_difference", "created_at", "updated_at"
+    )
 
 
 class SaleItemInline(admin.TabularInline):

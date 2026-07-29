@@ -1,5 +1,9 @@
 # Business rules
 
+New completed sales require the completing user's open shift. Expected drawer
+cash is opening cash plus completed cash allocations only. Held bills reserve
+no stock and are revalidated on resume. Card success is confirmed externally.
+
 1. A shop is the root boundary for business data.
 2. A user belongs to exactly one shop; deleting a shop with users is protected.
 3. Usernames are normalized to lowercase and unique within a shop, not globally.

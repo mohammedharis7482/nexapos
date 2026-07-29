@@ -1,5 +1,12 @@
 # SaaS data model
 
+- `CashierShift`: shop/user shift history, opening and closing cash, expected
+  drawer value, counted cash, and variance.
+- `Sale.shift`: nullable for historical compatibility and assigned to new
+  completed sales; HELD metadata preserves who held a bill and when.
+- `Payment`: immutable allocation with optional tender/change, safe external
+  terminal reference, recorder, and shift.
+
 - `Shop`: tenant identity, lifecycle status, onboarding milestone, and protected
   one-to-one primary-owner reference.
 - `User`: one Shop, stable OWNER/CASHIER role, active flag, verification and

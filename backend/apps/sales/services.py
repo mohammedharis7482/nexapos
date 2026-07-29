@@ -1,6 +1,8 @@
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Count, DecimalField, Q, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -11,7 +13,8 @@ from apps.shops.models import Shop
 
 from .calculations import calculate_line_totals, round_money, round_quantity
 from .exceptions import BillingOperationError
-from .models import Sale, SaleItem, SaleSequence
+from apps.saas.models import AuditEvent
+from .models import CashierShift, Sale, SaleItem, SaleSequence
 
 
 def _locked_accessible_draft(*, sale_id, user: User) -> Sale:
@@ -31,6 +34,125 @@ def _require_draft(sale: Sale) -> None:
             "status",
             "Only draft bills can be modified.",
         )
+
+
+def _audit(*, user: User, event: str, detail: str = "") -> None:
+    AuditEvent.objects.create(
+        shop=user.shop, actor=user, event=event, detail=detail[:200]
+    )
+
+
+def active_shift_for(user: User, *, lock: bool = False) -> CashierShift | None:
+    queryset = CashierShift.objects.filter(
+        shop=user.shop, cashier=user, status=CashierShift.Status.OPEN
+    )
+    if lock:
+        queryset = queryset.select_for_update()
+    return queryset.first()
+
+
+@transaction.atomic
+def open_shift(
+    *, user: User, opening_cash: Decimal = Decimal("0.00"), opening_note: str = ""
+) -> CashierShift:
+    if not user.is_active:
+        raise BillingOperationError("cashier", "Inactive users cannot open shifts.")
+    opening_cash = round_money(opening_cash)
+    if opening_cash < 0:
+        raise BillingOperationError("opening_cash", "Opening cash cannot be negative.")
+    if active_shift_for(user, lock=True):
+        raise BillingOperationError("status", "This user already has an open shift.")
+    try:
+        shift = CashierShift.objects.create(
+            shop=user.shop, cashier=user, opened_by=user,
+            opening_cash=opening_cash, opening_note=opening_note.strip(),
+        )
+    except IntegrityError as exc:
+        raise BillingOperationError("status", "This user already has an open shift.") from exc
+    _audit(user=user, event=AuditEvent.Event.SHIFT_OPENED)
+    return shift
+
+
+def shift_summary(shift: CashierShift) -> dict:
+    completed = shift.sales.filter(status=Sale.Status.COMPLETED)
+    payment_totals = {
+        row["payment_method"]: row["total"]
+        for row in Payment.objects.filter(
+            shift=shift, sale__status=Sale.Status.COMPLETED
+        ).values("payment_method").annotate(
+            total=Coalesce(
+                Sum("amount"), Decimal("0.00"),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        )
+    }
+    cash = payment_totals.get(Payment.Method.CASH, Decimal("0.00"))
+    card = payment_totals.get(Payment.Method.CARD, Decimal("0.00"))
+    aggregate = completed.aggregate(
+        completed_bills=Count("id"),
+        gross_sales=Coalesce(
+            Sum("grand_total"), Decimal("0.00"),
+            output_field=DecimalField(max_digits=14, decimal_places=2),
+        ),
+        items_sold=Coalesce(
+            Sum("items__quantity"), Decimal("0.000"),
+            output_field=DecimalField(max_digits=15, decimal_places=3),
+        ),
+    )
+    split_count = completed.annotate(payment_count=Count("payments")).filter(
+        payment_count__gt=1
+    ).count()
+    expected = round_money(shift.opening_cash + cash)
+    return {
+        "opening_cash": shift.opening_cash,
+        "completed_bills": aggregate["completed_bills"],
+        "gross_sales": aggregate["gross_sales"],
+        "cash_sales": cash,
+        "card_sales": card,
+        "split_payment_count": split_count,
+        "expected_closing_cash": expected,
+        "counted_closing_cash": shift.counted_closing_cash,
+        "cash_difference": shift.cash_difference,
+        "items_sold": aggregate["items_sold"],
+        "opened_at": shift.opened_at,
+        "closed_at": shift.closed_at,
+    }
+
+
+@transaction.atomic
+def close_shift(
+    *, shift_id, user: User, counted_closing_cash: Decimal, closing_note: str = ""
+) -> CashierShift:
+    try:
+        shift = CashierShift.objects.select_for_update().get(
+            pk=shift_id, shop=user.shop
+        )
+    except CashierShift.DoesNotExist as exc:
+        raise BillingOperationError("shift", "Shift was not found.") from exc
+    if shift.cashier_id != user.id and user.role != User.Role.OWNER:
+        raise BillingOperationError("shift", "Shift was not found.")
+    if shift.status != CashierShift.Status.OPEN:
+        raise BillingOperationError("status", "Only an open shift can be closed.")
+    counted = round_money(counted_closing_cash)
+    if counted < 0:
+        raise BillingOperationError(
+            "counted_closing_cash", "Counted cash cannot be negative."
+        )
+    expected = shift_summary(shift)["expected_closing_cash"]
+    shift.status = CashierShift.Status.CLOSED
+    shift.closed_at = timezone.now()
+    shift.expected_closing_cash = expected
+    shift.counted_closing_cash = counted
+    shift.cash_difference = round_money(counted - expected)
+    shift.closing_note = closing_note.strip()
+    shift.closed_by = user
+    shift.save(update_fields=[
+        "status", "closed_at", "expected_closing_cash",
+        "counted_closing_cash", "cash_difference", "closing_note",
+        "closed_by", "updated_at",
+    ])
+    _audit(user=user, event=AuditEvent.Event.SHIFT_CLOSED)
+    return shift
 
 
 def _available_product(
@@ -232,13 +354,52 @@ def cancel_draft_sale(*, sale_id, user: User) -> Sale:
     sale = _locked_accessible_draft(sale_id=sale_id, user=user)
     if sale.status == Sale.Status.CANCELLED:
         return sale
-    _require_draft(sale)
+    if sale.status not in (Sale.Status.DRAFT, Sale.Status.HELD):
+        _require_draft(sale)
     sale.status = Sale.Status.CANCELLED
     sale.cancelled_at = timezone.now()
     sale.cancelled_by = user
     sale.save(
         update_fields=["status", "cancelled_at", "cancelled_by", "updated_at"]
     )
+    _audit(user=user, event=AuditEvent.Event.BILL_CANCELLED)
+    return sale
+
+
+@transaction.atomic
+def hold_draft_sale(*, sale_id, user: User, note: str = "") -> Sale:
+    sale = _locked_accessible_draft(sale_id=sale_id, user=user)
+    _require_draft(sale)
+    sale.status = Sale.Status.HELD
+    sale.held_at = timezone.now()
+    sale.held_by = user
+    if note.strip():
+        sale.notes = note.strip()
+    sale.save(update_fields=["status", "held_at", "held_by", "notes", "updated_at"])
+    _audit(user=user, event=AuditEvent.Event.BILL_HELD)
+    return sale
+
+
+@transaction.atomic
+def resume_held_sale(*, sale_id, user: User) -> Sale:
+    sale = _locked_accessible_draft(sale_id=sale_id, user=user)
+    if sale.status != Sale.Status.HELD:
+        raise BillingOperationError("status", "Only a held bill can be resumed.")
+    for item in sale.items.select_related("product"):
+        if not item.product.is_active:
+            raise BillingOperationError(
+                "items", f"{item.product_name} is no longer active."
+            )
+        if item.unit_price != item.product.selling_price:
+            raise BillingOperationError(
+                "items", f"{item.product_name} has a new price; review the bill."
+            )
+        _validate_stock(
+            product=item.product, quantity=item.quantity, shop_id=user.shop_id
+        )
+    sale.status = Sale.Status.DRAFT
+    sale.save(update_fields=["status", "updated_at"])
+    _audit(user=user, event=AuditEvent.Event.BILL_RESUMED)
     return sale
 
 
@@ -333,6 +494,11 @@ def complete_sale(
     amount_received: Decimal | None = None,
 ) -> Sale:
     sale = _locked_accessible_draft(sale_id=sale_id, user=user)
+    shift = active_shift_for(user, lock=True)
+    if shift is None:
+        raise BillingOperationError(
+            "shift", "Open a cashier shift before completing a sale."
+        )
     _require_draft(sale)
     items = list(
         SaleItem.objects.select_for_update()
@@ -414,19 +580,27 @@ def complete_sale(
         )
 
     for payment in payments:
+        is_cash = payment["method"] == Payment.Method.CASH
         Payment.objects.create(
             shop_id=sale.shop_id,
             sale=sale,
             payment_method=payment["method"],
             amount=payment["amount"],
             reference=payment.get("reference", "").strip(),
+            amount_tendered=amount_received if is_cash else None,
+            change_due=change_due if is_cash else Decimal("0.00"),
+            note=payment.get("note", "").strip(),
+            shift=shift,
             recorded_by=user,
         )
+        if payment["method"] == Payment.Method.CARD:
+            _audit(user=user, event=AuditEvent.Event.CARD_PAYMENT_RECORDED)
 
     sale.status = Sale.Status.COMPLETED
     sale.sale_number = sale_number
     sale.completed_at = completed_at
     sale.completed_by = user
+    sale.shift = shift
     sale.amount_received = total_received
     sale.change_due = change_due
     sale.save(
@@ -435,9 +609,11 @@ def complete_sale(
             "sale_number",
             "completed_at",
             "completed_by",
+            "shift",
             "amount_received",
             "change_due",
             "updated_at",
         ]
     )
+    _audit(user=user, event=AuditEvent.Event.SALE_COMPLETED)
     return sale

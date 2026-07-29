@@ -6,6 +6,7 @@ import {
   ReceiptText,
   Settings,
   ShoppingCart,
+  Clock3,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -24,6 +25,8 @@ export interface NavigationItem {
 export const navigationItems: NavigationItem[] = [
   { label: "Dashboard", shortLabel: "Home", href: "/dashboard", icon: Home, roles: ["OWNER", "CASHIER"] },
   { label: "New Bill", shortLabel: "Billing", href: "/billing", icon: ShoppingCart, roles: ["OWNER", "CASHIER"], prominent: true },
+  { label: "Current Shift", shortLabel: "Shift", href: "/shift", icon: Clock3, roles: ["OWNER", "CASHIER"] },
+  { label: "Shifts", href: "/shifts", icon: Clock3, roles: ["OWNER"] },
   { label: "Products", href: "/products", icon: PackageSearch, roles: ["OWNER", "CASHIER"] },
   { label: "Inventory", href: "/inventory", icon: Boxes, roles: ["OWNER"] },
   { label: "Sales", href: "/sales", icon: ReceiptText, roles: ["OWNER", "CASHIER"] },

@@ -11,6 +11,8 @@ from apps.sales.services import (
     cancel_draft_sale,
     create_draft_sale,
     complete_sale,
+    hold_draft_sale,
+    resume_held_sale,
     remove_draft_item,
     update_draft_item_quantity,
 )
@@ -24,6 +26,7 @@ from .serializers import (
     CompletedSaleSerializer,
     CreateDraftSerializer,
     DraftSaleSerializer,
+    HoldDraftSerializer,
     UpdateItemSerializer,
 )
 
@@ -198,3 +201,32 @@ class DraftCompleteView(APIView):
             "Sale completed.",
             CompletedSaleSerializer(sale).data,
         )
+
+
+class DraftHoldView(APIView):
+    permission_classes = [IsCashierOrOwner]
+
+    @extend_schema(request=HoldDraftSerializer, responses={200: DraftSaleSerializer})
+    def post(self, request, sale_id):
+        serializer = HoldDraftSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            sale = hold_draft_sale(
+                sale_id=sale_id, user=request.user,
+                note=serializer.validated_data.get("note", ""),
+            )
+        except BillingOperationError as exc:
+            raise_operation_error(exc)
+        return success_response("Bill held.", DraftSaleSerializer(sale).data)
+
+
+class DraftResumeView(APIView):
+    permission_classes = [IsCashierOrOwner]
+
+    @extend_schema(request=None, responses={200: DraftSaleSerializer})
+    def post(self, request, sale_id):
+        try:
+            sale = resume_held_sale(sale_id=sale_id, user=request.user)
+        except BillingOperationError as exc:
+            raise_operation_error(exc)
+        return success_response("Bill resumed.", DraftSaleSerializer(sale).data)

@@ -34,6 +34,10 @@ function isoDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+const exportBase = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1"
+).replace(/\/+$/, "");
+
 export function defaultReportFilters(now = new Date()): ReportFilters {
   const from = new Date(now);
   from.setDate(from.getDate() - 6);
@@ -120,6 +124,13 @@ export default function ReportsPage() {
 
   return <div className="page-stack">
     <PageHeader eyebrow="Analytics" title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
+    <div className="flex flex-wrap gap-2">
+      {["products", "inventory", "sales", "shifts"].map((name) => (
+        <a key={name} className="premium-action-secondary capitalize" href={`${exportBase}/exports/${name}.csv`}>
+          Export {name}
+        </a>
+      ))}
+    </div>
     <FilterToolbar>
       <div className="mb-3 flex flex-wrap items-center gap-2" aria-label="Report date presets">
         <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Period</span>

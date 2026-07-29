@@ -22,6 +22,8 @@ appropriate.
 | Cashier filter list | Current-shop staff | Self only | Shop/user filter |
 | Dashboard | Shop-wide | Own financial/recent-sale scope | Role-aware shop-scoped selectors |
 | Reports | Allowed | Denied | `IsOwner`; all aggregations start from user shop |
+| Shifts | All shop shifts | Own shifts only | Shop-scoped selector and cashier identity |
+| CSV exports | Allowed | Denied | `IsOwner`; no client shop selector |
 | Team direct creation/edit/activation/reset | Manage cashiers; primary owner also manages owners | Denied | `request.user.shop`, role, seat-limit and primary-owner service checks |
 | Onboarding | Primary owner only | Denied | Explicit `Shop.primary_owner` relationship |
 | Subscription | Read; sensitive actions reserved to primary owner/platform admin | Denied | Current shop OneToOne subscription |

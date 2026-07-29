@@ -15,6 +15,7 @@ from apps.sales.selectors import completed_sales_for_user, filter_completed_sale
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsCashierOrOwner
 from common.views import success_response
+from apps.saas.models import AuditEvent
 
 
 def completed_sale_for_request(request, sale_id):
@@ -108,6 +109,24 @@ class SaleReceiptView(APIView):
         sale = completed_sale_for_request(request, sale_id)
         return success_response(
             "Receipt retrieved.",
+            ReceiptDataSerializer({"shop": sale.shop, "sale": sale}).data,
+        )
+
+
+class SaleReceiptReprintView(APIView):
+    permission_classes = [IsCashierOrOwner]
+
+    @extend_schema(request=None, responses={200: ReceiptDataSerializer})
+    def post(self, request, sale_id):
+        sale = completed_sale_for_request(request, sale_id)
+        AuditEvent.objects.create(
+            shop=request.user.shop,
+            actor=request.user,
+            event=AuditEvent.Event.RECEIPT_REPRINTED,
+            detail=sale.sale_number or "",
+        )
+        return success_response(
+            "Receipt reprint recorded.",
             ReceiptDataSerializer({"shop": sale.shop, "sale": sale}).data,
         )
 

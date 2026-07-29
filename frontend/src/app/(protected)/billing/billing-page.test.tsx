@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { billingService } from "@/services/billing.service";
 import { categoryService } from "@/services/category.service";
 import { inventoryService } from "@/services/inventory.service";
+import { shiftService } from "@/services/shift.service";
 import type { DraftSale } from "@/types/billing";
 import type { InventoryItem } from "@/types/inventory";
 
@@ -11,6 +12,10 @@ import BillingPage, {
   availableForDraft,
   billingWorkspaceState,
 } from "./page";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+}));
 
 vi.mock("@/services/billing.service", () => ({
   billingService: {
@@ -20,6 +25,9 @@ vi.mock("@/services/billing.service", () => ({
     updateItem: vi.fn(),
     removeItem: vi.fn(),
     cancel: vi.fn(),
+    list: vi.fn(),
+    hold: vi.fn(),
+    resume: vi.fn(),
   },
 }));
 vi.mock("@/services/category.service", () => ({
@@ -27,6 +35,9 @@ vi.mock("@/services/category.service", () => ({
 }));
 vi.mock("@/services/inventory.service", () => ({
   inventoryService: { list: vi.fn() },
+}));
+vi.mock("@/services/shift.service", () => ({
+  shiftService: { current: vi.fn() },
 }));
 
 const draft: DraftSale = {
@@ -44,6 +55,8 @@ const draft: DraftSale = {
   cancelled_by: null,
   created_at: "",
   updated_at: "",
+  held_at: null,
+  shift: null,
 };
 const inventoryItem: InventoryItem = {
   product: {
@@ -66,6 +79,7 @@ const inventoryItem: InventoryItem = {
 const billing = vi.mocked(billingService);
 const categories = vi.mocked(categoryService);
 const inventory = vi.mocked(inventoryService);
+const shifts = vi.mocked(shiftService);
 
 describe("BillingPage", () => {
   beforeEach(() => {
@@ -75,6 +89,24 @@ describe("BillingPage", () => {
     billing.detail.mockResolvedValue({ success: true, message: "", data: draft });
     billing.addItem.mockResolvedValue({ success: true, message: "", data: draft });
     billing.cancel.mockResolvedValue({ success: true, message: "", data: { ...draft, status: "CANCELLED" } });
+    billing.list.mockResolvedValue({
+      success: true, message: "",
+      data: { count: 0, next: null, previous: null, results: [] },
+    });
+    shifts.current.mockResolvedValue({
+      success: true, message: "", data: {
+        id: "shift-id", status: "OPEN", cashier: draft.created_by,
+        opened_at: "", closed_at: null, opening_cash: "0.00",
+        expected_closing_cash: "0.00", counted_closing_cash: null,
+        cash_difference: null, opening_note: "", closing_note: "",
+        summary: {
+          opening_cash: "0.00", completed_bills: 0, gross_sales: "0.00",
+          cash_sales: "0.00", card_sales: "0.00", split_payment_count: 0,
+          expected_closing_cash: "0.00", counted_closing_cash: null,
+          cash_difference: null, items_sold: "0.000", opened_at: "", closed_at: null,
+        },
+      },
+    });
     categories.list.mockResolvedValue({
       success: true,
       message: "",

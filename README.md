@@ -1,5 +1,11 @@
 # NexaPOS
 
+Core shop operation includes cashier/owner shifts, cash reconciliation, held
+bills, cash/card/split tender recording, audited receipt reprints, and bounded
+owner CSV exports. CARD records a confirmed external-terminal result; NexaPOS
+does not process gateway payments or collect card credentials. See
+`docs/core-pos-scope.md` and `docs/grocery-pilot-test.md`.
+
 Email delivery and abandoned development registrations are operational
 lifecycle concerns, not reasons to flush PostgreSQL. See
 `docs/email-delivery.md`, `docs/registration-recovery.md`, and

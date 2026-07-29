@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CartLine } from "@/components/billing/cart-line";
@@ -22,6 +23,7 @@ import { ApiError } from "@/lib/api-client";
 import { billingService } from "@/services/billing.service";
 import { categoryService } from "@/services/category.service";
 import { inventoryService } from "@/services/inventory.service";
+import { shiftService } from "@/services/shift.service";
 import type { DraftSale } from "@/types/billing";
 import type { ProductCategory } from "@/types/category";
 import type { InventoryItem } from "@/types/inventory";
@@ -49,6 +51,7 @@ function apiMessage(error: unknown, fallback: string) {
 }
 
 export default function BillingPage() {
+  const router = useRouter();
   const initializationStarted = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<DraftSale | null>(null);
@@ -64,8 +67,10 @@ export default function BillingPage() {
   const [mobileView, setMobileView] = useState<"products" | "cart">("products");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [heldBills, setHeldBills] = useState<DraftSale[]>([]);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [holding, setHolding] = useState(false);
 
   const createFreshDraft = useCallback(async () => {
     const response = await billingService.create();
@@ -74,10 +79,20 @@ export default function BillingPage() {
     return response.data;
   }, []);
 
+  const loadHeldBills = useCallback(async () => {
+    const response = await billingService.list();
+    setHeldBills(response.data.results.filter((bill) => bill.status === "HELD"));
+  }, []);
+
   const initializeDraft = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const currentShift = await shiftService.current();
+      if (!currentShift.data) {
+        router.replace("/shift");
+        return;
+      }
       const savedId = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (savedId) {
         try {
@@ -91,12 +106,13 @@ export default function BillingPage() {
         }
       }
       await createFreshDraft();
+      await loadHeldBills();
     } catch (loadError) {
       setError(apiMessage(loadError, "A draft bill could not be prepared."));
     } finally {
       setLoading(false);
     }
-  }, [createFreshDraft]);
+  }, [createFreshDraft, loadHeldBills, router]);
 
   const searchProducts = useCallback(async (term: string, categoryId = category) => {
     setSearching(true);
@@ -205,6 +221,7 @@ export default function BillingPage() {
       await billingService.cancel(draft.id);
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       await createFreshDraft();
+      await loadHeldBills();
       setSuccess("Draft cancelled. A new empty draft is ready.");
       setMobileView("products");
       setCancelOpen(false);
@@ -212,6 +229,33 @@ export default function BillingPage() {
       setError(apiMessage(cancelError, "The draft could not be cancelled."));
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function resumeBill(bill: DraftSale) {
+    try {
+      const response = await billingService.resume(bill.id);
+      localStorage.setItem(DRAFT_STORAGE_KEY, bill.id);
+      setDraft(response.data);
+      setHeldBills((items) => items.filter((item) => item.id !== bill.id));
+      setSuccess("Held bill resumed and revalidated.");
+    } catch (caught) {
+      setError(apiMessage(caught, "The held bill could not be resumed."));
+    }
+  }
+
+  async function holdDraft() {
+    if (!draft) return;
+    setHolding(true);
+    try {
+      await billingService.hold(draft.id);
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      await createFreshDraft();
+      setSuccess("Bill held. It can be resumed from the saved bills list.");
+    } catch (caught) {
+      setError(apiMessage(caught, "The bill could not be held."));
+    } finally {
+      setHolding(false);
     }
   }
 
@@ -261,7 +305,7 @@ export default function BillingPage() {
         <Card className="overflow-hidden text-center">
           <div className="bg-success-soft px-6 py-8 sm:px-8">
           <span className="mx-auto grid size-16 place-items-center rounded-full bg-surface text-success shadow-sm"><CheckCircle2 className="size-9" /></span>
-          <h1 className="mt-4 text-2xl font-bold">Payment successful</h1>
+          <h1 className="mt-4 text-2xl font-bold">Payment recorded</h1>
           <p className="mt-2 text-sm text-text-muted">{completedSale.sale_number}</p>
           <p className="mt-6 text-3xl font-bold"><MoneyDisplay value={completedSale.grand_total} /></p>
           <p className="mt-2 text-sm text-text-secondary">{methods}</p>
@@ -296,6 +340,19 @@ export default function BillingPage() {
       />
       {error ? <Alert title={error} /> : null}
       {success ? <Alert title={success} tone="success" /> : null}
+      {heldBills.length ? (
+        <Card className="p-4">
+          <h2 className="font-bold">Held bills</h2>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {heldBills.map((bill) => (
+              <div key={bill.id} className="flex items-center justify-between rounded-xl border border-border p-3">
+                <div><p className="font-semibold">{bill.created_by.full_name}</p><p className="text-sm text-text-muted">{bill.items.length} lines · <MoneyDisplay value={bill.grand_total} /></p></div>
+                <Button variant="outline" onClick={() => void resumeBill(bill)}>Resume</Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2 lg:hidden">
         <Button variant={mobileView === "products" ? "primary" : "secondary"} onClick={() => setMobileView("products")}>Products</Button>
@@ -423,6 +480,15 @@ export default function BillingPage() {
                 onClick={() => setPaymentOpen(true)}
               >
                 Continue to Payment
+              </Button>
+              <Button
+                className="mt-2 w-full"
+                variant="secondary"
+                disabled={!draft?.items.length}
+                loading={holding}
+                onClick={() => void holdDraft()}
+              >
+                Hold Bill
               </Button>
             </div>
           </Card>

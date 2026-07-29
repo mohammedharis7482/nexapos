@@ -157,6 +157,20 @@ Shop ID is a public tenant identifier required alongside username and password
 at login. Knowing it grants no access; authentication and shop-scoped
 authorization remain mandatory.
 
+### Shifts and operational completion
+
+- `GET /api/v1/shifts/current/`
+- `POST /api/v1/shifts/open/`
+- `POST /api/v1/shifts/{id}/close/`
+- `GET /api/v1/shifts/` and `GET /api/v1/shifts/{id}/`
+- `POST /api/v1/billing/drafts/{id}/hold/`
+- `POST /api/v1/billing/drafts/{id}/resume/`
+- `POST /api/v1/sales/{id}/receipt/reprint/`
+- Owner-only `/api/v1/exports/{products|inventory|sales|shifts}.csv`
+
+Expected cash and variance are response-only calculated fields. Sale completion
+requires the completing user's open shift.
+
 ### First login and verification
 
 Public registration creates an active owner record with

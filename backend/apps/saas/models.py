@@ -178,6 +178,15 @@ class AuditEvent(BaseModel):
         USER_LOGIN = "USER_LOGIN", "User login"
         USER_LOGOUT = "USER_LOGOUT", "User logout"
         SUBSCRIPTION_CHANGED = "SUBSCRIPTION_CHANGED", "Subscription changed"
+        SHIFT_OPENED = "SHIFT_OPENED", "Shift opened"
+        SHIFT_CLOSED = "SHIFT_CLOSED", "Shift closed"
+        BILL_HELD = "BILL_HELD", "Bill held"
+        BILL_RESUMED = "BILL_RESUMED", "Bill resumed"
+        BILL_CANCELLED = "BILL_CANCELLED", "Bill cancelled"
+        SALE_COMPLETED = "SALE_COMPLETED", "Sale completed"
+        RECEIPT_REPRINTED = "RECEIPT_REPRINTED", "Receipt reprinted"
+        CARD_PAYMENT_RECORDED = "CARD_PAYMENT_RECORDED", "Card payment recorded"
+        DATA_EXPORTED = "DATA_EXPORTED", "Data exported"
 
     shop = models.ForeignKey(
         "shops.Shop", on_delete=models.PROTECT, related_name="audit_events"

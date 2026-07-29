@@ -185,7 +185,9 @@ export function PaymentDialog({
       footer={
         <>
           <Button variant="secondary" disabled={isSubmitting} onClick={() => onOpenChange(false)}>Back</Button>
-          <Button form="payment-form" type="submit" loading={isSubmitting}>Confirm payment</Button>
+          <Button form="payment-form" type="submit" loading={isSubmitting}>
+            {mode === "CARD" ? "Confirm Card Payment" : "Confirm payment"}
+          </Button>
         </>
       }
     >
@@ -249,11 +251,15 @@ export function PaymentDialog({
 
         {mode === "CARD" || mode === "SPLIT" ? (
           <>
+            <Alert title="Complete payment on the external terminal" tone="warning">
+              Complete the payment on the shop&apos;s card terminal, then confirm it here.
+              NexaPOS does not authorize the card payment.
+            </Alert>
             <FormField label="Terminal reference (optional)" htmlFor="card-reference" error={errors.card_reference?.message}>
               <Input id="card-reference" {...register("card_reference")} />
             </FormField>
-            <Alert title="External terminal recording" tone="warning">
-              NexaPOS records the result only. Never enter a card number, CVV, or expiry.
+            <Alert title="Do not enter card details" tone="warning">
+              Never enter a card number, CVV, PIN, or expiry date.
             </Alert>
           </>
         ) : null}

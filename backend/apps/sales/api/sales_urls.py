@@ -4,6 +4,7 @@ from .sales_views import (
     CompletedSaleDetailView,
     CompletedSaleListView,
     SaleReceiptView,
+    SaleReceiptReprintView,
     SalesCashierListView,
 )
 
@@ -17,5 +18,10 @@ urlpatterns = [
         "<uuid:sale_id>/receipt/",
         SaleReceiptView.as_view(),
         name="receipt",
+    ),
+    path(
+        "<uuid:sale_id>/receipt/reprint/",
+        SaleReceiptReprintView.as_view(),
+        name="receipt-reprint",
     ),
 ]

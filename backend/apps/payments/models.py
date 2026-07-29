@@ -26,6 +26,17 @@ class Payment(BaseModel):
     payment_method = models.CharField(max_length=10, choices=Method.choices)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     reference = models.CharField(max_length=120, blank=True)
+    note = models.CharField(max_length=240, blank=True)
+    amount_tendered = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    change_due = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0
+    )
+    shift = models.ForeignKey(
+        "sales.CashierShift", on_delete=models.PROTECT,
+        related_name="payments", null=True, blank=True,
+    )
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -38,7 +49,15 @@ class Payment(BaseModel):
             models.CheckConstraint(
                 condition=Q(amount__gt=0),
                 name="payments_amount_positive",
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(amount_tendered__isnull=True) | Q(amount_tendered__gte=0),
+                name="payments_tendered_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(change_due__gte=0),
+                name="payments_change_nonnegative",
+            ),
         ]
         indexes = [
             models.Index(

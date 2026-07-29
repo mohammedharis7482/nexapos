@@ -7,6 +7,8 @@ from .views import (
     DraftItemCreateView,
     DraftItemDetailView,
     DraftListCreateView,
+    DraftHoldView,
+    DraftResumeView,
 )
 
 app_name = "sales_api"
@@ -34,4 +36,6 @@ urlpatterns = [
         DraftCompleteView.as_view(),
         name="draft-complete",
     ),
+    path("drafts/<uuid:sale_id>/hold/", DraftHoldView.as_view(), name="draft-hold"),
+    path("drafts/<uuid:sale_id>/resume/", DraftResumeView.as_view(), name="draft-resume"),
 ]

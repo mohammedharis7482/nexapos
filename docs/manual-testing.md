@@ -1,5 +1,8 @@
 # Manual UI validation
 
+Use `grocery-pilot-test.md` for release sign-off on the target barcode scanner,
+receipt printer, external terminal, cash process, tablet, and mobile viewport.
+
 ## SaaS acceptance
 
 Register a synthetic shop, capture the console verification email, verify,

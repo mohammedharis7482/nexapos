@@ -7,7 +7,8 @@ from django.test.utils import CaptureQueriesContext
 from apps.inventory.models import InventoryBalance, StockMovement
 from apps.payments.models import Payment
 
-from .models import Sale, SaleItem
+from .models import CashierShift, Sale, SaleItem
+from .services import close_shift, shift_summary
 from .tests import DraftBillingApiTestCase
 
 
@@ -61,6 +62,38 @@ class SaleCompletionTests(DraftBillingApiTestCase):
         self.assertEqual(movement.quantity_delta, Decimal("-2.000"))
         self.assertEqual(movement.quantity_after, Decimal("18.000"))
         self.assertEqual(movement.reference, data["sale_number"])
+
+    def test_shift_reconciliation_uses_allocated_cash_not_tendered(self):
+        shift = CashierShift.objects.get(cashier=self.owner, status="OPEN")
+        cash_id = self.create_sale_with_item(quantity="1.000")
+        self.complete(cash_id, {
+            "payments": [{"method": "CASH", "amount": "10.50"}],
+            "amount_received": "20.00",
+        })
+        card_id = self.create_sale_with_item(product=self.inclusive, quantity="1.000")
+        self.complete(card_id, {
+            "payments": [{"method": "CARD", "amount": "10.00", "reference": "TERM-1"}]
+        })
+        summary = shift_summary(shift)
+        self.assertEqual(summary["cash_sales"], Decimal("10.50"))
+        self.assertEqual(summary["card_sales"], Decimal("10.00"))
+        self.assertEqual(summary["expected_closing_cash"], Decimal("110.50"))
+        closed = close_shift(
+            shift_id=shift.id, user=self.owner,
+            counted_closing_cash=Decimal("109.50"),
+        )
+        self.assertEqual(closed.cash_difference, Decimal("-1.00"))
+
+    def test_completion_without_open_shift_is_rejected_without_side_effects(self):
+        CashierShift.objects.filter(cashier=self.owner).update(status="CLOSED")
+        sale_id = self.create_sale_with_item(quantity="1.000")
+        response = self.complete(sale_id, {
+            "payments": [{"method": "CASH", "amount": "10.50"}],
+            "amount_received": "10.50",
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Sale.objects.get(pk=sale_id).status, Sale.Status.DRAFT)
+        self.assertFalse(Payment.objects.filter(sale_id=sale_id).exists())
 
     def test_cash_change_and_card_reference(self):
         cash_id = self.create_sale_with_item()

@@ -18,7 +18,7 @@ def billing_sales_for_user(user: User) -> QuerySet[Sale]:
 
 def drafts_for_user(user: User) -> QuerySet[Sale]:
     return billing_sales_for_user(user).filter(
-        status__in=(Sale.Status.DRAFT, Sale.Status.CANCELLED)
+        status__in=(Sale.Status.DRAFT, Sale.Status.HELD, Sale.Status.CANCELLED)
     )
 
 

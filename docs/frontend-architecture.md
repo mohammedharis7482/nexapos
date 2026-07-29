@@ -1,5 +1,10 @@
 # Frontend architecture
 
+Billing checks the current shift before preparing a draft and routes to
+`/shift` when none is open. The backend completion service remains
+authoritative. Shift opening, summaries, closing cash and variance use the
+existing responsive cards, dialogs, money inputs, loading and error patterns.
+
 ## SaaS routes and context
 
 Public account routes are grouped with login and use one branded account

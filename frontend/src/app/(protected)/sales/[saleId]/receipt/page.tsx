@@ -17,6 +17,7 @@ export default function ReceiptPage() {
   const { saleId } = useParams<{ saleId: string }>();
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reprinting, setReprinting] = useState(false);
   const load = useCallback(async () => {
     setError(null);
     try {
@@ -32,10 +33,19 @@ export default function ReceiptPage() {
 
   if (error) return <ErrorState title="Receipt unavailable" description={error} onRetry={() => void load()} />;
   if (!receipt) return <Skeleton className="mx-auto h-[680px] max-w-[360px]" />;
+  async function reprint() {
+    setReprinting(true);
+    try {
+      await salesService.reprint(saleId);
+      window.print();
+    } finally {
+      setReprinting(false);
+    }
+  }
   return (
     <div className="page-stack print:!p-0">
       <div className="print-controls mx-auto w-full max-w-3xl">
-        <PageHeader eyebrow="Customer copy" title="Receipt preview" description={receipt.sale.sale_number} action={<div className="flex gap-2"><Link href={`/sales/${saleId}`} className="premium-action-secondary"><ArrowLeft className="size-4" /> Sale details</Link><Button leadingIcon={<Printer className="size-4" />} onClick={() => window.print()}>Print Receipt</Button></div>} />
+        <PageHeader eyebrow="Customer copy" title="Receipt preview" description={receipt.sale.sale_number} action={<div className="flex gap-2"><Link href={`/sales/${saleId}`} className="premium-action-secondary"><ArrowLeft className="size-4" /> Sale details</Link><Button leadingIcon={<Printer className="size-4" />} loading={reprinting} onClick={() => void reprint()}>Reprint Receipt</Button></div>} />
       </div>
       <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border bg-surface-secondary p-4 shadow-[var(--shadow-card)] sm:p-8">
         <Receipt data={receipt} />

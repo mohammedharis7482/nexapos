@@ -88,7 +88,7 @@ describe("PaymentDialog", () => {
     render(<PaymentDialog open onOpenChange={vi.fn()} draft={draft} onCompleted={vi.fn()} onInventoryConflict={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Card" }));
     fireEvent.change(screen.getByLabelText("Terminal reference (optional)"), { target: { value: "TERMINAL-1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirm payment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm Card Payment" }));
     await waitFor(() => expect(service.complete).toHaveBeenCalledOnce());
     const payload = service.complete.mock.calls[0][1];
     expect(payload).toEqual({

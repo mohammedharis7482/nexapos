@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from common.models import BaseModel
 
@@ -11,6 +12,7 @@ from common.models import BaseModel
 class Sale(BaseModel):
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Draft"
+        HELD = "HELD", "Held"
         COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
 
@@ -50,6 +52,15 @@ class Sale(BaseModel):
         default=Decimal("0.00"),
     )
     notes = models.TextField(blank=True)
+    held_at = models.DateTimeField(null=True, blank=True)
+    held_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="sales_held", null=True, blank=True,
+    )
+    shift = models.ForeignKey(
+        "sales.CashierShift", on_delete=models.PROTECT,
+        related_name="sales", null=True, blank=True,
+    )
     sale_number = models.CharField(max_length=40, null=True, blank=True, unique=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     completed_by = models.ForeignKey(
@@ -155,6 +166,94 @@ class Sale(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.id} ({self.status})"
+
+
+class CashierShift(BaseModel):
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Open"
+        CLOSED = "CLOSED", "Closed"
+
+    shop = models.ForeignKey(
+        "shops.Shop", on_delete=models.PROTECT, related_name="cashier_shifts"
+    )
+    cashier = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="cashier_shifts",
+    )
+    status = models.CharField(
+        max_length=8, choices=Status.choices, default=Status.OPEN, db_index=True
+    )
+    opened_at = models.DateTimeField(default=timezone.now)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    opening_cash = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    expected_closing_cash = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0
+    )
+    counted_closing_cash = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    cash_difference = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    opening_note = models.CharField(max_length=500, blank=True)
+    closing_note = models.CharField(max_length=500, blank=True)
+    opened_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="shifts_opened",
+    )
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="shifts_closed", null=True, blank=True,
+    )
+
+    class Meta:
+        ordering = ["-opened_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["shop", "cashier"],
+                condition=Q(status="OPEN"),
+                name="sales_one_open_shift_per_cashier",
+            ),
+            models.CheckConstraint(
+                condition=Q(opening_cash__gte=0),
+                name="sales_shift_opening_cash_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(counted_closing_cash__isnull=True)
+                | Q(counted_closing_cash__gte=0),
+                name="sales_shift_counted_cash_nonnegative",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["shop", "status", "-opened_at"],
+                name="sales_shift_shop_status_idx",
+            ),
+            models.Index(
+                fields=["shop", "cashier", "-opened_at"],
+                name="sales_shift_cashier_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        for field in ("cashier", "opened_by", "closed_by"):
+            related = getattr(self, field, None)
+            if related and related.shop_id != self.shop_id:
+                raise ValidationError({field: "Shift users must belong to the shop."})
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).values("status").first()
+            if previous and previous["status"] == self.Status.CLOSED:
+                raise ValidationError("Closed shifts are immutable.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Shift records cannot be deleted.")
+
+    def __str__(self):
+        return f"{self.cashier} — {self.status}"
 
 
 class SaleItem(BaseModel):

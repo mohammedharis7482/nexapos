@@ -1,5 +1,29 @@
 # Backup and recovery
 
+No backup is claimed merely by this document. Production must schedule encrypted
+PostgreSQL backups, monitor completion, and retain daily backups for at least 30
+days unless an approved policy requires longer.
+
+Before migrations, create a restricted backup:
+
+```bash
+pg_dump --format=custom --no-owner --file=nexapos-pre-migration.dump nexapos
+```
+
+Restore only with production authorization into a new empty database, never
+over a running database:
+
+```bash
+createdb nexapos_restore_test
+pg_restore --clean --if-exists --no-owner --dbname=nexapos_restore_test nexapos-pre-migration.dump
+```
+
+Run migrations/checks, verify row counts and tenant isolation, then exercise
+login, inventory, one historical receipt, reports, and shift reconciliation.
+Perform a restore drill at least quarterly. A database restore recovers data;
+application rollback deploys earlier code and is a separate decision. Confirm
+backup age and take another backup before either operation.
+
 The deployment owner—not the application repository—is responsible for
 configuring and monitoring PostgreSQL backups.
 
@@ -38,4 +62,3 @@ financial totals before reopening the tills.
 
 This document is a required policy; it does not claim that any provider backup
 or point-in-time recovery is currently configured.
-

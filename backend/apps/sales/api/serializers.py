@@ -1,9 +1,11 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from apps.payments.models import Payment
-from apps.sales.models import Sale, SaleItem
+from apps.sales.models import CashierShift, Sale, SaleItem
+from apps.sales.services import shift_summary
 
 
 class SaleCreatorSerializer(serializers.Serializer):
@@ -61,6 +63,9 @@ class DraftSaleSerializer(serializers.ModelSerializer):
             "cancelled_by",
             "created_at",
             "updated_at",
+            "held_at",
+            "held_by",
+            "shift",
         )
 
 
@@ -125,7 +130,10 @@ class PaymentSummarySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ("id", "method", "amount", "reference", "created_at")
+        fields = (
+            "id", "method", "amount", "reference", "amount_tendered",
+            "change_due", "note", "created_at",
+        )
 
 
 class CompletedSaleSerializer(DraftSaleSerializer):
@@ -264,3 +272,41 @@ class UpdateItemSerializer(serializers.Serializer):
                     {field: "This field cannot be supplied." for field in extra}
                 )
         return attrs
+
+
+class HoldDraftSerializer(serializers.Serializer):
+    note = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+
+
+class OpenShiftSerializer(serializers.Serializer):
+    opening_cash = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0.00"), default=Decimal("0.00")
+    )
+    opening_note = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class CloseShiftSerializer(serializers.Serializer):
+    counted_closing_cash = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0.00")
+    )
+    closing_note = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class CashierShiftSerializer(serializers.ModelSerializer):
+    cashier = SaleCreatorSerializer(read_only=True)
+    opened_by = SaleCreatorSerializer(read_only=True)
+    closed_by = SaleCreatorSerializer(read_only=True)
+    summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CashierShift
+        fields = (
+            "id", "status", "cashier", "opened_by", "closed_by", "opened_at",
+            "closed_at", "opening_cash", "expected_closing_cash",
+            "counted_closing_cash", "cash_difference", "opening_note",
+            "closing_note", "summary", "created_at",
+        )
+
+    @extend_schema_field(serializers.DictField())
+    def get_summary(self, shift) -> dict:
+        return shift_summary(shift)

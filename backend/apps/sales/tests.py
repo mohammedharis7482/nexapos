@@ -9,7 +9,7 @@ from apps.products.models import Product
 from apps.shops.models import Shop
 
 from .calculations import calculate_line_totals
-from .models import Sale, SaleItem
+from .models import CashierShift, Sale, SaleItem
 
 PASSWORD = "DraftBillingPassword123!"
 
@@ -102,6 +102,11 @@ class DraftBillingApiTestCase(TestCase):
                 shop=product.shop,
                 product=product,
                 quantity_on_hand=Decimal(quantity),
+            )
+        for user in (cls.owner, cls.cashier, cls.other_cashier, cls.other_owner):
+            CashierShift.objects.create(
+                shop=user.shop, cashier=user, opened_by=user,
+                opening_cash=Decimal("100.00"),
             )
 
     def login(self, user):

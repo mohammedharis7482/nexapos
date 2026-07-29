@@ -30,6 +30,11 @@ export const salesService = {
   receipt(saleId: string) {
     return apiRequest<ApiSuccess<ReceiptData>>(`/sales/${saleId}/receipt/`);
   },
+  reprint(saleId: string) {
+    return apiRequest<ApiSuccess<ReceiptData>>(`/sales/${saleId}/receipt/reprint/`, {
+      method: "POST",
+    });
+  },
   cashiers() {
     return apiRequest<ApiSuccess<DraftCreator[]>>("/sales/cashiers/");
   },
