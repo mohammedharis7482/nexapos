@@ -1,4 +1,5 @@
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F403
 
@@ -25,7 +26,15 @@ CSRF_TRUSTED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = config(
+    "DJANGO_EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend",
+)
+
+if EMAIL_USE_TLS and EMAIL_USE_SSL:  # noqa: F405
+    raise ImproperlyConfigured(
+        "DJANGO_EMAIL_USE_TLS and DJANGO_EMAIL_USE_SSL cannot both be true."
+    )
 
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False

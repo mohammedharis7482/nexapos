@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import timedelta
 from urllib.parse import urlencode
 
@@ -7,10 +8,8 @@ from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models.functions import Lower
-from django.template.loader import render_to_string
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied
 
@@ -26,6 +25,7 @@ from .models import (
     ShopInvitation,
     ShopSubscription,
 )
+from .email_service import DeliveryResult, send_templated_email
 
 TOKEN_LIFETIME = timedelta(hours=24)
 RESET_TOKEN_LIFETIME = timedelta(hours=1)
@@ -43,6 +43,13 @@ class SaasOperationError(Exception):
         self.field = field
         self.code = code
         super().__init__(message)
+
+
+@dataclass(frozen=True)
+class RegistrationResult:
+    shop: Shop
+    owner: User
+    email_delivery: DeliveryResult
 
 
 def hash_token(raw_token: str) -> str:
@@ -76,12 +83,16 @@ def _send_action_email(
     recipient: str,
     template: str,
     context: dict,
-) -> None:
-    text = render_to_string(f"emails/{template}.txt", context)
-    html = render_to_string(f"emails/{template}.html", context)
-    message = EmailMultiAlternatives(subject, text, settings.DEFAULT_FROM_EMAIL, [recipient])
-    message.attach_alternative(html, "text/html")
-    message.send()
+) -> DeliveryResult:
+    return send_templated_email(
+        event=template,
+        subject=subject,
+        recipient=recipient,
+        template=template,
+        context=context,
+        user_id=context.get("user_id"),
+        shop_id=context.get("shop_id"),
+    )
 
 
 def get_default_plan() -> Plan:
@@ -93,7 +104,9 @@ def get_default_plan() -> Plan:
         ) from exc
 
 
-def create_verification_token(user: User) -> EmailVerificationToken:
+def _create_verification_token_record(
+    user: User,
+) -> tuple[EmailVerificationToken, str]:
     now = timezone.now()
     EmailVerificationToken.objects.filter(
         user=user, used_at__isnull=True, expires_at__gt=now
@@ -104,7 +117,11 @@ def create_verification_token(user: User) -> EmailVerificationToken:
         token_hash=digest,
         expires_at=now + TOKEN_LIFETIME,
     )
-    _send_action_email(
+    return token, raw
+
+
+def send_verification_email(user: User, raw_token: str) -> DeliveryResult:
+    return _send_action_email(
         subject="Verify your NexaPOS email",
         recipient=user.email,
         template="verify_email",
@@ -113,14 +130,21 @@ def create_verification_token(user: User) -> EmailVerificationToken:
             "username": user.username,
             "shop_name": user.shop.name,
             "shop_id": str(user.shop_id),
-            "action_url": _frontend_url("/verify-email", raw),
+            "user_id": str(user.id),
+            "action_url": _frontend_url("/verify-email", raw_token),
             "expires_hours": 24,
         },
     )
-    return token
 
 
-@transaction.atomic
+def create_verification_token(
+    user: User,
+) -> tuple[EmailVerificationToken, DeliveryResult]:
+    with transaction.atomic():
+        token, raw = _create_verification_token_record(user)
+    return token, send_verification_email(user, raw)
+
+
 def register_shop(
     *,
     shop_name: str,
@@ -133,17 +157,21 @@ def register_shop(
     country: str = "Qatar",
     timezone_name: str = "Asia/Qatar",
     currency: str = "QAR",
-) -> tuple[Shop, User]:
-    normalized_email = User.objects.normalize_email(owner_email).lower()
+) -> RegistrationResult:
+    normalized_email = User.objects.normalize_email_address(owner_email)
     if User.objects.annotate(email_ci=Lower("email")).filter(
         email_ci=normalized_email
     ).exists():
         raise SaasOperationError(
-            "An account with this email cannot be registered.", "owner_email"
+            "An account may already exist with these details. Sign in or request "
+            "another verification message.",
+            code="ACCOUNT_MAY_EXIST",
         )
     if Shop.objects.filter(name__iexact=shop_name.strip()).exists():
         raise SaasOperationError(
-            "A shop with this name cannot be registered.", "shop_name"
+            "An account may already exist with these details. Sign in or request "
+            "another verification message.",
+            code="ACCOUNT_MAY_EXIST",
         )
     prospective = User(
         full_name=owner_full_name.strip(),
@@ -152,46 +180,48 @@ def register_shop(
         role=User.Role.OWNER,
     )
     validate_password(password, user=prospective)
-    plan = get_default_plan()
-    now = timezone.now()
-    shop = Shop.objects.create(
-        name=shop_name.strip(),
-        address=address.strip(),
-        phone=phone.strip(),
-        email=normalized_email,
-        country=country,
-        timezone=timezone_name,
-        currency=currency,
-        status=Shop.Status.PENDING_VERIFICATION,
-        is_active=True,
-    )
-    owner = User.objects.create_user(
-        shop=shop,
-        username=owner_username,
-        password=password,
-        full_name=owner_full_name.strip(),
-        email=normalized_email,
-        role=User.Role.OWNER,
-        is_active=True,
-        activated_at=now,
-    )
-    shop.primary_owner = owner
-    shop.save(update_fields=["primary_owner", "updated_at"])
-    ShopSubscription.objects.create(
-        shop=shop,
-        plan=plan,
-        status=ShopSubscription.Status.TRIAL,
-        trial_started_at=now,
-        trial_ends_at=now + timedelta(days=plan.trial_days),
-    )
-    AuditEvent.objects.create(
-        shop=shop,
-        actor=owner,
-        event=AuditEvent.Event.SHOP_REGISTERED,
-        target_user=owner,
-    )
-    create_verification_token(owner)
-    return shop, owner
+    with transaction.atomic():
+        plan = get_default_plan()
+        now = timezone.now()
+        shop = Shop.objects.create(
+            name=shop_name.strip(),
+            address=address.strip(),
+            phone=phone.strip(),
+            email=normalized_email,
+            country=country,
+            timezone=timezone_name,
+            currency=currency,
+            status=Shop.Status.PENDING_VERIFICATION,
+            is_active=True,
+        )
+        owner = User.objects.create_user(
+            shop=shop,
+            username=owner_username,
+            password=password,
+            full_name=owner_full_name.strip(),
+            email=normalized_email,
+            role=User.Role.OWNER,
+            is_active=True,
+            activated_at=now,
+        )
+        shop.primary_owner = owner
+        shop.save(update_fields=["primary_owner", "updated_at"])
+        ShopSubscription.objects.create(
+            shop=shop,
+            plan=plan,
+            status=ShopSubscription.Status.TRIAL,
+            trial_started_at=now,
+            trial_ends_at=now + timedelta(days=plan.trial_days),
+        )
+        AuditEvent.objects.create(
+            shop=shop,
+            actor=owner,
+            event=AuditEvent.Event.SHOP_REGISTERED,
+            target_user=owner,
+        )
+        _token, raw = _create_verification_token_record(owner)
+    delivery = send_verification_email(owner, raw)
+    return RegistrationResult(shop=shop, owner=owner, email_delivery=delivery)
 
 
 @transaction.atomic
@@ -209,9 +239,21 @@ def verify_email(raw_token: str) -> User:
             code="INVALID_VERIFICATION_TOKEN",
         )
     if token.used_at:
+        replaced = EmailVerificationToken.objects.filter(
+            user=token.user,
+            created_at__gt=token.created_at,
+        ).exists()
         raise SaasOperationError(
-            "This verification link has already been used.",
-            code="VERIFICATION_TOKEN_USED",
+            (
+                "This verification link was replaced. Use the latest message."
+                if replaced
+                else "This verification link has already been used."
+            ),
+            code=(
+                "VERIFICATION_TOKEN_REPLACED"
+                if replaced
+                else "VERIFICATION_TOKEN_USED"
+            ),
         )
     if token.expires_at <= now:
         raise SaasOperationError(
@@ -235,7 +277,7 @@ def resend_verification(
     email: str | None = None,
     shop_id=None,
     username: str | None = None,
-) -> None:
+) -> DeliveryResult | None:
     users = User.objects.select_related("shop").filter(is_active=True)
     if email:
         user = users.filter(email__iexact=email.strip()).first()
@@ -247,7 +289,9 @@ def resend_verification(
     else:
         user = None
     if user and user.email and user.email_verified_at is None:
-        create_verification_token(user)
+        _token, delivery = create_verification_token(user)
+        return delivery
+    return None
 
 
 def usage_for_shop(shop: Shop) -> dict:
@@ -298,7 +342,7 @@ def create_invitation(
     if not can_manage_role(actor, role):
         raise PermissionDenied("You cannot invite this role.")
     enforce_user_limit(actor.shop)
-    normalized = User.objects.normalize_email(email).lower()
+    normalized = User.objects.normalize_email_address(email)
     if User.objects.filter(
         shop=actor.shop, email__iexact=normalized, is_active=True
     ).exists():

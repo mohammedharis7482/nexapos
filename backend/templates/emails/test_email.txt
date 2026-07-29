@@ -1,0 +1,3 @@
+NexaPOS email delivery test
+
+Your configured email backend accepted this token-free test message.

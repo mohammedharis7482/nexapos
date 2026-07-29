@@ -149,13 +149,18 @@ export default function RegisterShopPage() {
             Shop registered
           </h2>
           <p className="mt-2 text-sm text-foreground-secondary">
-            <strong>{result.shop.name}</strong> is registered. A verification
-            email was created for <strong>{result.owner_email}</strong>.
+            <strong>{result.shop.name}</strong> is registered.
             Email verification is required before your first sign-in.
           </p>
+          <p className="mt-2 text-sm text-foreground-secondary">
+            Registration owner: <strong>{result.owner_email}</strong>
+          </p>
           <p className="mt-3 text-sm text-foreground-secondary">
-            Open the verification link from your email. In local development,
-            the message and link appear in the Django server terminal.
+            {result.email_delivery === "DEVELOPMENT_CONSOLE"
+              ? "In local development, open the verification link shown in the Django server terminal."
+              : result.email_delivery === "EMAIL_DELIVERY_FAILED"
+                ? "The verification email could not be delivered. Request another verification message below."
+                : `A verification email was sent to ${result.owner_email}. Open its link to verify your account.`}
           </p>
           <p className="mt-3 text-sm font-medium text-foreground">
             Save this Shop ID. You will use it together with your username and

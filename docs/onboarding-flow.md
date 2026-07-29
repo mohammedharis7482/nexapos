@@ -47,3 +47,8 @@ one-time email invitation marks that invited address verified; directly
 owner-created cashiers are trusted accounts under the existing active-shop
 policy. Authenticated session context reports `email_verified` without allowing
 the client to change it.
+# Delivery failure recovery
+
+Provider failure leaves the shop `PENDING_VERIFICATION`. Resend creates the one
+current usable token. Verification advances the shop to `ONBOARDING`; the
+original Shop ID, username, and password can then establish a session.

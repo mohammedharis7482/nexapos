@@ -25,6 +25,8 @@ const success = {
     },
     verification_required: true as const,
     owner_email: "owner@example.test",
+    registration_status: "PENDING_VERIFICATION" as const,
+    email_delivery: "DEVELOPMENT_CONSOLE" as const,
   },
 };
 
@@ -110,6 +112,53 @@ describe("shop registration", () => {
       email: success.data.owner_email,
     });
     expect(await screen.findByText(/If an unverified account exists/)).toBeInTheDocument();
+  });
+
+  it("shows accurate SMTP delivery wording", async () => {
+    register.mockResolvedValue({
+      ...success,
+      data: { ...success.data, email_delivery: "EMAIL_SENT" },
+    });
+    render(<RegisterShopPage />);
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Create shop" }));
+
+    expect(await screen.findByText(/A verification email was sent to/)).toBeInTheDocument();
+    expect(screen.queryByText(/Django server terminal/)).not.toBeInTheDocument();
+  });
+
+  it("retains the Shop ID and resend action when delivery fails", async () => {
+    register.mockResolvedValue({
+      ...success,
+      message:
+        "Your shop was created, but the verification email could not be delivered.",
+      data: { ...success.data, email_delivery: "EMAIL_DELIVERY_FAILED" },
+    });
+    render(<RegisterShopPage />);
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Create shop" }));
+
+    expect(await screen.findByText(/could not be delivered/)).toBeInTheDocument();
+    expect(screen.getByText(success.data.shop.id)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resend Verification Email" })).toBeEnabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("shows generic possible-existing-account recovery guidance", async () => {
+    register.mockRejectedValue(
+      new ApiError(
+        "An account may already exist with these details. Sign in or request another verification message.",
+        400,
+        {},
+        "ACCOUNT_MAY_EXIST",
+      ),
+    );
+    render(<RegisterShopPage />);
+    const user = await fillForm();
+    await user.click(screen.getByRole("button", { name: "Create shop" }));
+
+    expect(await screen.findByText(/account may already exist/i)).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("synchronously guards double submission while the request is pending", async () => {

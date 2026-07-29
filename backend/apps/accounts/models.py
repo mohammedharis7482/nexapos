@@ -16,6 +16,10 @@ class UserManager(BaseUserManager["User"]):
     def normalize_username(username: str) -> str:
         return username.strip().lower()
 
+    @classmethod
+    def normalize_email_address(cls, email: str) -> str:
+        return cls.normalize_email(email.strip()).lower()
+
     def _create_user(
         self,
         username: str,
@@ -33,7 +37,7 @@ class UserManager(BaseUserManager["User"]):
 
         email = extra_fields.get("email")
         if email:
-            extra_fields["email"] = self.normalize_email(email)
+            extra_fields["email"] = self.normalize_email_address(email)
 
         user = self.model(
             username=self.normalize_username(username),
@@ -127,7 +131,7 @@ class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.username = UserManager.normalize_username(self.username)
         if self.email:
-            self.email = UserManager.normalize_email(self.email)
+            self.email = UserManager.normalize_email_address(self.email)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:

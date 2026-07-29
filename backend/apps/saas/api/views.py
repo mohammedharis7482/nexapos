@@ -91,7 +91,7 @@ class RegisterView(PublicCsrfViewMixin, APIView):
         try:
             values = dict(serializer.validated_data)
             values["timezone_name"] = values.pop("timezone")
-            shop, _owner = register_shop(**values)
+            result = register_shop(**values)
         except (SaasOperationError, DjangoValidationError) as exc:
             operation_error(exc)
         except IntegrityError as exc:
@@ -99,17 +99,27 @@ class RegisterView(PublicCsrfViewMixin, APIView):
             if getattr(diagnostic, "constraint_name", None) == "shops_email_ci_uniq":
                 operation_error(
                     SaasOperationError(
-                        "An account with this email cannot be registered.",
-                        "owner_email",
+                        "An account may already exist with these details. Sign in "
+                        "or request another verification message.",
+                        code="ACCOUNT_MAY_EXIST",
                     )
                 )
             raise
+        delivery_failed = result.email_delivery.status.value == "EMAIL_DELIVERY_FAILED"
+        message = (
+            "Your shop was created, but the verification email could not be "
+            "delivered. Request another verification message."
+            if delivery_failed
+            else "Shop registered. Verify your email before signing in."
+        )
         return success_response(
-            "Shop registered. Check your email to verify the account.",
+            message,
             {
-                "shop": {"id": str(shop.id), "name": shop.name},
+                "shop": {"id": str(result.shop.id), "name": result.shop.name},
                 "verification_required": True,
-                "owner_email": _owner.email,
+                "owner_email": result.owner.email,
+                "registration_status": "PENDING_VERIFICATION",
+                "email_delivery": result.email_delivery.status.value,
             },
             status_code=status.HTTP_201_CREATED,
         )
@@ -148,7 +158,8 @@ class ResendVerificationView(PublicCsrfViewMixin, APIView):
         serializer.is_valid(raise_exception=True)
         resend_verification(**serializer.validated_data)
         return success_response(
-            "If an unverified account exists, a verification email has been sent."
+            "If an eligible unverified account exists, a verification delivery "
+            "was attempted."
         )
 
 

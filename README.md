@@ -1,5 +1,10 @@
 # NexaPOS
 
+Email delivery and abandoned development registrations are operational
+lifecycle concerns, not reasons to flush PostgreSQL. See
+`docs/email-delivery.md`, `docs/registration-recovery.md`, and
+`docs/development-test-tenant-cleanup.md`.
+
 NexaPOS is a production-oriented multi-tenant grocery point-of-sale and billing
 SaaS application for small local grocery shops in Qatar. Each Shop is an
 isolated tenant in a shared PostgreSQL database. The product includes owner and

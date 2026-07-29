@@ -167,3 +167,10 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
   boundary contains no stack trace.
 - Complete the scenarios and sign-off fields in
   [pilot-acceptance-test.md](pilot-acceptance-test.md).
+# Email-delivery recovery
+
+1. Register with the console backend and find the link in the Django terminal.
+2. Configure private SMTP settings and run `send_test_email`.
+3. Simulate delivery failure and confirm the Shop ID remains recoverable.
+4. Resend, verify the prior token is superseded, and sign in with the latest.
+5. Run `cleanup_test_tenant` without `--confirm` and verify nothing changes.

@@ -35,6 +35,8 @@ class RegistrationDataSerializer(serializers.Serializer):
     shop = PublicShopIdentitySerializer(read_only=True)
     verification_required = serializers.BooleanField(read_only=True)
     owner_email = serializers.EmailField(read_only=True)
+    registration_status = serializers.CharField(read_only=True)
+    email_delivery = serializers.CharField(read_only=True)
 
 
 class RegistrationResponseSerializer(serializers.Serializer):

@@ -4,6 +4,11 @@ export interface RegistrationResult {
   shop: PublicShopIdentity;
   verification_required: true;
   owner_email: string;
+  registration_status: "PENDING_VERIFICATION";
+  email_delivery:
+    | "DEVELOPMENT_CONSOLE"
+    | "EMAIL_SENT"
+    | "EMAIL_DELIVERY_FAILED";
 }
 
 export interface PublicShopIdentity {

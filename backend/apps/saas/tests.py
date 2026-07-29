@@ -118,7 +118,7 @@ class SaasFoundationTests(TestCase):
             response.json(),
             {
                 "success": True,
-                "message": "Shop registered. Check your email to verify the account.",
+                "message": "Shop registered. Verify your email before signing in.",
                 "data": {
                     "shop": {
                         "id": response.json()["data"]["shop"]["id"],
@@ -126,6 +126,8 @@ class SaasFoundationTests(TestCase):
                     },
                     "verification_required": True,
                     "owner_email": "new-owner@example.test",
+                    "registration_status": "PENDING_VERIFICATION",
+                    "email_delivery": "EMAIL_SENT",
                 },
             },
         )
@@ -228,7 +230,7 @@ class SaasFoundationTests(TestCase):
                     email=self.shop.email.upper(),
                 )
 
-    def test_registration_rolls_back_when_verification_email_fails(self):
+    def test_registration_remains_recoverable_when_verification_email_fails(self):
         payload = {
             "shop_name": "Email Failure Grocery",
             "owner_full_name": "Email Failure Owner",
@@ -244,9 +246,19 @@ class SaasFoundationTests(TestCase):
                 EmailMessage, "send", side_effect=RuntimeError("email unavailable")
             ):
                 response = self.public_post(reverse("saas_api:register"), payload)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json()["message"], "NexaPOS could not complete the request.")
-        self.assertFalse(Shop.objects.filter(name="Email Failure Grocery").exists())
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["data"]["email_delivery"], "EMAIL_DELIVERY_FAILED"
+        )
+        self.assertIn("shop was created", response.json()["message"])
+        shop = Shop.objects.get(name="Email Failure Grocery")
+        self.assertEqual(shop.status, Shop.Status.PENDING_VERIFICATION)
+        self.assertEqual(shop.users.count(), 1)
+        self.assertTrue(ShopSubscription.objects.filter(shop=shop).exists())
+        self.assertEqual(
+            EmailVerificationToken.objects.filter(user__shop=shop).count(), 1
+        )
+        self.assertNotIn("token", str(response.json()).lower())
 
     def test_verification_is_one_time_hashed_and_advances_lifecycle(self):
         self.test_registration_is_atomic_and_creates_hashed_owner_trial_and_token()
@@ -310,6 +322,7 @@ class SaasFoundationTests(TestCase):
         shop = Shop.objects.get(name="New Grocery")
         owner = shop.primary_owner
         original = EmailVerificationToken.objects.get(user=owner)
+        original_raw = token_from_email(mail.outbox[0].body)
         response = self.public_post(
             "/api/v1/auth/email-verification/resend/",
             {"shop_id": str(shop.id), "username": "  NEWOWNER  "},
@@ -323,9 +336,22 @@ class SaasFoundationTests(TestCase):
             ).count(),
             1,
         )
+        replaced = self.public_post(
+            "/api/v1/auth/email-verification/verify/",
+            {"token": original_raw},
+        )
+        self.assertEqual(replaced.status_code, 400)
+        self.assertEqual(
+            replaced.json()["code"], "VERIFICATION_TOKEN_REPLACED"
+        )
+        latest_raw = token_from_email(mail.outbox[-1].body)
+        latest = self.public_post(
+            "/api/v1/auth/email-verification/verify/",
+            {"token": latest_raw},
+        )
+        self.assertEqual(latest.status_code, 200)
 
-        owner.email_verified_at = timezone.now()
-        owner.save(update_fields=["email_verified_at", "updated_at"])
+        owner.refresh_from_db()
         token_count = EmailVerificationToken.objects.filter(user=owner).count()
         verified_response = self.public_post(
             "/api/v1/auth/email-verification/resend/",

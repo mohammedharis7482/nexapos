@@ -208,3 +208,9 @@ The production build provides the TypeScript and App Router integration check.
 No browser end-to-end suite is introduced in this phase; live Django/Next.js
 interaction should be exercised when frontend deployment infrastructure is
 defined.
+# Authentication delivery and cleanup coverage
+
+Tests cover durable registration on delivery failure, delivery states, generic
+duplicate recovery, token supersession, verification then login, console-mode
+detection, token-free test email, cleanup dry run, confirmation, environment
+refusal, and business-data refusal.

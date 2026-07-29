@@ -5,6 +5,9 @@ from .base import *  # noqa: F403
 
 DEBUG = False
 SECRET_KEY = config("DJANGO_SECRET_KEY")
+EMAIL_BACKEND = config("DJANGO_EMAIL_BACKEND")
+EMAIL_HOST = config("DJANGO_EMAIL_HOST")
+DEFAULT_FROM_EMAIL = config("DJANGO_DEFAULT_FROM_EMAIL")
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", cast=Csv())
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv(), default="")
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", cast=Csv(), default="")
@@ -27,6 +30,19 @@ if "*" in CORS_ALLOWED_ORIGINS:
 if CORS_ALLOWED_ORIGINS and not CSRF_TRUSTED_ORIGINS:
     raise ImproperlyConfigured(
         "CSRF_TRUSTED_ORIGINS is required when production CORS origins are set."
+    )
+if EMAIL_USE_TLS and EMAIL_USE_SSL:  # noqa: F405
+    raise ImproperlyConfigured(
+        "DJANGO_EMAIL_USE_TLS and DJANGO_EMAIL_USE_SSL cannot both be true."
+    )
+if EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":  # noqa: F405
+    raise ImproperlyConfigured("The console email backend is not allowed in production.")
+if EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend" and not all(  # noqa: F405
+    (EMAIL_HOST, DEFAULT_FROM_EMAIL)
+):
+    raise ImproperlyConfigured(
+        "SMTP production delivery requires DJANGO_EMAIL_HOST and "
+        "DJANGO_DEFAULT_FROM_EMAIL."
     )
 
 if config("DJANGO_TRUST_X_FORWARDED_PROTO", cast=bool, default=True):

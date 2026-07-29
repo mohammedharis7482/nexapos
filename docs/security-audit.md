@@ -114,3 +114,9 @@ be returned. Wrong Shop ID, username, or password always uses
 `INVALID_CREDENTIALS`. Denied attempts create no session. Development logs use
 reason categories at debug level and never include passwords, request bodies,
 session identifiers, or account tokens.
+# Email and cleanup controls
+
+Email failures are logged using safe event IDs, backend names, states, and
+exception categories. Logs exclude recipients, bodies, action URLs, tokens,
+passwords, SMTP credentials, and sessions. Development cleanup is CLI-only,
+dry-run-first, development-gated, atomic, and business-data-aware.

@@ -40,3 +40,9 @@ remain indistinguishable.
 
 Automated payment collection, recurring charging, multi-branch operation,
 impersonation, and custom permission builders are deliberately deferred.
+# Registration and delivery boundary
+
+Core registration is one PostgreSQL transaction. Email is attempted after
+commit because no transactional outbox exists. Delivery failure is represented
+honestly and the pending tenant remains recoverable. No recurring deletion job
+is enabled.

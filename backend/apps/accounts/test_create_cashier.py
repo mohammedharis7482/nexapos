@@ -45,7 +45,7 @@ class CreateCashierCommandTests(TestCase):
         self.assertEqual(cashier.role, User.Role.CASHIER)
         self.assertTrue(cashier.is_active)
         self.assertTrue(cashier.check_password(PASSWORD))
-        self.assertEqual(cashier.email, "CASHIER@example.com")
+        self.assertEqual(cashier.email, "cashier@example.com")
         self.assertIn(self.shop.name, output)
         self.assertIn(str(self.shop.id), output)
         self.assertNotIn(PASSWORD, output)

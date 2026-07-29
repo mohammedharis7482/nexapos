@@ -384,3 +384,14 @@ current snapshot, so date, cashier, and payment filters do not alter quantities;
 the category filter does. Payment values use allocated Payment amounts and
 never tendered cash. No purchase price, profit, COGS, supplier, accounting, or
 export data is returned.
+# Registration delivery metadata
+
+`POST /api/v1/saas/register/` returns `registration_status:
+PENDING_VERIFICATION` and `email_delivery` as `DEVELOPMENT_CONSOLE`,
+`EMAIL_SENT`, or `EMAIL_DELIVERY_FAILED`. Delivery failure still returns `201`
+because the tenant was durably created and remains recoverable. Raw tokens and
+provider errors are never returned.
+
+Possible duplicate registration returns generic `ACCOUNT_MAY_EXIST` guidance
+and creates no additional core records. Resend intentionally returns the same
+generic acknowledgement for eligible and unknown contexts.
