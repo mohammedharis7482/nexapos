@@ -49,7 +49,7 @@ describe("premium application shell", () => {
     expect(within(desktop).queryByRole("link", { name: "Current Shift" })).not.toBeInTheDocument();
     expect(within(desktop).queryByRole("link", { name: "Shifts" })).not.toBeInTheDocument();
     expect(within(desktop).queryByRole("link", { name: "Team" })).not.toBeInTheDocument();
-    expect(screen.getByText("Network online")).toBeInTheDocument();
+    expect(screen.getByText("Device online")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "New Bill" }).length).toBeGreaterThan(0);
     const mobile = screen.getByRole("navigation", { name: "Mobile navigation" });
     expect(within(mobile).getByRole("link", { name: "Inventory" })).toBeInTheDocument();

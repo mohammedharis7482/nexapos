@@ -7,6 +7,13 @@ after the deployment conditions below are met. It must not yet be described as
 production-ready because provider-level rate limiting, backup verification,
 HTTPS topology, HSTS, CSP rollout, and restore testing are external decisions.
 
+The release audit confirmed that production settings reject missing secrets,
+wildcard hosts/CORS, console email, invalid cookie SameSite values, and insecure
+`SameSite=None`. The frontend production build now rejects a missing API URL
+instead of silently targeting localhost. Current status remains **NOT READY**
+until production values, hosting, HTTPS topology, edge throttling, and verified
+managed-backup evidence exist.
+
 ## Authentication and sessions
 
 - Django session authentication is authoritative; no token or password is kept

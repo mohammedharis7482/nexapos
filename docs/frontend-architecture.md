@@ -68,5 +68,7 @@ plus a role-filtered More sheet. See [navigation.md](navigation.md).
 ## Production configuration
 
 Only `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_API_TIMEOUT_MS` are public.
+Production builds require the API URL explicitly; localhost is only a
+development/test fallback.
 The Next build emits baseline security headers. CSP enforcement is deliberately
 deployment-staged as described in [security-audit.md](security-audit.md).

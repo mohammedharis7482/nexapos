@@ -1,3 +1,5 @@
+from django.db import connection
+from django.db.utils import DatabaseError
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
@@ -62,5 +64,3 @@ def success_response(
         {"success": True, "message": message, "data": data},
         status=status_code,
     )
-from django.db import connection
-from django.db.utils import DatabaseError

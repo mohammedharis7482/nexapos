@@ -180,11 +180,12 @@ throttles; production must also provide a shared reverse-proxy/platform limit.
 
 ## Production-readiness status
 
-The repository has completed an application-level QA/security audit, but final
-deployment readiness is conditional on environment-specific work: shared edge
-rate limiting, verified HTTPS/cookie topology, CSP staging, provider backups
-with a restore rehearsal, production-like performance measurements, and pilot
-acceptance. Start with [the deployment checklist](docs/deployment-checklist.md),
+The repository has completed an application-level release audit, but is **not
+ready to deploy** until production hosts/secrets, verified HTTPS cookie
+topology, shared edge rate limiting, SMTP, and managed PostgreSQL backup
+evidence are configured. Start with
+[the release checklist](docs/release-checklist.md),
+[the deployment checklist](docs/deployment-checklist.md),
 [security audit](docs/security-audit.md), and [QA matrix](docs/qa-matrix.md).
 
 Create the first shop and owner interactively:

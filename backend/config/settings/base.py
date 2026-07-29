@@ -197,5 +197,10 @@ LOGGING = {
             "level": config("DJANGO_LOG_LEVEL", default="INFO"),
             "propagate": False,
         },
+        "nexapos.request": {
+            "handlers": ["console"],
+            "level": config("DJANGO_REQUEST_LOG_LEVEL", default="WARNING"),
+            "propagate": False,
+        },
     },
 }

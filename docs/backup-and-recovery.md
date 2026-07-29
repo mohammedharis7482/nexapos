@@ -27,6 +27,15 @@ backup age and take another backup before either operation.
 The deployment owner—not the application repository—is responsible for
 configuring and monitoring PostgreSQL backups.
 
+## Release ownership and evidence
+
+The release record must name a deployment owner and approver and record the
+provider, automated-backup state, retention, latest successful backup, the
+pre-migration backup identifier, encryption, and last restore-drill result.
+Until recorded, backup status is **not configured** and release is blocked.
+Enable provider-native encrypted daily backups before accepting application
+traffic; repository documentation is not evidence that a backup ran.
+
 ## Minimum policy
 
 - Automated encrypted daily backups, retained for at least 30 days.
@@ -62,3 +71,12 @@ financial totals before reopening the tills.
 
 This document is a required policy; it does not claim that any provider backup
 or point-in-time recovery is currently configured.
+
+## Application rollback
+
+Stop writes, preserve logs, and take a new backup. Confirm schema compatibility
+before deploying the previous backend and its matching frontend. Restore a
+database only with explicit approval when code rollback cannot recover safely,
+and restore into a new database rather than over the live one. Before reopening,
+verify readiness, login, a historical receipt, inventory, shifts, and reports,
+then reconcile sales in the incident window.

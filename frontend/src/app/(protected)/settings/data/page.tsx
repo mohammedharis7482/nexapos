@@ -4,12 +4,12 @@ import { Download, Upload } from "lucide-react";
 import { Breadcrumbs, ModuleNavigation, settingsNavigation } from "@/components/layout/module-navigation";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
+import { API_BASE_URL } from "@/lib/api-client";
 
-const exportBase = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1").replace(/\/+$/, "");
 const actions = [
   { href: "/products/import", label: "Import Products", description: "Validate and import a CSV product catalogue.", icon: Upload, external: false },
   ...["products", "inventory", "sales", "shifts"].map((name) => ({
-    href: `${exportBase}/exports/${name}.csv`,
+    href: `${API_BASE_URL}/exports/${name}.csv`,
     label: `Export ${name[0].toUpperCase()}${name.slice(1)}`,
     description: `Download the current ${name} data as CSV.`,
     icon: Download,

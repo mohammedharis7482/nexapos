@@ -10,7 +10,7 @@ import { Badge, PageHeader } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { DateInput, Select } from "@/components/ui/input";
 import { FilterToolbar } from "@/components/ui/layout";
-import { ApiError } from "@/lib/api-client";
+import { API_BASE_URL, ApiError } from "@/lib/api-client";
 import { categoryService } from "@/services/category.service";
 import { reportsService } from "@/services/reports.service";
 import { salesService } from "@/services/sales.service";
@@ -33,10 +33,6 @@ function isoDate(date: Date) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-
-const exportBase = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1"
-).replace(/\/+$/, "");
 
 export function defaultReportFilters(now = new Date()): ReportFilters {
   const from = new Date(now);
@@ -126,7 +122,7 @@ export default function ReportsPage() {
     <PageHeader eyebrow="Analytics" title="Reports" description={`Owner operational reports${updated ? ` · Updated ${updated}` : ""}`} action={<Button variant="secondary" loading={loading} onClick={() => void load()} leadingIcon={<RefreshCw className="size-4" />}>Refresh</Button>} />
     <div className="flex flex-wrap gap-2">
       {["products", "inventory", "sales", "shifts"].map((name) => (
-        <a key={name} className="premium-action-secondary capitalize" href={`${exportBase}/exports/${name}.csv`}>
+        <a key={name} className="premium-action-secondary capitalize" href={`${API_BASE_URL}/exports/${name}.csv`}>
           Export {name}
         </a>
       ))}

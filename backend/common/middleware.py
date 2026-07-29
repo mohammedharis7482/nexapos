@@ -1,5 +1,8 @@
+import logging
 import uuid
 from django.http import JsonResponse
+
+request_logger = logging.getLogger("nexapos.request")
 
 
 class RequestIdMiddleware:
@@ -14,6 +17,15 @@ class RequestIdMiddleware:
         request.request_id = uuid.uuid4().hex
         response = self.get_response(request)
         response[self.header_name] = request.request_id
+        request_logger.info(
+            "request_completed",
+            extra={
+                "request_id": request.request_id,
+                "path": request.path,
+                "method": request.method,
+                "status_code": response.status_code,
+            },
+        )
         return response
 
 

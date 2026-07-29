@@ -6,7 +6,14 @@ from datetime import UTC, datetime
 class SafeJsonFormatter(logging.Formatter):
     """Emit structured operational fields while excluding request payloads."""
 
-    safe_extra_fields = ("request_id", "path", "user_id", "shop_id")
+    safe_extra_fields = (
+        "request_id",
+        "path",
+        "method",
+        "status_code",
+        "user_id",
+        "shop_id",
+    )
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {

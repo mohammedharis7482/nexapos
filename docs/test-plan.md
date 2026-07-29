@@ -237,6 +237,13 @@ The production build provides the TypeScript and App Router integration check.
 No browser end-to-end suite is introduced in this phase; live Django/Next.js
 interaction should be exercised when frontend deployment infrastructure is
 defined.
+
+Release validation additionally covers production-settings fail-closed
+behavior, migration drift/plan review, WhiteNoise static collection, mandatory
+production API URL, safe request-log fields, Team MVP copy and hidden invitation
+UI, full PostgreSQL regression, OpenAPI, lint, Vitest, and production build.
+Live HTTPS sessions, devices, printer/scanner, SMTP, backups, and cross-shop
+browser checks remain mandatory on the selected host.
 # Authentication delivery and cleanup coverage
 
 Tests cover durable registration on delivery failure, delivery states, generic

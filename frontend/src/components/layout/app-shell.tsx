@@ -194,7 +194,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden items-center gap-2 text-xs text-text-muted md:flex">
-              <StatusBadge label={networkOnline ? "Network online" : "Network offline"} online={networkOnline} />
+              <StatusBadge label={networkOnline ? "Device online" : "Device offline"} online={networkOnline} />
               <span className="mx-1 h-4 w-px bg-border" />
               <CalendarDays className="size-4" aria-hidden="true" />
               <time dateTime={now.toISOString()}>
@@ -254,15 +254,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Settings className="size-5" /> Settings
                 </Link>
               </>
-            ) : null}
-            {user.role === "OWNER" ? (
-              <Link
-                href="/settings/subscription"
-                role="menuitem"
-                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-text-secondary hover:bg-surface-secondary"
-              >
-                Subscription
-              </Link>
             ) : null}
             <button
               onClick={() => void handleLogout()}

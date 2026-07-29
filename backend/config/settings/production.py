@@ -83,6 +83,9 @@ if config("POSTGRES_SSL_REQUIRE", cast=bool, default=False):
 LOGGING["handlers"]["console"]["formatter"] = config(  # noqa: F405
     "DJANGO_LOG_FORMAT", default="json"
 )
+LOGGING["loggers"]["nexapos.request"]["level"] = config(  # noqa: F405
+    "DJANGO_REQUEST_LOG_LEVEL", default="INFO"
+)
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

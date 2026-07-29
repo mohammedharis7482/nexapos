@@ -13,12 +13,11 @@ import { Dialog } from "@/components/ui/overlay";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { saasService } from "@/services/saas.service";
-import type { Invitation, ManagedUser, Usage } from "@/types/saas";
+import type { ManagedUser, Usage } from "@/types/saas";
 
 export default function TeamPage() {
   const { user } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +34,9 @@ export default function TeamPage() {
     setLoading(true);
     setError(null);
     try {
-      const [team, pending] = await Promise.all([saasService.users(), saasService.invitations()]);
+      const team = await saasService.users();
       setUsers(team.data.results);
       setUsage(team.data.usage);
-      setInvitations(pending.data);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Team information could not be loaded.");
     } finally {
@@ -74,7 +72,7 @@ export default function TeamPage() {
       setNotice("Staff account created. Share the temporary credentials securely.");
       await load();
     } catch (caught) {
-      setNotice(caught instanceof ApiError ? caught.message : "Invitation could not be sent.");
+      setNotice(caught instanceof ApiError ? caught.message : "Team member could not be created.");
     } finally {
       setBusy(false);
     }
@@ -132,15 +130,21 @@ export default function TeamPage() {
 
   if (loading) return <PageSkeleton />;
   if (error) return <ErrorState title="Team unavailable" description={error} onRetry={() => void load()} />;
+  const activeUsers = users.filter((member) => member.is_active);
+  const owners = activeUsers.filter((member) => member.role === "OWNER").length;
+  const cashiers = activeUsers.filter((member) => member.role === "CASHIER").length;
+  const inactiveUsers = users.length - activeUsers.length;
   return (
     <div className="page-stack">
       <Breadcrumbs items={[{ label: "Settings", href: "/settings" }, { label: "Team & Access" }]} />
       <ModuleNavigation label="Settings sections" items={settingsNavigation} />
       <PageHeader eyebrow="Administration" title="Team & Access" description="Create staff accounts, assign roles, and control access to this shop." action={<Button onClick={() => setCreateOpen(true)} leadingIcon={<UserPlus className="size-4" />}>Add team member</Button>} />
       {notice ? <Alert title={notice} tone="info" /> : null}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <SummaryCard label="Active users" value={`${usage?.active_users ?? 0} / ${usage?.max_users ?? 0}`} footer="Deactivated users do not consume a seat." />
-        <SummaryCard label="Available seats" value={Math.max((usage?.max_users ?? 0) - (usage?.active_users ?? 0), 0)} footer="Inactive accounts do not consume a seat." />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label="Active Team Members" value={activeUsers.length} footer={`System safety limit: ${usage?.max_users ?? 0} active accounts.`} />
+        <SummaryCard label="Owners" value={owners} footer="Includes the protected Primary Owner." />
+        <SummaryCard label="Cashiers" value={cashiers} footer="Active billing accounts." />
+        <SummaryCard label="Inactive Accounts" value={inactiveUsers} footer="Retained for audit history." />
       </div>
       <div className="grid gap-3 sm:grid-cols-[1fr_12rem_14rem]">
         <Input aria-label="Search team" placeholder="Search name, email, or username" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -168,20 +172,8 @@ export default function TeamPage() {
             </Card>
           ))}
         </div>
-      ) : <EmptyState icon={Users} title="No matching users" description="Adjust the search or invite a team member." />}
-      <section>
-        <h2 className="type-section-title">Invitations</h2>
-        <div className="mt-3 grid gap-3">
-          {invitations.map((invitation) => (
-            <Card key={invitation.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-              <div className="flex-1"><p className="font-semibold">{invitation.email}</p><p className="text-sm text-foreground-muted">{invitation.role.toLowerCase()} · {invitation.status.toLowerCase()}</p></div>
-              {invitation.status === "PENDING" ? <div className="flex gap-2"><Button variant="outline" onClick={() => void saasService.invitationAction(invitation.id, "resend").then(load)}>Resend</Button><Button variant="ghost" onClick={() => void saasService.invitationAction(invitation.id, "revoke").then(load)}>Revoke</Button></div> : null}
-            </Card>
-          ))}
-          {!invitations.length ? <EmptyState title="No invitations" description="Invite an owner or cashier when your team is ready." compact /> : null}
-        </div>
-      </section>
-      <Dialog open={createOpen} onOpenChange={setCreateOpen} title="Add team member" description={`${usage?.active_users ?? 0} of ${usage?.max_users ?? 0} active seats used.`}>
+      ) : <EmptyState icon={Users} title="No matching users" description="Adjust the filters or add a team member." />}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen} title="Add team member" description={`${usage?.active_users ?? 0} of ${usage?.max_users ?? 0} active accounts used under the system safety limit.`}>
         <form className="space-y-5" onSubmit={createMember}>
           <FormField label="Full name" htmlFor="staff-name"><Input id="staff-name" name="full_name" required /></FormField>
           <FormField label="Username" htmlFor="staff-username"><Input id="staff-username" name="username" autoCapitalize="none" required /></FormField>

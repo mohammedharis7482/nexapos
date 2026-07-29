@@ -40,6 +40,10 @@ Model `clean()` methods protect cross-shop relationships during normal model
 validation. Database foreign keys protect existence, while production writes
 must continue to use the audited service/API layer because PostgreSQL cannot
 express every cross-table shop-equality rule as a simple check constraint.
+
+The Team UI describes the enforced active-user maximum as a system safety
+limit, not a subscription seat. Invitation APIs remain protected and tested but
+are hidden from the v1 UI; direct temporary-password staff creation is visible.
 # Primary-owner representation
 
 `PRIMARY_OWNER` is a capability derived from `Shop.primary_owner`; stored roles

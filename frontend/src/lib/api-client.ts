@@ -1,8 +1,22 @@
 import { readCsrfToken } from "@/lib/csrf";
 import type { ApiErrorResponse } from "@/types/auth";
 
-const configuredBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+export function resolveApiBaseUrl(
+  configured: string | undefined,
+  environment = process.env.NODE_ENV,
+) {
+  if (configured?.trim()) return configured.trim().replace(/\/+$/, "");
+  if (environment === "production") {
+    throw new Error(
+      "NEXT_PUBLIC_API_BASE_URL is required for a production frontend build.",
+    );
+  }
+  return "http://localhost:8000/api/v1";
+}
+
+const configuredBaseUrl = resolveApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL,
+);
 const API_BASE_URL = configuredBaseUrl.replace(/\/+$/, "");
 const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const configuredTimeout = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? "15000");

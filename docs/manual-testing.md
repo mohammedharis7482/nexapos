@@ -221,6 +221,12 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
   boundary contains no stack trace.
 - Complete the scenarios and sign-off fields in
   [pilot-acceptance-test.md](pilot-acceptance-test.md).
+- Confirm Team & Access shows operational member counts and a system safety
+  limit, with no subscription-seat or invitation interface.
+- Confirm a production build refuses a missing `NEXT_PUBLIC_API_BASE_URL`, then
+  succeeds with the real HTTPS API URL and contains no localhost API target.
+- Complete [production-smoke-test.md](production-smoke-test.md) after both
+  services are deployed.
 # Email-delivery recovery
 
 1. Register with the console backend and find the link in the Django terminal.

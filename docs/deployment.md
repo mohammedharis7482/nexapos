@@ -17,6 +17,37 @@ subdomain policy are verified; `DJANGO_SECURE_SSL_REDIRECT`,
 `DJANGO_SECURE_HSTS_PRELOAD` allow controlled local validation and rollout.
 Cookie SameSite values, trusted proxy handling, database SSL, login throttle
 rates, and JSON logging are also environment-configurable in `.env.example`.
+Set `DJANGO_REQUEST_LOG_LEVEL=INFO` in production so structured request logs
+include timestamp, request ID, path, method, and response status.
+
+The frontend production build requires `NEXT_PUBLIC_API_BASE_URL`; it fails
+closed instead of silently compiling against localhost. The value must be the
+HTTPS backend origin ending in `/api/v1`.
+
+## Deployment topology and commands
+
+No hosting provider is selected in this repository, so no provider-specific
+manifest is asserted. Configure a backend service, frontend service, and
+managed PostgreSQL in the selected platform.
+
+Use Python 3.13 and `requirements/production.txt`. Build static assets with
+`python manage.py collectstatic --noinput --settings=config.settings.production`
+and start behind the TLS proxy with:
+
+```bash
+gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} \
+  --chdir backend --workers 3 --timeout 60
+```
+
+Configure `/api/v1/health/` for liveness and `/api/v1/readiness/` for database
+readiness. Never use `runserver` in production. For the frontend, run `npm ci`,
+`npm run build`, and `npm run start` unless the selected Next.js host provides
+its own supported lifecycle.
+
+Deploy in this order: configure managed PostgreSQL and backups; configure and
+deploy backend; review migrations, back up, migrate, and verify health/API;
+configure the frontend API URL and backend origins; deploy frontend; run the
+production smoke test; review logs; take a post-release backup; record version.
 
 ## PostgreSQL on macOS with Homebrew
 

@@ -329,7 +329,7 @@ def enforce_user_limit(shop: Shop) -> None:
     usage = usage_for_shop(shop)
     if usage["active_users"] >= usage["max_users"]:
         raise SaasOperationError(
-            "The active-user limit for this plan has been reached."
+            "The system active-account safety limit has been reached."
         )
 
 

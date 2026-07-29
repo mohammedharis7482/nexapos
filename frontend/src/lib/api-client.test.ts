@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, API_BASE_URL, apiRequest, joinApiUrl } from "./api-client";
+import {
+  ApiError,
+  API_BASE_URL,
+  apiRequest,
+  joinApiUrl,
+  resolveApiBaseUrl,
+} from "./api-client";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -12,6 +18,18 @@ function jsonResponse(body: unknown, status = 200) {
 describe("API client", () => {
   beforeEach(() => {
     document.cookie = "csrftoken=; Max-Age=0; path=/";
+  });
+
+  it("requires an explicit API URL in production", () => {
+    expect(resolveApiBaseUrl(undefined, "development")).toBe(
+      "http://localhost:8000/api/v1",
+    );
+    expect(() => resolveApiBaseUrl(undefined, "production")).toThrow(
+      "NEXT_PUBLIC_API_BASE_URL is required",
+    );
+    expect(
+      resolveApiBaseUrl("https://api.example.test/api/v1/", "production"),
+    ).toBe("https://api.example.test/api/v1");
   });
 
   it("always includes browser credentials", async () => {

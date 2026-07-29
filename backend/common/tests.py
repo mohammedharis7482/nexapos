@@ -1,3 +1,5 @@
+import json
+import logging
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -7,9 +9,24 @@ from django.urls import reverse
 from rest_framework.test import APIRequestFactory
 
 from common.exceptions import api_exception_handler
+from common.logging import SafeJsonFormatter
 
 
 class HealthEndpointTests(SimpleTestCase):
+    @patch("common.middleware.request_logger.info")
+    def test_request_completion_log_uses_safe_operational_fields(self, logger):
+        response = self.client.get(reverse("health"))
+
+        logger.assert_called_once_with(
+            "request_completed",
+            extra={
+                "request_id": response["X-Request-ID"],
+                "path": "/api/v1/health/",
+                "method": "GET",
+                "status_code": 200,
+            },
+        )
+
     def test_health_endpoint_is_public(self):
         response = self.client.get(reverse("health"))
 
@@ -19,6 +36,20 @@ class HealthEndpointTests(SimpleTestCase):
             {"status": "ok", "service": "NexaPOS API"},
         )
         self.assertRegex(response["X-Request-ID"], r"^[0-9a-f]{32}$")
+
+    def test_json_formatter_emits_status_without_unsafe_payloads(self):
+        record = logging.LogRecord(
+            "nexapos.request", logging.INFO, "", 0, "request_completed", (), None
+        )
+        record.request_id = "safe-id"
+        record.path = "/api/v1/health/"
+        record.method = "GET"
+        record.status_code = 200
+        output = json.loads(SafeJsonFormatter().format(record))
+
+        self.assertEqual(output["request_id"], "safe-id")
+        self.assertEqual(output["status_code"], "200")
+        self.assertNotIn("body", output)
 
 
 class ReadinessEndpointTests(TestCase):
