@@ -13,6 +13,19 @@ export function resolveProtectedState(status: AuthStatus) {
   return "content";
 }
 
+// The onboarding screen explicitly invites the owner to complete catalogue
+// and team setup "in their full workspaces" — these routes must stay
+// reachable while onboarding is in progress, matching that promise and the
+// backend's tenant_access_allowed(), which already treats ONBOARDING as a
+// fully write-eligible shop lifecycle state.
+const ONBOARDING_ACCESSIBLE_ROUTES = ["/products", "/inventory", "/team", "/settings/team"];
+
+function isOnboardingAccessibleRoute(pathname: string) {
+  return ONBOARDING_ACCESSIBLE_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
 export function resolveSaasRoute(user: AuthenticatedUser, pathname: string) {
   if (
     user.must_change_password &&
@@ -27,7 +40,8 @@ export function resolveSaasRoute(user: AuthenticatedUser, pathname: string) {
   if (
     user.shop.status === "ONBOARDING" &&
     user.is_primary_owner &&
-    pathname !== "/onboarding"
+    pathname !== "/onboarding" &&
+    !isOnboardingAccessibleRoute(pathname)
   ) return "/onboarding";
   if (
     user.shop.status === "SUSPENDED" &&

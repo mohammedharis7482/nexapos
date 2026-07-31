@@ -32,6 +32,23 @@ describe("SaaS lifecycle route guards", () => {
     expect(resolveSaasRoute(onboarding, "/onboarding")).toBeNull();
   });
 
+  it("lets an onboarding primary owner reach catalogue and team workspaces", () => {
+    const onboarding = user({
+      shop: { ...user().shop, status: "ONBOARDING", onboarding_completed: false },
+    });
+    expect(resolveSaasRoute(onboarding, "/products")).toBeNull();
+    expect(resolveSaasRoute(onboarding, "/products/import")).toBeNull();
+    expect(resolveSaasRoute(onboarding, "/products/categories")).toBeNull();
+    expect(resolveSaasRoute(onboarding, "/inventory")).toBeNull();
+    expect(resolveSaasRoute(onboarding, "/team")).toBeNull();
+    expect(resolveSaasRoute(onboarding, "/settings/team")).toBeNull();
+    // Non-catalogue, non-team routes still funnel back to the wizard.
+    expect(resolveSaasRoute(onboarding, "/dashboard")).toBe("/onboarding");
+    expect(resolveSaasRoute(onboarding, "/billing")).toBe("/onboarding");
+    expect(resolveSaasRoute(onboarding, "/reports")).toBe("/onboarding");
+    expect(resolveSaasRoute(onboarding, "/settings")).toBe("/onboarding");
+  });
+
   it("requires temporary-password users to change it before business routes", () => {
     const temporary = user({ must_change_password: true });
     expect(resolveSaasRoute(temporary, "/dashboard")).toBe(
