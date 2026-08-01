@@ -3,23 +3,27 @@
 import {
   Barcode,
   CheckCircle2,
+  Keyboard,
   ReceiptText,
   ShoppingCart,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { CartLine } from "@/components/billing/cart-line";
+import { CartLine, nextQuantity } from "@/components/billing/cart-line";
 import { DiscountControl } from "@/components/billing/discount-control";
 import { PaymentDialog } from "@/components/billing/payment-dialog";
-import { Button } from "@/components/ui/button";
+import { ShortcutsHelpDialog } from "@/components/billing/shortcuts-help-dialog";
+import { IconButton, Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/ui/display";
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
+import { useShortcuts, type ShortcutBinding } from "@/hooks/use-shortcuts";
 import { ApiError } from "@/lib/api-client";
+import { computeGridNavigationIndex, type ArrowKey } from "@/lib/grid-navigation";
 import { billingService } from "@/services/billing.service";
 import { categoryService } from "@/services/category.service";
 import { inventoryService } from "@/services/inventory.service";
@@ -72,6 +76,8 @@ export default function BillingPage() {
   const [holding, setHolding] = useState(false);
   const [shift, setShift] = useState<import("@/types/shift").CashierShift | null>(null);
   const [shiftRequired, setShiftRequired] = useState(false);
+  const [lastActiveItemId, setLastActiveItemId] = useState<string | null>(null);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
 
   const createFreshDraft = useCallback(async () => {
     const response = await billingService.create();
@@ -162,6 +168,8 @@ export default function BillingPage() {
         quantity: "1.000",
       });
       setDraft(response.data);
+      const addedItem = response.data.items.find((item) => item.product.id === productId);
+      if (addedItem) setLastActiveItemId(addedItem.id);
       setSuccess("Product added to the draft.");
       setSearch("");
       searchRef.current?.focus();
@@ -295,6 +303,56 @@ export default function BillingPage() {
     0,
   ) ?? 0;
 
+  function adjustActiveQuantity(direction: "increase" | "decrease") {
+    if (!draft?.items.length) return;
+    const targetId = draft.items.some((item) => item.id === lastActiveItemId)
+      ? (lastActiveItemId as string)
+      : draft.items[draft.items.length - 1].id;
+    const target = draft.items.find((item) => item.id === targetId);
+    if (!target) return;
+    void updateQuantity(targetId, nextQuantity(target.quantity, direction, target.product.unit));
+  }
+
+  function handleResultsGridKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button"));
+    const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (current === -1) return;
+    event.preventDefault();
+    const nextIndex = computeGridNavigationIndex(
+      current,
+      event.key as ArrowKey,
+      buttons.map((button) => button.offsetTop),
+    );
+    buttons[nextIndex]?.focus();
+  }
+
+  const shortcutBindings: ShortcutBinding[] = [
+    { key: "/", description: "Focus barcode / product search", handler: () => searchRef.current?.focus() },
+    { key: "+", description: "Increase quantity of the active item", handler: () => adjustActiveQuantity("increase") },
+    { key: "-", description: "Decrease quantity of the active item", handler: () => adjustActiveQuantity("decrease") },
+    {
+      key: "F9",
+      description: "Continue to payment",
+      allowInEditableFields: true,
+      handler: () => { if (draft?.items.length) setPaymentOpen(true); },
+    },
+    {
+      key: "F8",
+      description: "Hold bill",
+      allowInEditableFields: true,
+      handler: () => { if (draft?.items.length) void holdDraft(); },
+    },
+    {
+      key: "F4",
+      description: "Cancel draft",
+      allowInEditableFields: true,
+      handler: () => setCancelOpen(true),
+    },
+    { key: "?", description: "Show keyboard shortcuts", handler: () => setShortcutsHelpOpen(true) },
+  ];
+  useShortcuts(shortcutBindings, state === "ready" && !shiftRequired && !completedSale);
+
   if (state === "loading") {
     return <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]"><Skeleton className="h-[620px]" /><Skeleton className="h-[620px]" /></div>;
   }
@@ -353,7 +411,13 @@ export default function BillingPage() {
         eyebrow="Point of sale"
         title="New Bill"
         description="Build a draft using live catalogue prices and current stock availability."
-        action={<><Link className="premium-action-secondary" href="/sales/shifts/current">Shift open{shift ? ` · ${new Date(shift.opened_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</Link><Badge tone="primary">Draft</Badge></>}
+        action={<>
+          <IconButton aria-label="Keyboard shortcuts" onClick={() => setShortcutsHelpOpen(true)}>
+            <Keyboard className="size-4" />
+          </IconButton>
+          <Link className="premium-action-secondary" href="/sales/shifts/current">Shift open{shift ? ` · ${new Date(shift.opened_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</Link>
+          <Badge tone="primary">Draft</Badge>
+        </>}
       />
       {error ? <Alert title={error} /> : null}
       {success ? <Alert title={success} tone="success" /> : null}
@@ -417,7 +481,7 @@ export default function BillingPage() {
           ) : results.length === 0 ? (
             <EmptyState title="No products found" description="Search by product name, SKU, or barcode." />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3" onKeyDown={handleResultsGridKeyDown}>
               {results.map((item) => {
                 const available = availableForDraft(item);
                 return (
@@ -474,6 +538,7 @@ export default function BillingPage() {
                   busy={busyItem === item.id}
                   onQuantity={(quantity) => void updateQuantity(item.id, quantity)}
                   onRemove={() => void removeItem(item.id)}
+                  onFocusItem={() => setLastActiveItemId(item.id)}
                 />
               )) : (
                 <div className="py-10 text-center">
@@ -537,6 +602,11 @@ export default function BillingPage() {
         confirmLabel="Cancel draft"
         loading={cancelling}
         onConfirm={() => void cancelDraft()}
+      />
+      <ShortcutsHelpDialog
+        open={shortcutsHelpOpen}
+        onOpenChange={setShortcutsHelpOpen}
+        bindings={shortcutBindings}
       />
     </div>
   );

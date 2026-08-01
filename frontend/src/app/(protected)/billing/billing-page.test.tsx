@@ -178,4 +178,83 @@ describe("BillingPage", () => {
     await waitFor(() => expect(billing.cancel).toHaveBeenCalledWith("draft-id"));
     expect(localStorage.getItem("nexapos.activeDraftId")).toBe("fresh-id");
   });
+
+  describe("keyboard shortcuts", () => {
+    const draftWithItem: DraftSale = {
+      ...draft,
+      items: [{
+        id: "item-id",
+        product: { id: "product-id", name: "Baladna Milk", sku: "MILK-001", barcode: "6281007023412", unit: "BOTTLE" },
+        quantity: "1",
+        unit_price: "6.00",
+        tax_rate: "5.00",
+        is_tax_inclusive: false,
+        tax_amount: "0.30",
+        line_subtotal: "6.00",
+        line_total: "6.30",
+      }],
+    };
+
+    it("focuses the search input on '/'", async () => {
+      render(<BillingPage />);
+      await screen.findByText("Cart is empty");
+      const search = screen.getByLabelText("Product or barcode search");
+      search.blur();
+      fireEvent.keyDown(document, { key: "/" });
+      expect(search).toHaveFocus();
+    });
+
+    function openDialogText(container: HTMLElement) {
+      return container.querySelector("dialog[open]")?.textContent ?? "";
+    }
+
+    it("opens the shortcuts cheat sheet on '?'", async () => {
+      const { container } = render(<BillingPage />);
+      await screen.findByText("Cart is empty");
+      expect(openDialogText(container)).toBe("");
+      fireEvent.keyDown(document, { key: "?" });
+      expect(openDialogText(container)).toContain("Keyboard shortcuts");
+      expect(openDialogText(container)).toContain("Continue to payment");
+    });
+
+    it("opens the cancel confirmation on F4 even with an empty cart", async () => {
+      const { container } = render(<BillingPage />);
+      await screen.findByText("Cart is empty");
+      fireEvent.keyDown(document, { key: "F4" });
+      expect(openDialogText(container)).toContain("Cancel this draft?");
+    });
+
+    it("does not open the payment dialog on F9 with an empty cart", async () => {
+      const { container } = render(<BillingPage />);
+      await screen.findByText("Cart is empty");
+      fireEvent.keyDown(document, { key: "F9" });
+      expect(openDialogText(container)).toBe("");
+    });
+
+    it("opens the payment dialog on F9 once the cart has items", async () => {
+      billing.create.mockResolvedValue({ success: true, message: "", data: draftWithItem });
+      const { container } = render(<BillingPage />);
+      await screen.findByText("Baladna Milk");
+      fireEvent.keyDown(document, { key: "F9" });
+      expect(openDialogText(container)).toContain("Complete payment");
+    });
+
+    it("holds the bill on F8 once the cart has items", async () => {
+      billing.create.mockResolvedValue({ success: true, message: "", data: draftWithItem });
+      billing.hold.mockResolvedValue({ success: true, message: "", data: draftWithItem });
+      render(<BillingPage />);
+      await screen.findByText("Baladna Milk");
+      fireEvent.keyDown(document, { key: "F8" });
+      await waitFor(() => expect(billing.hold).toHaveBeenCalledWith("draft-id"));
+    });
+
+    it("still triggers an F-key shortcut while the search field has focus", async () => {
+      const { container } = render(<BillingPage />);
+      await screen.findByText("Cart is empty");
+      const search = screen.getByLabelText("Product or barcode search");
+      search.focus();
+      fireEvent.keyDown(search, { key: "F4" });
+      expect(openDialogText(container)).toContain("Cancel this draft?");
+    });
+  });
 });

@@ -39,11 +39,13 @@ export function CartLine({
   busy,
   onQuantity,
   onRemove,
+  onFocusItem,
 }: {
   item: SaleItem;
   busy: boolean;
   onQuantity: (quantity: string) => void;
   onRemove: () => void;
+  onFocusItem?: () => void;
 }) {
   const [quantity, setQuantity] = useState(formatQuantityDisplay(item.quantity, item.product.unit));
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -88,7 +90,10 @@ export function CartLine({
             inputMode="decimal"
             value={quantity}
             disabled={busy}
-            onFocus={(event) => event.target.select()}
+            onFocus={(event) => {
+              event.target.select();
+              onFocusItem?.();
+            }}
             onChange={(event) => setQuantity(event.target.value)}
             onBlur={() => commit(quantity)}
             onKeyDown={(event) => {
