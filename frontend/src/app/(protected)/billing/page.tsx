@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CartLine } from "@/components/billing/cart-line";
+import { DiscountControl } from "@/components/billing/discount-control";
 import { PaymentDialog } from "@/components/billing/payment-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -482,12 +483,17 @@ export default function BillingPage() {
                 </div>
               )}
             </div>
+            {draft?.items.length ? (
+              <div className="px-5 pt-1">
+                <DiscountControl draft={draft} onUpdated={setDraft} />
+              </div>
+            ) : null}
             <div className="border-t border-border bg-surface-secondary p-5">
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between"><dt className="text-text-muted">Items</dt><dd>{draft?.items.length ?? 0}</dd></div>
                 <div className="flex justify-between"><dt className="text-text-muted">Subtotal</dt><dd><MoneyDisplay value={draft?.subtotal ?? "0.00"} /></dd></div>
                 <div className="flex justify-between"><dt className="text-text-muted">Tax</dt><dd><MoneyDisplay value={draft?.tax_total ?? "0.00"} /></dd></div>
-                <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd><MoneyDisplay value={draft?.discount_total ?? "0.00"} /></dd></div>
+                <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd className={Number(draft?.discount_total ?? 0) > 0 ? "text-success" : undefined}>{Number(draft?.discount_total ?? 0) > 0 ? "− " : ""}<MoneyDisplay value={draft?.discount_total ?? "0.00"} /></dd></div>
                 <div className="flex justify-between border-t border-border pt-3 text-xl font-bold"><dt>Total</dt><dd><MoneyDisplay value={draft?.grand_total ?? "0.00"} /></dd></div>
               </dl>
               <Button

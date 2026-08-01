@@ -34,6 +34,8 @@ const receipt: ReceiptData = {
     }],
     subtotal: "12.00",
     tax_total: "0.00",
+    discount_type: "NONE",
+    discount_value: "0.00",
     discount_total: "0.00",
     grand_total: "12.00",
     notes: "",
@@ -57,5 +59,26 @@ describe("Receipt", () => {
     expect(screen.getByText("Thank you")).toBeInTheDocument();
     expect(container.querySelector(".print-receipt")).toBeInTheDocument();
     expect(container.textContent).not.toContain("purchase_price");
+  });
+
+  it("omits the discount line when no discount was applied", () => {
+    render(<Receipt data={receipt} />);
+    expect(screen.queryByText(/Discount/)).not.toBeInTheDocument();
+  });
+
+  it("shows the applied discount amount and percentage", () => {
+    const discounted: ReceiptData = {
+      ...receipt,
+      sale: {
+        ...receipt.sale,
+        discount_type: "PERCENTAGE",
+        discount_value: "10.00",
+        discount_total: "1.20",
+        grand_total: "10.80",
+      },
+    };
+    render(<Receipt data={discounted} />);
+    expect(screen.getByText("Discount (10.00%)")).toBeInTheDocument();
+    expect(screen.getByText("-QAR 1.20")).toBeInTheDocument();
   });
 });

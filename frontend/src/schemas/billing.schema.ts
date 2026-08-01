@@ -20,3 +20,13 @@ export const addDraftItemSchema = z
 export const updateDraftItemSchema = z.object({
   quantity: billingQuantity,
 });
+
+export const discountValueInput = z
+  .string()
+  .trim()
+  .regex(/^\d{1,12}(\.\d{1,2})?$/, "Enter an amount with up to 2 decimals.");
+
+export const updateDraftDiscountSchema = z.object({
+  discount_type: z.enum(["NONE", "PERCENTAGE", "FIXED"]),
+  discount_value: discountValueInput,
+});

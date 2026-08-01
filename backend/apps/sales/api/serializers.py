@@ -56,6 +56,8 @@ class DraftSaleSerializer(serializers.ModelSerializer):
             "items",
             "subtotal",
             "tax_total",
+            "discount_type",
+            "discount_value",
             "discount_total",
             "grand_total",
             "notes",
@@ -106,6 +108,7 @@ class CompleteSaleRequestSerializer(serializers.Serializer):
             "shop_id",
             "sale_number",
             "grand_total",
+            "discount_total",
             "change_due",
             "completed_by",
             "payment_status",
@@ -271,6 +274,26 @@ class UpdateItemSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {field: "This field cannot be supplied." for field in extra}
                 )
+        return attrs
+
+
+class DraftDiscountSerializer(serializers.Serializer):
+    discount_type = serializers.ChoiceField(choices=Sale.DiscountType.choices)
+    discount_value = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+        default=Decimal("0.00"),
+    )
+
+    def validate(self, attrs):
+        if (
+            attrs["discount_type"] == Sale.DiscountType.PERCENTAGE
+            and attrs["discount_value"] > 100
+        ):
+            raise serializers.ValidationError(
+                {"discount_value": "Percentage discount cannot exceed 100%."}
+            )
         return attrs
 
 

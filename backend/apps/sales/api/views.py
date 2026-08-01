@@ -14,6 +14,7 @@ from apps.sales.services import (
     hold_draft_sale,
     resume_held_sale,
     remove_draft_item,
+    set_draft_discount,
     update_draft_item_quantity,
 )
 from common.pagination import StandardResultsSetPagination
@@ -25,6 +26,7 @@ from .serializers import (
     CompleteSaleRequestSerializer,
     CompletedSaleSerializer,
     CreateDraftSerializer,
+    DraftDiscountSerializer,
     DraftSaleSerializer,
     HoldDraftSerializer,
     UpdateItemSerializer,
@@ -143,6 +145,29 @@ class DraftItemDetailView(APIView):
         sale = sale_for_request(request, sale.pk)
         return success_response(
             "Draft item removed.",
+            DraftSaleSerializer(sale).data,
+        )
+
+
+class DraftDiscountView(APIView):
+    permission_classes = [IsCashierOrOwner]
+
+    @extend_schema(request=DraftDiscountSerializer, responses={200: DraftSaleSerializer})
+    def put(self, request, sale_id):
+        sale_for_request(request, sale_id)
+        serializer = DraftDiscountSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            sale = set_draft_discount(
+                sale_id=sale_id,
+                user=request.user,
+                **serializer.validated_data,
+            )
+        except BillingOperationError as exc:
+            raise_operation_error(exc)
+        sale = sale_for_request(request, sale.pk)
+        return success_response(
+            "Discount updated.",
             DraftSaleSerializer(sale).data,
         )
 

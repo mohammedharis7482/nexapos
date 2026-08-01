@@ -215,6 +215,9 @@ export function PaymentDialog({
         <div className="rounded-xl border border-border bg-surface-secondary p-4">
           <div className="flex justify-between text-sm"><span className="text-text-muted">Subtotal</span><strong><MoneyDisplay value={draft.subtotal} /></strong></div>
           <div className="mt-2 flex justify-between text-sm"><span className="text-text-muted">Tax</span><strong><MoneyDisplay value={draft.tax_total} /></strong></div>
+          {Number(draft.discount_total) > 0 ? (
+            <div className="mt-2 flex justify-between text-sm"><span className="text-text-muted">Discount{draft.discount_type === "PERCENTAGE" ? ` (${draft.discount_value}%)` : ""}</span><strong className="text-success">− <MoneyDisplay value={draft.discount_total} /></strong></div>
+          ) : null}
           <div className="mt-3 flex justify-between border-t border-border pt-3 text-xl"><strong>Grand total</strong><strong><MoneyDisplay value={draft.grand_total} /></strong></div>
         </div>
 

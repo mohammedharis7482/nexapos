@@ -28,6 +28,8 @@ export interface SaleItem {
   line_total: string;
 }
 
+export type DiscountType = "NONE" | "PERCENTAGE" | "FIXED";
+
 export interface DraftSale {
   id: string;
   status: SaleStatus;
@@ -36,6 +38,8 @@ export interface DraftSale {
   items: SaleItem[];
   subtotal: string;
   tax_total: string;
+  discount_type: DiscountType;
+  discount_value: string;
   discount_total: string;
   grand_total: string;
   notes: string;
@@ -55,6 +59,11 @@ export interface AddItemRequest {
 
 export interface UpdateItemRequest {
   quantity: string;
+}
+
+export interface UpdateDiscountRequest {
+  discount_type: DiscountType;
+  discount_value: string;
 }
 
 export type DraftListResponse = PaginatedResponse<DraftSale>;
