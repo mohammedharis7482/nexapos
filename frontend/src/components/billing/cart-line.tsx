@@ -8,15 +8,30 @@ import { MoneyDisplay } from "@/components/ui/display";
 import { Input } from "@/components/ui/input";
 import { billingQuantity } from "@/schemas/billing.schema";
 import type { SaleItem } from "@/types/billing";
+import { isDecimalUnit } from "@/types/product";
 
 export function nextQuantity(
   quantity: string,
   direction: "increase" | "decrease",
   unit: SaleItem["product"]["unit"] = "PIECE",
 ) {
-  const step = ["KG", "GRAM", "LITRE", "MILLILITRE"].includes(unit) ? 0.001 : 1;
-  const next = Number(quantity) + (direction === "increase" ? step : -step);
-  return Math.max(step, next).toFixed(3);
+  const decimal = isDecimalUnit(unit);
+  const step = decimal ? 0.001 : 1;
+  const next = Math.max(step, Number(quantity) + (direction === "increase" ? step : -step));
+  return decimal ? next.toFixed(3) : String(Math.round(next));
+}
+
+/**
+ * Whole-count products (piece, pack, bottle, ...) render as a clean integer
+ * instead of the API's fixed 3-decimal string. Weight/volume products keep
+ * their decimal precision, since fractional amounts (0.750 kg) are real.
+ * Falls back to the raw value for the rare case of a non-integer quantity
+ * on a whole-count product, rather than silently rounding it away.
+ */
+export function formatQuantityDisplay(quantity: string, unit: SaleItem["product"]["unit"]) {
+  if (isDecimalUnit(unit)) return quantity;
+  const numeric = Number(quantity);
+  return Number.isInteger(numeric) ? String(numeric) : quantity;
 }
 
 export function CartLine({
@@ -30,14 +45,15 @@ export function CartLine({
   onQuantity: (quantity: string) => void;
   onRemove: () => void;
 }) {
-  const [quantity, setQuantity] = useState(item.quantity);
+  const [quantity, setQuantity] = useState(formatQuantityDisplay(item.quantity, item.product.unit));
   const [confirmRemove, setConfirmRemove] = useState(false);
 
   function commit(value: string) {
-    if (billingQuantity.safeParse(value).success && value !== item.quantity) {
+    const parsed = billingQuantity.safeParse(value);
+    if (parsed.success && Number(value) !== Number(item.quantity)) {
       onQuantity(value);
     } else {
-      setQuantity(item.quantity);
+      setQuantity(formatQuantityDisplay(item.quantity, item.product.unit));
     }
   }
 
@@ -72,6 +88,7 @@ export function CartLine({
             inputMode="decimal"
             value={quantity}
             disabled={busy}
+            onFocus={(event) => event.target.select()}
             onChange={(event) => setQuantity(event.target.value)}
             onBlur={() => commit(quantity)}
             onKeyDown={(event) => {
