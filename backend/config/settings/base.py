@@ -147,6 +147,17 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False
+# Store the CSRF secret in the session rather than a separate cookie. A
+# cross-domain deployment (frontend and API on different registrable
+# domains) can have its csrftoken cookie dropped by browser third-party
+# cookie policies even with SameSite=None; Secure set correctly - and
+# Django's CSRF validation has no fallback once that cookie is missing,
+# regardless of what header the client sends (see CsrfViewMiddleware
+# _get_secret). Backing the secret with the session cookie - which the
+# frontend already depends on for authentication - means CSRF validation
+# rides on the same cookie the app already requires to work at all,
+# instead of needing a second, independently-fragile cookie.
+CSRF_USE_SESSIONS = True
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_AGE = config("SESSION_COOKIE_AGE_SECONDS", cast=int, default=28800)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = config(

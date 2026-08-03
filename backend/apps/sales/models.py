@@ -16,6 +16,11 @@ class Sale(BaseModel):
         COMPLETED = "COMPLETED", "Completed"
         CANCELLED = "CANCELLED", "Cancelled"
 
+    class DiscountType(models.TextChoices):
+        NONE = "NONE", "No discount"
+        PERCENTAGE = "PERCENTAGE", "Percentage"
+        FIXED = "FIXED", "Fixed amount"
+
     shop = models.ForeignKey(
         "shops.Shop",
         on_delete=models.PROTECT,
@@ -42,6 +47,16 @@ class Sale(BaseModel):
         default=Decimal("0.00"),
     )
     discount_total = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    discount_type = models.CharField(
+        max_length=10,
+        choices=DiscountType.choices,
+        default=DiscountType.NONE,
+    )
+    discount_value = models.DecimalField(
         max_digits=14,
         decimal_places=2,
         default=Decimal("0.00"),
@@ -103,6 +118,14 @@ class Sale(BaseModel):
             models.CheckConstraint(
                 condition=Q(discount_total__gte=0),
                 name="sales_discount_total_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(discount_value__gte=0),
+                name="sales_discount_value_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=~Q(discount_type="PERCENTAGE") | Q(discount_value__lte=100),
+                name="sales_discount_percentage_max_100",
             ),
             models.CheckConstraint(
                 condition=Q(grand_total__gte=0),

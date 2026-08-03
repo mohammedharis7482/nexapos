@@ -29,6 +29,9 @@ export function Receipt({ data }: { data: ReceiptData }) {
       <dl className="mt-4 space-y-1 border-y border-dashed border-black py-3">
         <div className="flex justify-between"><dt>Subtotal</dt><dd>QAR {sale.subtotal}</dd></div>
         <div className="flex justify-between"><dt>Tax</dt><dd>QAR {sale.tax_total}</dd></div>
+        {Number(sale.discount_total) > 0 ? (
+          <div className="flex justify-between"><dt>Discount{sale.discount_type === "PERCENTAGE" ? ` (${sale.discount_value}%)` : ""}</dt><dd>-QAR {sale.discount_total}</dd></div>
+        ) : null}
         <div className="flex justify-between text-sm font-bold"><dt>Total</dt><dd>QAR {sale.grand_total}</dd></div>
       </dl>
       <div className="mt-3 space-y-1">

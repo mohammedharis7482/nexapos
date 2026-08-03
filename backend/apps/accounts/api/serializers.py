@@ -56,6 +56,16 @@ class SuccessSerializer(serializers.Serializer):
     data = SessionDataSerializer(read_only=True, allow_null=True)
 
 
+class CsrfTokenDataSerializer(serializers.Serializer):
+    csrf_token = serializers.CharField(read_only=True)
+
+
+class CsrfTokenResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField(read_only=True)
+    message = serializers.CharField(read_only=True)
+    data = CsrfTokenDataSerializer(read_only=True)
+
+
 class LoginErrorSerializer(serializers.Serializer):
     success = serializers.BooleanField(read_only=True)
     message = serializers.CharField(read_only=True)

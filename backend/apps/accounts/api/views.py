@@ -16,6 +16,7 @@ from common.views import success_response
 
 from .serializers import (
     ChangePasswordSerializer,
+    CsrfTokenResponseSerializer,
     LoginErrorSerializer,
     LoginSerializer,
     SuccessSerializer,
@@ -27,10 +28,10 @@ class CsrfView(APIView):
     authentication_classes: list = []
     permission_classes = [AllowAny]
 
-    @extend_schema(responses={200: SuccessSerializer})
+    @extend_schema(responses={200: CsrfTokenResponseSerializer})
     def get(self, request):
-        get_token(request)
-        return success_response("CSRF cookie initialized.")
+        token = get_token(request)
+        return success_response("CSRF token issued.", {"csrf_token": token})
 
 
 class LoginView(APIView):

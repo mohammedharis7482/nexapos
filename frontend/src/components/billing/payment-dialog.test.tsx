@@ -31,6 +31,8 @@ const draft: DraftSale = {
   }],
   subtotal: "12.00",
   tax_total: "0.00",
+  discount_type: "NONE",
+  discount_value: "0.00",
   discount_total: "0.00",
   grand_total: "12.00",
   notes: "",

@@ -1,5 +1,5 @@
-import { readCsrfToken } from "@/lib/csrf";
-import type { ApiErrorResponse } from "@/types/auth";
+import { getCsrfToken, setCsrfToken } from "@/lib/csrf";
+import type { ApiErrorResponse, ApiSuccess } from "@/types/auth";
 
 export function resolveApiBaseUrl(
   configured: string | undefined,
@@ -114,7 +114,12 @@ export async function initializeCsrf(): Promise<void> {
     credentials: "include",
     headers: { Accept: "application/json" },
   });
-  await parseResponse(response);
+  const payload = await parseResponse<ApiSuccess<{ csrf_token: string }>>(response);
+  setCsrfToken(payload.data.csrf_token);
+}
+
+function isCsrfFailure(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 403 && error.message.startsWith("CSRF Failed");
 }
 
 export async function apiRequest<T>(
@@ -123,42 +128,72 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { timeoutMs, ...requestOptions } = options;
   const method = (options.method ?? "GET").toUpperCase();
-  const headers = new Headers(options.headers);
-  headers.set("Accept", "application/json");
+  const needsCsrf = unsafeMethods.has(method);
 
-  if (unsafeMethods.has(method)) {
-    await initializeCsrf();
-    const csrfToken = readCsrfToken();
-    if (!csrfToken) {
-      throw new ApiError(
-        "Security verification could not be initialized. Refresh and try again.",
-        0,
-      );
+  function buildHeaders(csrfToken: string | null): Headers {
+    const headers = new Headers(options.headers);
+    headers.set("Accept", "application/json");
+    if (needsCsrf && csrfToken) headers.set("X-CSRFToken", csrfToken);
+    if (
+      options.body &&
+      !(options.body instanceof FormData) &&
+      !headers.has("Content-Type")
+    ) {
+      headers.set("Content-Type", "application/json");
     }
-    headers.set("X-CSRFToken", csrfToken);
+    return headers;
   }
 
-  if (
-    options.body &&
-    !(options.body instanceof FormData) &&
-    !headers.has("Content-Type")
-  ) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  try {
+  async function send(csrfToken: string | null): Promise<T> {
     const response = await fetchWithTimeout(
       joinApiUrl(API_BASE_URL, path),
       {
         ...requestOptions,
         method,
         credentials: "include",
-        headers,
+        headers: buildHeaders(csrfToken),
       },
       timeoutMs,
     );
     return await parseResponse<T>(response);
+  }
+
+  // The CSRF token is cached in memory (see lib/csrf.ts) rather than read
+  // from a cookie, so it survives across requests without depending on
+  // the browser storing/sending a cross-site cookie. Only fetch a fresh
+  // one when nothing is cached yet.
+  if (needsCsrf && !getCsrfToken()) {
+    await initializeCsrf();
+  }
+
+  try {
+    if (needsCsrf && !getCsrfToken()) {
+      throw new ApiError(
+        "Security verification could not be initialized. Refresh and try again.",
+        0,
+      );
+    }
+    return await send(getCsrfToken());
   } catch (error) {
+    if (needsCsrf && isCsrfFailure(error)) {
+      // The cached token can go stale if the session's CSRF secret
+      // rotated since it was issued (e.g. a login or logout elsewhere in
+      // the app). Refresh once and retry before surfacing an error.
+      setCsrfToken(null);
+      await initializeCsrf();
+      const refreshedToken = getCsrfToken();
+      if (refreshedToken) {
+        try {
+          return await send(refreshedToken);
+        } catch (retryError) {
+          if (retryError instanceof ApiError) throw retryError;
+          throw new ApiError(
+            "NexaPOS cannot reach the server. Check your connection and try again.",
+            0,
+          );
+        }
+      }
+    }
     if (error instanceof ApiError) throw error;
     throw new ApiError(
       "NexaPOS cannot reach the server. Check your connection and try again.",

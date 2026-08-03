@@ -44,3 +44,23 @@ def calculate_line_totals(
         tax=tax,
         total=round_money(gross + tax),
     )
+
+
+def calculate_discount(
+    *,
+    subtotal: Decimal,
+    discount_type: str,
+    discount_value: Decimal,
+) -> Decimal:
+    """Resolve a bill-level discount against the subtotal.
+
+    The discount is always clamped to [0, subtotal] so a grand total can
+    never go negative regardless of what value was supplied.
+    """
+    if discount_type == "PERCENTAGE":
+        raw = subtotal * (discount_value / ONE_HUNDRED)
+    elif discount_type == "FIXED":
+        raw = discount_value
+    else:
+        return Decimal("0.00")
+    return max(Decimal("0.00"), min(round_money(raw), subtotal))

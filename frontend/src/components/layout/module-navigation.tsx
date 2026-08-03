@@ -15,7 +15,7 @@ export function ModuleNavigation({ label, items }: { label: string; items: Modul
   const pathname = usePathname() ?? "";
   return (
     <nav aria-label={label} className="overflow-x-auto">
-      <div className="flex min-w-max gap-1 rounded-[var(--radius-lg)] border border-border bg-surface-subtle p-1">
+      <div className="inline-flex gap-1 rounded-[var(--radius-lg)] border border-border bg-surface-subtle p-1">
         {items.map((item) => {
           const active = pathname === item.href
             || (item.href !== "/sales" && pathname.startsWith(`${item.href}/`));
@@ -25,8 +25,8 @@ export function ModuleNavigation({ label, items }: { label: string; items: Modul
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "inline-flex min-h-10 items-center rounded-[var(--radius-md)] px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]",
-                active ? "bg-surface text-primary shadow-sm" : "text-foreground-secondary hover:bg-surface-hover",
+                "inline-flex min-h-10 items-center rounded-[var(--radius-md)] px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--focus-ring)]",
+                active ? "bg-surface text-primary shadow-sm" : "text-foreground-secondary hover:bg-surface-active hover:text-foreground",
               )}
             >
               {item.label}

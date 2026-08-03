@@ -19,6 +19,13 @@ export const PRODUCT_UNITS = [
 
 export type ProductUnit = (typeof PRODUCT_UNITS)[number];
 
+/** Units genuinely sold by fractional weight/volume (e.g. 0.750 kg of produce). */
+export const DECIMAL_PRODUCT_UNITS: ProductUnit[] = ["KG", "GRAM", "LITRE", "MILLILITRE"];
+
+export function isDecimalUnit(unit: ProductUnit): boolean {
+  return DECIMAL_PRODUCT_UNITS.includes(unit);
+}
+
 export interface CategorySummary {
   id: string;
   name: string;

@@ -4,6 +4,7 @@ from .views import (
     DraftCancelView,
     DraftCompleteView,
     DraftDetailView,
+    DraftDiscountView,
     DraftItemCreateView,
     DraftItemDetailView,
     DraftListCreateView,
@@ -25,6 +26,11 @@ urlpatterns = [
         "drafts/<uuid:sale_id>/items/<uuid:item_id>/",
         DraftItemDetailView.as_view(),
         name="draft-item-detail",
+    ),
+    path(
+        "drafts/<uuid:sale_id>/discount/",
+        DraftDiscountView.as_view(),
+        name="draft-discount",
     ),
     path(
         "drafts/<uuid:sale_id>/cancel/",

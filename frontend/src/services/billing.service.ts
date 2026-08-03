@@ -4,6 +4,7 @@ import type { ApiSuccess } from "@/types/auth";
 import type {
   AddItemRequest,
   DraftSale,
+  UpdateDiscountRequest,
   UpdateItemRequest,
 } from "@/types/billing";
 import type { CompleteSaleRequest } from "@/types/payment";
@@ -44,6 +45,12 @@ export const billingService = {
     return apiRequest<ApiSuccess<DraftSale>>(
       `/billing/drafts/${saleId}/items/${itemId}/`,
       { method: "DELETE" },
+    );
+  },
+  setDiscount(saleId: string, payload: UpdateDiscountRequest) {
+    return apiRequest<ApiSuccess<DraftSale>>(
+      `/billing/drafts/${saleId}/discount/`,
+      { method: "PUT", body: JSON.stringify(payload) },
     );
   },
   cancel(saleId: string) {

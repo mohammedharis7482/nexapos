@@ -84,7 +84,7 @@ class SaasFoundationTests(TestCase):
 
     def csrf(self):
         response = self.client.get(reverse("accounts_api:csrf"))
-        return response.cookies["csrftoken"].value
+        return response.json()["data"]["csrf_token"]
 
     def public_post(self, path, data):
         return self.client.post(
@@ -807,9 +807,7 @@ class DevelopmentRegistrationTests(TestCase):
         self.client = Client(enforce_csrf_checks=True)
 
     def public_post(self, path, data):
-        csrf = self.client.get(reverse("accounts_api:csrf")).cookies[
-            "csrftoken"
-        ].value
+        csrf = self.client.get(reverse("accounts_api:csrf")).json()["data"]["csrf_token"]
         return self.client.post(
             path,
             data,

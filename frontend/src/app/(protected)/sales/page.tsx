@@ -98,7 +98,7 @@ export default function SalesPage() {
         status={filters.search || filters.date_from || filters.date_to || filters.payment_method || filters.created_by ? <Button size="sm" variant="ghost" onClick={() => { setSearchDraft(""); setPage(1); setFilters({ ordering: "-completed_at" }); }}>Clear filters</Button> : null}
       >
         <form
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_155px_155px_170px_190px_auto]"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_155px_155px_150px_170px_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             updateFilter("search", searchDraft);

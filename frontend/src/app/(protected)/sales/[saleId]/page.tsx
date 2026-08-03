@@ -68,7 +68,7 @@ export default function SaleDetailPage() {
             <dl className="mt-5 space-y-3 text-sm">
               <div className="flex justify-between"><dt className="text-text-muted">Subtotal</dt><dd><MoneyDisplay value={sale.subtotal} /></dd></div>
               <div className="flex justify-between"><dt className="text-text-muted">Tax</dt><dd><MoneyDisplay value={sale.tax_total} /></dd></div>
-              <div className="flex justify-between"><dt className="text-text-muted">Discount</dt><dd><MoneyDisplay value={sale.discount_total} /></dd></div>
+              <div className="flex justify-between"><dt className="text-text-muted">Discount{sale.discount_type === "PERCENTAGE" ? ` (${sale.discount_value}%)` : ""}</dt><dd className={Number(sale.discount_total) > 0 ? "text-success" : undefined}>{Number(sale.discount_total) > 0 ? "− " : ""}<MoneyDisplay value={sale.discount_total} /></dd></div>
               <div className="flex justify-between border-t border-border pt-3 text-lg font-bold"><dt>Total</dt><dd><MoneyDisplay value={sale.grand_total} /></dd></div>
             </dl>
           </Card>

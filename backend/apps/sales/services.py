@@ -11,7 +11,12 @@ from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.shops.models import Shop
 
-from .calculations import calculate_line_totals, round_money, round_quantity
+from .calculations import (
+    calculate_discount,
+    calculate_line_totals,
+    round_money,
+    round_quantity,
+)
 from .exceptions import BillingOperationError
 from apps.saas.models import AuditEvent
 from .models import CashierShift, Sale, SaleItem, SaleSequence
@@ -209,10 +214,15 @@ def recalculate_draft_totals(sale: Sale) -> Sale:
     sale.tax_total = round_money(
         sum((item.tax_amount for item in items), Decimal("0.00"))
     )
-    sale.discount_total = Decimal("0.00")
-    sale.grand_total = round_money(
+    sale.discount_total = calculate_discount(
+        subtotal=sale.subtotal,
+        discount_type=sale.discount_type,
+        discount_value=sale.discount_value,
+    )
+    lines_total = round_money(
         sum((item.line_total for item in items), Decimal("0.00"))
     )
+    sale.grand_total = round_money(lines_total - sale.discount_total)
     sale.save(
         update_fields=[
             "subtotal",
@@ -223,6 +233,32 @@ def recalculate_draft_totals(sale: Sale) -> Sale:
         ]
     )
     return sale
+
+
+@transaction.atomic
+def set_draft_discount(
+    *,
+    sale_id,
+    user: User,
+    discount_type: str,
+    discount_value: Decimal,
+) -> Sale:
+    sale = _locked_accessible_draft(sale_id=sale_id, user=user)
+    _require_draft(sale)
+    if discount_type == Sale.DiscountType.NONE:
+        discount_value = Decimal("0.00")
+    elif discount_type == Sale.DiscountType.PERCENTAGE and discount_value > 100:
+        raise BillingOperationError(
+            "discount_value", "Percentage discount cannot exceed 100%."
+        )
+    elif discount_type == Sale.DiscountType.FIXED and discount_value > sale.subtotal:
+        raise BillingOperationError(
+            "discount_value", "Discount cannot exceed the subtotal."
+        )
+    sale.discount_type = discount_type
+    sale.discount_value = round_money(discount_value)
+    sale.save(update_fields=["discount_type", "discount_value", "updated_at"])
+    return recalculate_draft_totals(sale)
 
 
 @transaction.atomic

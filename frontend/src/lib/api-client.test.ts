@@ -7,6 +7,7 @@ import {
   joinApiUrl,
   resolveApiBaseUrl,
 } from "./api-client";
+import { getCsrfToken, setCsrfToken } from "./csrf";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -15,8 +16,16 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+function csrfResponse(token: string) {
+  return jsonResponse({ success: true, message: "CSRF token issued.", data: { csrf_token: token } });
+}
+
 describe("API client", () => {
   beforeEach(() => {
+    // The token lives in module memory (never a cookie - see lib/csrf.ts),
+    // so tests must reset it explicitly rather than relying on
+    // document.cookie, which the client no longer reads at all.
+    setCsrfToken(null);
     document.cookie = "csrftoken=; Max-Age=0; path=/";
   });
 
@@ -62,20 +71,17 @@ describe("API client", () => {
     );
   });
 
-  it("initializes CSRF and sends credentials and the header for login", async () => {
+  it("initializes CSRF from the response body (not a cookie) and sends it as a header", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockImplementationOnce(async () => {
-        document.cookie = "csrftoken=test-csrf-token; path=/";
-        return jsonResponse({
-          success: true,
-          message: "CSRF cookie initialized.",
-          data: null,
-        });
-      })
+      .mockImplementationOnce(async () => csrfResponse("test-csrf-token"))
       .mockResolvedValueOnce(
         jsonResponse({ success: true, message: "ok", data: null }),
       );
+
+    // No cookie exists anywhere - the deployment this token flow exists
+    // for is exactly the case where the browser drops it.
+    expect(document.cookie).not.toContain("csrftoken");
 
     await apiRequest("/auth/login/", {
       method: "POST",
@@ -98,14 +104,69 @@ describe("API client", () => {
     expect(new Headers(request.headers).get("X-CSRFToken")).toBe(
       "test-csrf-token",
     );
+    expect(getCsrfToken()).toBe("test-csrf-token");
+  });
+
+  it("reuses the cached token across requests instead of re-fetching every time", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => csrfResponse("cached-token"))
+      .mockImplementation(async () =>
+        jsonResponse({ success: true, message: "ok", data: null }),
+      );
+
+    await apiRequest("/billing/drafts/", { method: "POST", body: "{}" });
+    await apiRequest("/billing/drafts/1/hold/", { method: "POST" });
+
+    const csrfCalls = fetchMock.mock.calls.filter(
+      (call) => call[0] === "http://localhost:8000/api/v1/auth/csrf/",
+    );
+    expect(csrfCalls).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("refreshes a stale cached token once and retries after a CSRF rejection", async () => {
+    setCsrfToken("stale-token");
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { success: false, message: "CSRF Failed: CSRF token incorrect.", errors: {} },
+          403,
+        ),
+      )
+      .mockImplementationOnce(async () => csrfResponse("fresh-token"))
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, message: "ok", data: null }),
+      );
+
+    const result = await apiRequest("/billing/drafts/", { method: "POST", body: "{}" });
+
+    expect(result).toEqual({ success: true, message: "ok", data: null });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const retryRequest = fetchMock.mock.calls[2][1] as RequestInit;
+    expect(new Headers(retryRequest.headers).get("X-CSRFToken")).toBe("fresh-token");
+    expect(getCsrfToken()).toBe("fresh-token");
+  });
+
+  it("surfaces a non-CSRF 403 without retrying", async () => {
+    setCsrfToken("valid-token");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse(
+        { success: false, message: "Owner access is required.", errors: {} },
+        403,
+      ),
+    );
+
+    await expect(
+      apiRequest("/products/", { method: "POST", body: "{}" }),
+    ).rejects.toMatchObject({ status: 403, message: "Owner access is required." });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("parses an invalid-login response without exposing credentials", async () => {
     vi.spyOn(globalThis, "fetch")
-      .mockImplementationOnce(async () => {
-        document.cookie = "csrftoken=test-csrf-token; path=/";
-        return jsonResponse({ success: true, message: "ok", data: null });
-      })
+      .mockImplementationOnce(async () => csrfResponse("test-csrf-token"))
       .mockResolvedValueOnce(
         jsonResponse(
           {
