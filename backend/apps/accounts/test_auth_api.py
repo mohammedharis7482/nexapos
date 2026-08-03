@@ -61,7 +61,7 @@ class SessionAuthenticationApiTests(TestCase):
     def csrf_token(self) -> str:
         response = self.client.get(reverse("accounts_api:csrf"))
         self.assertEqual(response.status_code, 200)
-        return response.cookies["csrftoken"].value
+        return response.json()["data"]["csrf_token"]
 
     def login(self, user=None, password=PASSWORD, shop=None):
         user = user or self.owner
@@ -82,15 +82,54 @@ class SessionAuthenticationApiTests(TestCase):
         response = self.client.get(reverse("accounts_api:csrf"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("csrftoken", response.cookies)
-        self.assertEqual(
-            response.json(),
+        # CSRF_USE_SESSIONS=True: the secret lives in the session, not a
+        # separate cookie. A cross-domain deployment can have that cookie
+        # dropped by third-party cookie policies even with SameSite=None;
+        # Secure set correctly, so the token must be readable from the
+        # response body instead of depending on Set-Cookie reaching the
+        # browser at all.
+        self.assertNotIn("csrftoken", response.cookies)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["message"], "CSRF token issued.")
+        self.assertTrue(payload["data"]["csrf_token"])
+
+    def test_csrf_validates_without_a_csrf_cookie_ever_existing(self):
+        # Regression test for a cross-domain deployment where a browser's
+        # third-party cookie policy can drop the csrftoken cookie even
+        # with SameSite=None; Secure set correctly (Django's CSRF
+        # middleware has no fallback once that cookie is missing - it
+        # rejects with "CSRF cookie not set" regardless of what header is
+        # sent, see CsrfViewMiddleware._get_secret). CSRF_USE_SESSIONS=True
+        # ties validation to the session cookie instead, so this whole
+        # flow - fetching the token, logging in, and making an
+        # authenticated mutation - must succeed while a csrftoken cookie
+        # never exists in the client's cookie jar at any point.
+        token = self.csrf_token()
+        self.assertNotIn("csrftoken", self.client.cookies)
+
+        login_response = self.login()
+        self.assertEqual(login_response.status_code, 200)
+        self.assertNotIn("csrftoken", self.client.cookies)
+
+        # A freshly-issued token (Django masks a new value per call to
+        # get_token(), even for the same underlying secret) still validates
+        # a subsequent authenticated mutation with no CSRF cookie involved
+        # anywhere in the exchange.
+        mutation_token = self.csrf_token()
+        self.assertNotEqual(mutation_token, token)
+        change_response = self.client.post(
+            reverse("accounts_api:change-password"),
             {
-                "success": True,
-                "message": "CSRF cookie initialized.",
-                "data": None,
+                "current_password": PASSWORD,
+                "new_password": NEW_PASSWORD,
+                "confirm_password": NEW_PASSWORD,
             },
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=mutation_token,
         )
+        self.assertEqual(change_response.status_code, 200)
+        self.assertNotIn("csrftoken", self.client.cookies)
 
     def test_auth_routes_use_exact_trailing_slashes_without_redirects(self):
         expected_paths = {
@@ -307,7 +346,7 @@ class SessionAuthenticationApiTests(TestCase):
 
     def test_logout_invalidates_session(self):
         self.login()
-        token = self.client.cookies["csrftoken"].value
+        token = self.csrf_token()
         response = self.client.post(
             reverse("accounts_api:logout"),
             HTTP_X_CSRFTOKEN=token,
@@ -350,7 +389,7 @@ class SessionAuthenticationApiTests(TestCase):
 
     def test_successful_password_change_preserves_session(self):
         self.login()
-        token = self.client.cookies["csrftoken"].value
+        token = self.csrf_token()
         response = self.client.post(
             reverse("accounts_api:change-password"),
             {
@@ -369,7 +408,7 @@ class SessionAuthenticationApiTests(TestCase):
 
     def test_wrong_current_password_returns_field_error(self):
         self.login()
-        token = self.client.cookies["csrftoken"].value
+        token = self.csrf_token()
         response = self.client.post(
             reverse("accounts_api:change-password"),
             {
@@ -386,7 +425,7 @@ class SessionAuthenticationApiTests(TestCase):
 
     def test_password_validation_and_confirmation_errors(self):
         self.login()
-        token = self.client.cookies["csrftoken"].value
+        token = self.csrf_token()
         weak = self.client.post(
             reverse("accounts_api:change-password"),
             {

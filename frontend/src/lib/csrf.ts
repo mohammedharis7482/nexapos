@@ -1,13 +1,20 @@
-const CSRF_COOKIE_NAME = "csrftoken";
+/**
+ * In-memory CSRF token store.
+ *
+ * The token is issued by GET /auth/csrf/ in the JSON response body and
+ * held only in module state - it is never read from or written to
+ * document.cookie. This deployment serves the frontend and API from
+ * different registrable domains, and a browser's third-party cookie
+ * policy can silently drop a cross-site cookie even when it's set with
+ * SameSite=None; Secure, with no way for JS to detect or recover from
+ * that short of not depending on the cookie being readable at all.
+ */
+let csrfToken: string | null = null;
 
-export function readCsrfToken(cookieSource?: string): string | null {
-  const source =
-    cookieSource ?? (typeof document === "undefined" ? "" : document.cookie);
-  const cookie = source
-    .split(";")
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith(`${CSRF_COOKIE_NAME}=`));
+export function getCsrfToken(): string | null {
+  return csrfToken;
+}
 
-  if (!cookie) return null;
-  return decodeURIComponent(cookie.slice(CSRF_COOKIE_NAME.length + 1));
+export function setCsrfToken(token: string | null): void {
+  csrfToken = token;
 }

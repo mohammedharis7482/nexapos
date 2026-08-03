@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { ApiError, UNAUTHORIZED_EVENT } from "@/lib/api-client";
+import { setCsrfToken } from "@/lib/csrf";
 import { authService } from "@/services/auth.service";
 import type { AuthenticatedUser, LoginRequest } from "@/types/auth";
 
@@ -116,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleUnauthorized = () => {
+      setCsrfToken(null);
       clearUserScopedBrowserState();
       dispatch({ type: "LOGGED_OUT" });
     };
@@ -126,6 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (payload: LoginRequest) => {
     try {
       const response = await authService.login(payload);
+      // Django rotates the session's CSRF secret on login; the token
+      // cached before login no longer matches it. The request wrapper
+      // would recover from this itself (refresh-and-retry-once on a CSRF
+      // failure), but clearing it here avoids a guaranteed-to-fail first
+      // attempt on whatever the user does next.
+      setCsrfToken(null);
       dispatch({ type: "AUTHENTICATED", user: response.data.user });
       return response.data.user;
     } catch (error) {
@@ -139,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.logout();
     } finally {
+      setCsrfToken(null);
       clearUserScopedBrowserState();
       dispatch({ type: "LOGGED_OUT" });
     }
