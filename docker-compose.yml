@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: nexapos
+      POSTGRES_USER: nexapos_user
+      POSTGRES_PASSWORD: change-me
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexapos_user -d nexapos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SECRET_KEY: local-development-secret-key-not-for-production
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      # The service name Docker Compose resolves on the internal network -
+      # never localhost/127.0.0.1, which would point at the backend
+      # container itself rather than the db container.
+      POSTGRES_DB: nexapos
+      POSTGRES_USER: nexapos_user
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      CSRF_TRUSTED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      DJANGO_EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+      REQUIRE_EMAIL_VERIFICATION: "False"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    command: npm run dev
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_API_TIMEOUT_MS: "15000"
+    volumes:
+      - ./frontend:/app
+      # Anonymous volume so this mount doesn't shadow the node_modules
+      # installed into the image during the build - without this, the bind
+      # mount above would replace /app/node_modules with the (empty) host
+      # directory instead of the one npm install populated.
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

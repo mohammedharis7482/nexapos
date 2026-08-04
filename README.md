@@ -31,7 +31,74 @@ include branches or automated subscription charging.
 - `design/`: design assets and decisions
 - `infrastructure/`: deployment and infrastructure configuration
 
+## Local development with Docker
+
+The fastest way to run NexaPOS locally is Docker Compose, which starts
+PostgreSQL, the Django API, and the Next.js frontend together with no manual
+virtualenv or `npm install` step on the host.
+
+**Prerequisite**: Docker Desktop (or Docker Engine + the Compose plugin)
+installed and running.
+
+```bash
+docker compose build
+docker compose up
+```
+
+The first `up` runs `python manage.py migrate` automatically before starting
+the API, against a fresh PostgreSQL database that Compose waits to be
+healthy before starting the backend at all. Once the logs settle:
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000/api/v1>
+- API schema docs: <http://localhost:8000/api/docs/>
+- PostgreSQL: `localhost:5432` (user `nexapos_user`, database `nexapos`,
+  password `change-me` - published for connecting a local DB client only;
+  these are fixed development-only credentials, not secrets)
+
+Run `docker compose up -d` instead to run in the background, and
+`docker compose logs -f backend` (or `frontend`, or `db`) to follow one
+service's logs. `docker compose down` stops everything; add `-v` to also
+delete the PostgreSQL volume and start from a completely empty database next
+time.
+
+Before public registration works, seed the example subscription plans (same
+one-time step as the non-Docker workflow):
+
+```bash
+docker compose exec backend python manage.py seed_plans
+```
+
+Run any other one-off Django management command the same way, for example:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py bootstrap_shop --shop-name "Al Noor Grocery" \
+  --address "Doha, Qatar" --phone "+974 5555 0101" --username owner \
+  --full-name "Shop Owner" --email owner@example.com
+docker compose exec backend python manage.py test
+```
+
+Both `./backend` and `./frontend` are bind-mounted into their containers, so
+code edits on the host take effect immediately (Django's dev server
+autoreloads; Next.js fast-refreshes) without rebuilding the image. You only
+need `docker compose build` again after changing a dependency
+(`requirements/*.txt` or `package.json`), since those install during the
+image build, not at container start.
+
+The Docker environment always talks to the API at `http://localhost:8000`
+from the browser and uses `db` (the Compose service name, not `localhost`)
+as `POSTGRES_HOST` between containers on the internal network - see
+`docker-compose.yml` for every environment variable it sets. It intentionally
+mirrors `backend/.env.example` and `frontend/.env.example`'s development
+defaults rather than replacing them; running the app without Docker (below)
+still works exactly as documented.
+
 ## Local frontend
+
+Docker Compose (above) is the recommended path and needs none of the steps
+below. Use this manual setup only if you specifically want the app running
+directly on the host instead of in containers.
 
 ```bash
 cd frontend
