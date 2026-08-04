@@ -1,0 +1,53 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+backend/db.sqlite3
+backend/.venv/
+venv/
+.venv/
+backend/staticfiles/*
+!backend/staticfiles/.gitkeep
+backend/media/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Node / Next.js
+frontend/node_modules/
+node_modules/
+frontend/.next/
+.next/
+frontend/out/
+out/
+frontend/coverage/
+coverage/
+
+# Environment files (never bake secrets into an image)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Builds and temporary files
+dist/
+build/
+tmp/
+temp/
