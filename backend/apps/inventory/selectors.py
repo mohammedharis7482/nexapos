@@ -1,4 +1,4 @@
-from django.db.models import F, Q, QuerySet
+from django.db.models import Count, F, Q, QuerySet
 
 from apps.accounts.models import User
 from apps.products.models import Product
@@ -83,16 +83,24 @@ def movements_for_product(
 
 def inventory_summary(user: User) -> dict[str, int]:
     products = inventory_products_for_user(user)
-    balances = InventoryBalance.objects.filter(
-        shop=user.shop,
-        product__in=products,
+    # inventory_balance is a OneToOneField, so joining to it never fans a
+    # product row out into more than one - a single conditional-Count
+    # aggregate is safe here (unlike a reverse FK/M2M join, which would be).
+    counts = products.aggregate(
+        total_products=Count("id"),
+        initialized=Count("inventory_balance"),
+        low_stock=Count(
+            "inventory_balance",
+            filter=Q(
+                inventory_balance__quantity_on_hand__gt=0,
+                inventory_balance__quantity_on_hand__lte=F(
+                    "inventory_balance__low_stock_threshold"
+                ),
+            ),
+        ),
+        out_of_stock=Count(
+            "inventory_balance",
+            filter=Q(inventory_balance__quantity_on_hand=0),
+        ),
     )
-    return {
-        "total_products": products.count(),
-        "initialized": balances.count(),
-        "low_stock": balances.filter(
-            quantity_on_hand__gt=0,
-            quantity_on_hand__lte=F("low_stock_threshold"),
-        ).count(),
-        "out_of_stock": balances.filter(quantity_on_hand=0).count(),
-    }
+    return counts
