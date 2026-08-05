@@ -22,7 +22,13 @@ def report_bounds(user, date_from: date, date_to: date) -> tuple[datetime, datet
     )
 
 
-def filtered_sales(user, filters: dict):
+def filtered_sales(user, filters: dict, *, sale_ids=None):
+    # ReportsView resolves the filtered sale ID set once and passes it to
+    # every report function below, so the (possibly subquery-backed, e.g.
+    # the category filter) WHERE clause is only ever evaluated once per
+    # request instead of once per report section.
+    if sale_ids is not None:
+        return Sale.objects.filter(pk__in=sale_ids)
     start, end = report_bounds(user, filters["date_from"], filters["date_to"])
     sales = Sale.objects.filter(
         shop=user.shop,
@@ -43,8 +49,12 @@ def filtered_sales(user, filters: dict):
     return sales.distinct()
 
 
-def sales_report(user, filters: dict) -> dict:
-    sales = filtered_sales(user, filters)
+def resolve_filtered_sale_ids(user, filters: dict) -> list:
+    return list(filtered_sales(user, filters).values_list("id", flat=True))
+
+
+def sales_report(user, filters: dict, *, sale_ids=None) -> dict:
+    sales = filtered_sales(user, filters, sale_ids=sale_ids)
     totals = sales.aggregate(
         gross_sales=Coalesce(
             Sum("grand_total"),
@@ -104,8 +114,8 @@ def sales_report(user, filters: dict) -> dict:
     }
 
 
-def product_report(user, filters: dict) -> list[dict]:
-    sales = filtered_sales(user, filters)
+def product_report(user, filters: dict, *, sale_ids=None) -> list[dict]:
+    sales = filtered_sales(user, filters, sale_ids=sale_ids)
     items = SaleItem.objects.filter(sale__in=sales)
     if category_id := filters.get("category"):
         items = items.filter(product__category_id=category_id)
@@ -208,8 +218,8 @@ def inventory_report(user, filters: dict) -> dict:
     }
 
 
-def payment_report(user, filters: dict) -> list[dict]:
-    sales = filtered_sales(user, filters)
+def payment_report(user, filters: dict, *, sale_ids=None) -> list[dict]:
+    sales = filtered_sales(user, filters, sale_ids=sale_ids)
     payments = Payment.objects.filter(shop=user.shop, sale__in=sales)
     if method := filters.get("payment_method"):
         payments = payments.filter(payment_method=method)
@@ -248,8 +258,8 @@ def payment_report(user, filters: dict) -> list[dict]:
     ]
 
 
-def cashier_report(user, filters: dict) -> list[dict]:
-    sales = filtered_sales(user, filters)
+def cashier_report(user, filters: dict, *, sale_ids=None) -> list[dict]:
+    sales = filtered_sales(user, filters, sale_ids=sale_ids)
     rows = (
         sales.values("completed_by_id", "completed_by__full_name")
         .annotate(
