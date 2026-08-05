@@ -162,6 +162,23 @@ describe("BillingPage", () => {
     );
   });
 
+  it("does not double-search when Enter is pressed before the debounce timer fires", async () => {
+    render(<BillingPage />);
+    const search = await screen.findByLabelText("Product or barcode search");
+    fireEvent.change(search, { target: { value: "6281007023412" } });
+    fireEvent.submit(search.closest("form")!);
+    await waitFor(() => expect(billing.addItem).toHaveBeenCalled());
+    // Wait past the 250ms debounce window the pending timer from the
+    // keystroke would have fired in, if it hadn't been cancelled - a
+    // second search for the *same* term here means the timer wasn't
+    // actually cancelled by the immediate Enter-triggered search.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const callsForBarcode = inventory.list.mock.calls.filter(
+      ([params]) => params?.search === "6281007023412",
+    );
+    expect(callsForBarcode).toHaveLength(1);
+  });
+
   it("confirms cancellation and prepares a fresh draft", async () => {
     billing.create
       .mockResolvedValueOnce({ success: true, message: "", data: draft })
