@@ -94,6 +94,15 @@ mirrors `backend/.env.example` and `frontend/.env.example`'s development
 defaults rather than replacing them; running the app without Docker (below)
 still works exactly as documented.
 
+The frontend container runs `next dev --webpack` instead of the default
+Turbopack bundler. Turbopack's Rust filesystem layer does not reliably
+resolve the `next` package across the anonymous `/app/node_modules` volume
+mount used to keep the container's Linux-native dependencies from being
+shadowed by the bind-mounted host directory, which surfaces as a
+`Next.js package not found, version 0.0.0` crash on every request. This is a
+Docker-only override in `docker-compose.yml`'s `command:`; `npm run dev`
+outside Docker (below) is unaffected and still uses Turbopack.
+
 ## Local frontend
 
 Docker Compose (above) is the recommended path and needs none of the steps

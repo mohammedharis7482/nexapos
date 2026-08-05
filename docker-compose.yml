@@ -49,7 +49,15 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    command: npm run dev
+    # Turbopack (the default dev bundler since Next.js 15) panics with
+    # "FATAL: An unexpected Turbopack error occurred ... Next.js package not
+    # found, version 0.0.0" when node_modules is split across the bind mount
+    # and the anonymous volume below - its Rust filesystem layer doesn't
+    # resolve the package the same way Node's own resolver does across that
+    # mount boundary. Webpack (Node-based, chokidar file watching) doesn't
+    # have this failure mode. This only overrides the container's dev
+    # command - `npm run dev` outside Docker still uses Turbopack.
+    command: npm run dev -- --webpack
     depends_on:
       - backend
     environment:
