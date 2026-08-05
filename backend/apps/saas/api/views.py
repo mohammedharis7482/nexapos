@@ -421,9 +421,13 @@ class InvitationListCreateView(APIView):
 
     @extend_schema(responses={200: InvitationSerializer(many=True)})
     def get(self, request):
+        paginator = StandardResultsSetPagination()
+        page = paginator.paginate_queryset(
+            invitations_for_manager(request.user), request, view=self
+        )
         return success_response(
             "Invitations retrieved.",
-            InvitationSerializer(invitations_for_manager(request.user), many=True).data,
+            paginator.get_paginated_data(InvitationSerializer(page, many=True).data),
         )
 
     @extend_schema(request=InvitationSerializer, responses={201: InvitationSerializer})

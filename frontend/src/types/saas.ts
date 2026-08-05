@@ -1,4 +1,5 @@
 import type { ApiSuccess, UserRole } from "@/types/auth";
+import type { PaginatedResponse } from "@/types/api";
 
 export interface RegistrationResult {
   shop: PublicShopIdentity;
@@ -113,6 +114,6 @@ export interface StaffCreateRequest {
   temporary_password: string;
   temporary_password_confirm: string;
 }
-export type InvitationsResponse = ApiSuccess<Invitation[]>;
+export type InvitationsResponse = PaginatedResponse<Invitation>;
 export type SubscriptionResponse = ApiSuccess<Subscription>;
 export type OnboardingResponse = ApiSuccess<OnboardingState>;
