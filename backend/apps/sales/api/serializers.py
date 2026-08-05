@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema_field
 
 from apps.payments.models import Payment
 from apps.sales.models import CashierShift, Sale, SaleItem
-from apps.sales.services import shift_summary
+from apps.sales.services import shift_summary as compute_shift_summary
 
 
 class SaleCreatorSerializer(serializers.Serializer):
@@ -332,4 +332,7 @@ class CashierShiftSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_summary(self, shift) -> dict:
-        return shift_summary(shift)
+        precomputed = self.context.get("shift_summaries")
+        if precomputed is not None:
+            return precomputed.get(shift.id) or compute_shift_summary(shift)
+        return compute_shift_summary(shift)

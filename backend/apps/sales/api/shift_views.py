@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from apps.accounts.models import User
 from apps.sales.exceptions import BillingOperationError
 from apps.sales.models import CashierShift
-from apps.sales.services import active_shift_for, close_shift, open_shift
+from apps.sales.services import active_shift_for, bulk_shift_summaries, close_shift, open_shift
 from common.pagination import StandardResultsSetPagination
 from common.permissions import IsCashierOrOwner
 from common.views import success_response
@@ -108,9 +108,13 @@ class ShiftListView(APIView):
             queryset = queryset.filter(opened_at__date__lte=parsed["date_to"])
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
+        summaries = bulk_shift_summaries(page)
+        serializer = CashierShiftSerializer(
+            page, many=True, context={"shift_summaries": summaries}
+        )
         return success_response(
             "Shifts retrieved.",
-            paginator.get_paginated_data(CashierShiftSerializer(page, many=True).data),
+            paginator.get_paginated_data(serializer.data),
         )
 
 
