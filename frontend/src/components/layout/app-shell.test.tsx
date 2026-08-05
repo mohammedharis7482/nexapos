@@ -61,6 +61,14 @@ describe("premium application shell", () => {
     expect(screen.getByRole("dialog", { name: "Account" })).toBeInTheDocument();
   });
 
+  it("opens the dynamically-loaded change password dialog from the account menu", async () => {
+    render(<AppShell><p>Page content</p></AppShell>);
+    fireEvent.click(screen.getByRole("button", { name: "Open account menu" }));
+    const accountDialog = screen.getByRole("dialog", { name: "Account" });
+    fireEvent.click(within(accountDialog).getByRole("button", { name: "Change password" }));
+    expect(await screen.findByRole("dialog", { name: "Change password" })).toBeInTheDocument();
+  });
+
   it("marks parent modules active for nested routes", () => {
     mocks.pathname = "/settings/team";
     render(<AppShell><p>Page content</p></AppShell>);
