@@ -158,6 +158,7 @@ def register_shop(
     country: str = "Qatar",
     timezone_name: str = "Asia/Qatar",
     currency: str = "QAR",
+    shop_id=None,
 ) -> RegistrationResult:
     normalized_email = User.objects.normalize_email_address(owner_email)
     if User.objects.annotate(email_ci=Lower("email")).filter(
@@ -186,6 +187,7 @@ def register_shop(
         now = timezone.now()
         verification_required = settings.REQUIRE_EMAIL_VERIFICATION
         shop = Shop.objects.create(
+            **({"id": shop_id} if shop_id else {}),
             name=shop_name.strip(),
             address=address.strip(),
             phone=phone.strip(),

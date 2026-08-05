@@ -69,31 +69,35 @@ one-time step as the non-Docker workflow):
 docker compose exec backend python manage.py seed_plans
 ```
 
+### Shared demo login
+
 To get a consistent demo shop and login without sharing real credentials or
-a database, run:
+a database, run this once after `docker compose up`:
 
 ```bash
-docker compose exec backend python manage.py seed_demo
+docker compose exec backend python manage.py seed_demo_shop
 ```
-
-This loads `backend/fixtures/demo_seed.json` - a small, git-committed fixture
-with **no real secrets** - creating one demo shop with a couple of sample
-categories and products so the dashboard and billing screen aren't empty on
-first login:
 
 | Field    | Value                                  |
 | -------- | --------------------------------------- |
-| Shop ID  | `10000000-0000-0000-0000-000000000001` |
-| Username | `demo_owner`                            |
-| Password | `NexaDemo#2026`                         |
+| Shop ID  | `1dab9df7-7675-41cc-9973-b2ce13aa547d` |
+| Username | `mohammedharis`                         |
+| Password | `haris7482`                             |
 
 This is a fixed, shared, non-production credential documented here on
 purpose so anyone with this repo can log in identically on their own
-machine - it is not tied to any real shop or personal data. The command is
-safe to rerun (it upserts by fixed ID rather than inserting new rows) and
-only runs with `DEBUG=True`, so it has no effect against a production
-settings module. Running `reset_development_data` wipes it along with
-everything else; rerun `seed_demo` afterward to bring it back.
+machine - it is not tied to any real personal data, and it is never used in
+production. The command creates the shop through the same `register_shop()`
+service function the public registration API uses (so it's a fully valid
+shop with a real hashed password, an OWNER account, and a trial
+subscription, not a shortcut), explicitly marks onboarding complete the same
+way the app's own "finish onboarding" endpoint does (so login goes straight
+to the dashboard), and adds a couple of sample categories and products so
+the dashboard and billing screen aren't empty on first login. It only runs
+with `DEBUG=True` and is safe to rerun: it checks for this exact shop ID
+first and skips creation if it already exists, so it never errors or
+duplicates. Running `reset_development_data` wipes it along with everything
+else; rerun `seed_demo_shop` afterward to bring it back.
 
 Run any other one-off Django management command the same way, for example:
 
@@ -243,9 +247,9 @@ The command is disabled unless `DEBUG=True`, requires an existing shop, is safe
 to rerun, and never creates users, stock, or transactions.
 
 For a ready-made, shareable demo shop and login instead of your own real
-data, see `python manage.py seed_demo` under
-[Local development with Docker](#local-development-with-docker) above - it
-works the same way outside Docker.
+data, see `python manage.py seed_demo_shop` under
+[Shared demo login](#shared-demo-login) above - it works the same way
+outside Docker.
 
 Inventory is initialized deliberately from `/inventory/{productId}` after a
 product exists. This phase does not provide an inventory seeding command: stock
