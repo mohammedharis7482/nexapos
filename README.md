@@ -69,6 +69,32 @@ one-time step as the non-Docker workflow):
 docker compose exec backend python manage.py seed_plans
 ```
 
+To get a consistent demo shop and login without sharing real credentials or
+a database, run:
+
+```bash
+docker compose exec backend python manage.py seed_demo
+```
+
+This loads `backend/fixtures/demo_seed.json` - a small, git-committed fixture
+with **no real secrets** - creating one demo shop with a couple of sample
+categories and products so the dashboard and billing screen aren't empty on
+first login:
+
+| Field    | Value                                  |
+| -------- | --------------------------------------- |
+| Shop ID  | `10000000-0000-0000-0000-000000000001` |
+| Username | `demo_owner`                            |
+| Password | `NexaDemo#2026`                         |
+
+This is a fixed, shared, non-production credential documented here on
+purpose so anyone with this repo can log in identically on their own
+machine - it is not tied to any real shop or personal data. The command is
+safe to rerun (it upserts by fixed ID rather than inserting new rows) and
+only runs with `DEBUG=True`, so it has no effect against a production
+settings module. Running `reset_development_data` wipes it along with
+everything else; rerun `seed_demo` afterward to bring it back.
+
 Run any other one-off Django management command the same way, for example:
 
 ```bash
@@ -215,6 +241,11 @@ python manage.py seed_catalogue --shop-id <shop-uuid>
 
 The command is disabled unless `DEBUG=True`, requires an existing shop, is safe
 to rerun, and never creates users, stock, or transactions.
+
+For a ready-made, shareable demo shop and login instead of your own real
+data, see `python manage.py seed_demo` under
+[Local development with Docker](#local-development-with-docker) above - it
+works the same way outside Docker.
 
 Inventory is initialized deliberately from `/inventory/{productId}` after a
 product exists. This phase does not provide an inventory seeding command: stock
