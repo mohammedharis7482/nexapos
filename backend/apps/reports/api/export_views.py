@@ -54,12 +54,12 @@ class ProductExportView(CsvExportView):
     headers = ("SKU", "Name", "Category", "Barcode", "Unit", "Selling price", "Active")
 
     def rows(self, request):
-        return list(Product.objects.filter(shop=request.user.shop).select_related(
+        return Product.objects.filter(shop=request.user.shop).select_related(
             "category"
         ).values_list(
             "sku", "name", "category__name", "barcode", "unit",
             "selling_price", "is_active",
-        ))
+        )
 
 
 class InventoryExportView(CsvExportView):
@@ -67,12 +67,12 @@ class InventoryExportView(CsvExportView):
     headers = ("SKU", "Product", "Quantity on hand", "Low stock threshold", "Updated")
 
     def rows(self, request):
-        return list(InventoryBalance.objects.filter(
+        return InventoryBalance.objects.filter(
             shop=request.user.shop
         ).select_related("product").values_list(
             "product__sku", "product__name", "quantity_on_hand",
             "low_stock_threshold", "updated_at",
-        ))
+        )
 
 
 class SalesExportView(CsvExportView):
@@ -87,10 +87,10 @@ class SalesExportView(CsvExportView):
             queryset = queryset.filter(completed_at__date__gte=value)
         if value := request.query_params.get("date_to"):
             queryset = queryset.filter(completed_at__date__lte=value)
-        return list(queryset.values_list(
+        return queryset.values_list(
             "sale_number", "completed_at", "completed_by__full_name",
             "subtotal", "tax_total", "grand_total",
-        ))
+        )
 
 
 class ShiftExportView(CsvExportView):
@@ -101,10 +101,10 @@ class ShiftExportView(CsvExportView):
     )
 
     def rows(self, request):
-        return list(CashierShift.objects.filter(
+        return CashierShift.objects.filter(
             shop=request.user.shop
         ).select_related("cashier").values_list(
             "cashier__full_name", "status", "opened_at", "closed_at",
             "opening_cash", "expected_closing_cash",
             "counted_closing_cash", "cash_difference",
-        ))
+        )
