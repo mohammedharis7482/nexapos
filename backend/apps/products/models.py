@@ -95,6 +95,10 @@ class Product(BaseModel):
     )
     is_tax_inclusive = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    # Optional. Written only through the dedicated image endpoint, which
+    # enforces content type and size; the field itself stays permissive so
+    # existing create/update paths are unaffected. Mirrors Shop.logo.
+    image = models.ImageField(upload_to="product-images/", blank=True)
 
     class Meta:
         ordering = ["name"]

@@ -1,8 +1,13 @@
 from decimal import Decimal
 
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.products.image_rules import (
+    ALLOWED_PRODUCT_IMAGE_FORMATS,
+    MAX_PRODUCT_IMAGE_BYTES,
+)
 from apps.products.import_services import MAX_IMPORT_BYTES
 from apps.products.models import (
     Product,
@@ -58,6 +63,19 @@ class ProductCategorySerializer(serializers.ModelSerializer):
         return attrs
 
 
+def product_image_url(product, request=None) -> str | None:
+    """Absolute URL for a product image, or None when there is no image.
+
+    Reads only `field.url`, so a cloud storage backend returning a fully
+    qualified URL passes through untouched (build_absolute_uri is a no-op on
+    an absolute URL).
+    """
+    if not product.image:
+        return None
+    url = product.image.url
+    return request.build_absolute_uri(url) if request else url
+
+
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySummarySerializer(read_only=True)
     category_id = serializers.UUIDField(
@@ -65,6 +83,7 @@ class ProductSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -82,10 +101,15 @@ class ProductSerializer(serializers.ModelSerializer):
             "is_active",
             "category",
             "category_id",
+            "image_url",
             "created_at",
             "updated_at",
         )
         read_only_fields = ("id", "created_at", "updated_at")
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_image_url(self, product) -> str | None:
+        return product_image_url(product, self.context.get("request"))
 
     def validate_name(self, value: str) -> str:
         value = value.strip()
@@ -174,6 +198,24 @@ class ProductImportUploadSerializer(serializers.Serializer):
             raise serializers.ValidationError("Upload a CSV (.csv) file.")
         if value.size > MAX_IMPORT_BYTES:
             raise serializers.ValidationError("CSV files must be 5 MB or smaller.")
+        return value
+
+
+class ProductImageUploadSerializer(serializers.Serializer):
+    image = serializers.ImageField()
+
+    def validate_image(self, value):
+        # Size first: cheapest check, and it bounds the work below.
+        if value.size > MAX_PRODUCT_IMAGE_BYTES:
+            raise serializers.ValidationError("Images must be 5 MB or smaller.")
+        # ImageField already ran Pillow's verify() and set `image`, so the
+        # detected format is trustworthy - a .png-named JPEG or a renamed
+        # non-image is caught here rather than by its filename.
+        detected = getattr(value.image, "format", None)
+        if detected not in ALLOWED_PRODUCT_IMAGE_FORMATS:
+            raise serializers.ValidationError(
+                "Upload a JPG, PNG, or WEBP image."
+            )
         return value
 
 
