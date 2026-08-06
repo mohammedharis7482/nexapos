@@ -4,9 +4,12 @@ from django.conf import settings
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rest_framework.exceptions import APIException
 
 from .models import User
+from apps.saas.models import AuditEvent
+from apps.saas.services import invalidate_user_sessions
 from apps.shops.models import Shop
 
 INVALID_CREDENTIALS_MESSAGE = "Invalid shop or credentials."
@@ -67,7 +70,6 @@ def login_user(*, request, shop_id, username: str, password: str) -> User:
         deny_login("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE, 401)
 
     login(request, user, backend="common.authentication.ShopModelBackend")
-    from apps.saas.models import AuditEvent
 
     AuditEvent.objects.create(
         shop=user.shop,
@@ -96,8 +98,6 @@ def change_user_password(
 
     validate_password(new_password, user=user)
     user.set_password(new_password)
-    from django.utils import timezone
-
     user.must_change_password = False
     user.password_changed_at = timezone.now()
     user.save(
@@ -108,13 +108,10 @@ def change_user_password(
             "updated_at",
         ]
     )
-    from apps.saas.services import invalidate_user_sessions
-
     invalidate_user_sessions(
         user, exclude_session_key=request.session.session_key
     )
     update_session_auth_hash(request, user)
-    from apps.saas.models import AuditEvent
 
     AuditEvent.objects.create(
         shop=user.shop,

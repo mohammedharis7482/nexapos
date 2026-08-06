@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
@@ -503,8 +504,6 @@ class OnboardingView(APIView):
 
     def _ensure_primary(self, request):
         if not user_is_primary_owner(request.user):
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("Primary owner access is required.")
 
     @extend_schema(responses={200: OnboardingSerializer})
@@ -550,8 +549,6 @@ class OnboardingCompleteView(APIView):
     @extend_schema(request=None, responses={200: SuccessSerializer})
     def post(self, request):
         if not user_is_primary_owner(request.user):
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("Primary owner access is required.")
         shop = complete_onboarding(request.user.shop)
         _send_onboarding_complete(request.user)

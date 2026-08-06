@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
@@ -121,8 +122,6 @@ class InvitationSerializer(serializers.ModelSerializer):
             return "ACCEPTED"
         if invitation.revoked_at:
             return "REVOKED"
-        from django.utils import timezone
-
         return "EXPIRED" if invitation.expires_at <= timezone.now() else "PENDING"
 
 
