@@ -10,7 +10,6 @@ from apps.accounts.models import User
 from apps.inventory.models import InventoryBalance, StockMovement
 from apps.payments.models import Payment
 from apps.products.models import Product
-from apps.shops.models import Shop
 
 from .calculations import (
     calculate_discount,
@@ -485,9 +484,22 @@ def resume_held_sale(*, sale_id, user: User) -> Sale:
 
 
 def _next_sale_number(*, sale: Sale) -> str:
-    Shop.objects.select_for_update().get(pk=sale.shop_id)
     sequence_date = timezone.localdate()
-    sequence, _ = SaleSequence.objects.get_or_create(
+    # Ensure today's counter row exists before locking it. The first sale of
+    # the day is the only racing path here, and get_or_create handles it
+    # internally: it retries the read after an IntegrityError against the
+    # (shop, sequence_date) unique constraint, inside its own savepoint so
+    # the surrounding transaction survives.
+    SaleSequence.objects.get_or_create(
+        shop_id=sale.shop_id,
+        sequence_date=sequence_date,
+    )
+    # Lock only this shop's counter for today, not the whole Shop row.
+    # Locking shops_shop as the mutex serialised every checkout in a shop
+    # against every other checkout, and against unrelated shop writes
+    # (settings, onboarding, quota enforcement) - concurrent sales of
+    # different products on different registers had no reason to contend.
+    sequence = SaleSequence.objects.select_for_update().get(
         shop_id=sale.shop_id,
         sequence_date=sequence_date,
     )

@@ -35,6 +35,11 @@ class Command(BaseCommand):
             raise CommandError("The specified shop does not exist.") from exc
         if not shop.is_active:
             raise CommandError("Cashiers cannot be created for an inactive shop.")
+        # Advisory pre-check so the operator fails fast before being asked
+        # for a password. Not authoritative: it runs outside a transaction
+        # and therefore takes no row lock (holding one across an
+        # interactive prompt would be worse than the race it prevents).
+        # The binding check runs under lock inside the atomic block below.
         try:
             enforce_user_limit(shop)
         except SaasOperationError as exc:
@@ -64,6 +69,12 @@ class Command(BaseCommand):
             raise CommandError(" ".join(exc.messages)) from exc
 
         with transaction.atomic():
+            # Authoritative: inside a transaction this takes the quota row
+            # lock, so a concurrent create cannot slip past the same count.
+            try:
+                enforce_user_limit(shop)
+            except SaasOperationError as exc:
+                raise CommandError(exc.message) from exc
             if User.objects.select_for_update().filter(
                 shop=shop,
                 username__iexact=username,
