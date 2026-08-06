@@ -97,6 +97,7 @@ function apiMessage(error: unknown, fallback: string) {
 export default function BillingPage() {
   const initializationStarted = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const addInFlightRef = useRef(false);
   const searchTimerRef = useRef<number | null>(null);
   const [draft, setDraft] = useState<DraftSale | null>(null);
   const [results, setResults] = useState<InventoryItem[]>([]);
@@ -207,7 +208,12 @@ export default function BillingPage() {
   }, [search, category, searchProducts]);
 
   const addProduct = useCallback(async (productId: string) => {
-    if (!draft) return;
+    // Guards both the product-grid click path and the barcode-scan/Enter
+    // path (submitSearch) with one check, since a fast double Enter or a
+    // double scan could otherwise fire two concurrent add requests before
+    // the first sets busyItem.
+    if (!draft || addInFlightRef.current) return;
+    addInFlightRef.current = true;
     setBusyItem(productId);
     setError(null);
     setSuccess(null);
@@ -226,6 +232,7 @@ export default function BillingPage() {
       setError(apiMessage(addError, "The product could not be added."));
     } finally {
       setBusyItem(null);
+      addInFlightRef.current = false;
     }
   }, [draft]);
 

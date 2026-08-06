@@ -179,6 +179,28 @@ describe("BillingPage", () => {
     expect(callsForBarcode).toHaveLength(1);
   });
 
+  it("does not add the same scanned product twice from a double Enter before the add resolves", async () => {
+    let resolveAdd: (value: { success: true; message: string; data: DraftSale }) => void;
+    billing.addItem.mockReturnValue(
+      new Promise((resolve) => { resolveAdd = resolve; }),
+    );
+    render(<BillingPage />);
+    const search = await screen.findByLabelText("Product or barcode search");
+    const form = search.closest("form")!;
+    fireEvent.change(search, { target: { value: "6281007023412" } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(billing.addItem).toHaveBeenCalledTimes(1));
+    // A second Enter (or scan) while the first add is still in flight must
+    // not fire a second addItem call for the same product.
+    fireEvent.submit(form);
+    // Give the second submit's async chain (searchProducts -> addProduct)
+    // room to actually run before asserting - otherwise this check can
+    // pass vacuously before the second call would have landed.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    resolveAdd!({ success: true, message: "", data: draft });
+    await waitFor(() => expect(billing.addItem).toHaveBeenCalledTimes(1));
+  });
+
   it("confirms cancellation and prepares a fresh draft", async () => {
     billing.create
       .mockResolvedValueOnce({ success: true, message: "", data: draft })
