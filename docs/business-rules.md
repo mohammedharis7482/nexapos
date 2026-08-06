@@ -26,9 +26,9 @@ no stock and are revalidated on resume. Card success is confirmed externally.
 7. New normal users require an explicit shop and default to cashier.
 8. Shop defaults are QAR currency, `Asia/Qatar` timezone, and `INV` invoice
    prefix.
-9. Disabled shops and users must be rejected by future business workflows.
-10. Future queries and APIs must filter by the authenticated user's shop and
-    must not accept an arbitrary client-provided shop as authorization.
+9. Disabled shops and users are rejected by business workflows.
+10. Every query and API filters by the authenticated user's shop and never
+    accepts a client-provided shop as authorization.
 11. Authentication uses a server-side Django session. Login rotates the session
     key, logout invalidates it, and unsafe requests require CSRF validation.
 12. Inactive users and users belonging to inactive shops cannot log in.
@@ -111,7 +111,12 @@ no stock and are revalidated on resume. Card success is confirmed externally.
 42. Cash, card, and one cash-plus-card split are supported. Payment entries must
     be positive and each method may appear at most once.
 43. Sale numbers are server-generated at completion as
-    `NXP-{shop-prefix}-{YYYYMMDD}-{sequence}` using a locked shop/day sequence.
+    `NXP-{shop-prefix}-{YYYYMMDD}-{sequence}`. The counter is a `SaleSequence`
+    row per shop per day, locked with `select_for_update` for the increment, so
+    concurrent checkouts get distinct contiguous numbers. The lock is scoped to
+    that row deliberately - locking the `Shop` row instead would serialise every
+    register in the shop against every other. Covered by
+    `apps/sales/test_concurrency.py`.
 44. OWNER can complete any own-shop draft and read all own-shop completed sales.
     CASHIER can complete and read only their own sales. Cross-shop access is
     never allowed.
@@ -150,9 +155,13 @@ no stock and are revalidated on resume. Card success is confirmed externally.
     blocks business mutations. `CANCELLED` preserves data and blocks tenant use.
 50. Primary ownership is the protected `Shop.primary_owner` relationship.
     Normal role actions cannot transfer, deactivate, or demote it.
-51. Active users and active products count toward plan limits. Limits are
-    checked by backend services before creation/reactivation and invitation
-    acceptance.
+51. Active users and active products count toward plan limits, checked by
+    backend services before creation/reactivation and invitation acceptance.
+    The check takes a `select_for_update` lock on the shop's `ShopSubscription`
+    row first, so concurrent creates cannot all observe the same pre-insert
+    count and all pass. Outside a transaction the check is advisory only (the
+    `create_cashier` command relies on this, then re-checks under lock before
+    inserting). Covered by `apps/saas/test_concurrency.py`.
 52. Subscription payments are not connected; lifecycle transitions are
     platform-admin operations in this foundation.
 52a. Sales History and Reports reject an end date earlier than the start date;

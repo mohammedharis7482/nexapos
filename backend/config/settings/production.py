@@ -96,7 +96,9 @@ LOGGING["loggers"]["nexapos.request"]["level"] = config(  # noqa: F405
 )
 
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # Swap to a cloud backend by setting DJANGO_DEFAULT_FILE_STORAGE, e.g.
+    # cloudinary_storage.storage.MediaCloudinaryStorage - no code change.
+    "default": {"BACKEND": DEFAULT_FILE_STORAGE_BACKEND},  # noqa: F405
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },

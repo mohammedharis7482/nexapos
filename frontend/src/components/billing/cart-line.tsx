@@ -1,11 +1,12 @@
 "use client";
 
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { IconButton } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/ui/display";
 import { Input } from "@/components/ui/input";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { billingQuantity } from "@/schemas/billing.schema";
 import type { SaleItem } from "@/types/billing";
 import { isDecimalUnit } from "@/types/product";
@@ -34,7 +35,7 @@ export function formatQuantityDisplay(quantity: string, unit: SaleItem["product"
   return Number.isInteger(numeric) ? String(numeric) : quantity;
 }
 
-export function CartLine({
+export const CartLine = memo(function CartLine({
   item,
   busy,
   onQuantity,
@@ -43,17 +44,25 @@ export function CartLine({
 }: {
   item: SaleItem;
   busy: boolean;
-  onQuantity: (quantity: string) => void;
-  onRemove: () => void;
-  onFocusItem?: () => void;
+  onQuantity: (itemId: string, quantity: string) => void;
+  onRemove: (itemId: string) => void;
+  onFocusItem?: (itemId: string) => void;
 }) {
   const [quantity, setQuantity] = useState(formatQuantityDisplay(item.quantity, item.product.unit));
   const [confirmRemove, setConfirmRemove] = useState(false);
 
+  // Mirrors the server-confirmed quantity whenever it changes from outside
+  // (a successful update, or reverting after a failed one) - the input is
+  // disabled via `busy` for the whole round trip, so this never clobbers an
+  // in-progress edit.
+  useEffect(() => {
+    setQuantity(formatQuantityDisplay(item.quantity, item.product.unit));
+  }, [item.quantity, item.product.unit]);
+
   function commit(value: string) {
     const parsed = billingQuantity.safeParse(value);
     if (parsed.success && Number(value) !== Number(item.quantity)) {
-      onQuantity(value);
+      onQuantity(item.id, value);
     } else {
       setQuantity(formatQuantityDisplay(item.quantity, item.product.unit));
     }
@@ -62,16 +71,19 @@ export function CartLine({
   return (
     <article className="border-b border-border py-3.5 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold">{item.product.name}</h3>
-          <p className="mt-0.5 text-xs text-text-muted">
-            {item.product.sku} · <MoneyDisplay value={item.unit_price} />/{item.product.unit.toLowerCase()}
-          </p>
+        <div className="flex min-w-0 items-start gap-2.5">
+          <ProductThumb src={item.product.image_url} alt={item.product.name} size="sm" />
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold">{item.product.name}</h3>
+            <p className="mt-0.5 text-xs text-text-muted">
+              {item.product.sku} · <MoneyDisplay value={item.unit_price} />/{item.product.unit.toLowerCase()}
+            </p>
+          </div>
         </div>
         {confirmRemove ? (
           <div className="flex items-center gap-1">
             <button type="button" className="min-h-10 rounded-lg px-2 text-xs font-semibold text-text-secondary hover:bg-surface-secondary" onClick={() => setConfirmRemove(false)}>Keep</button>
-            <button type="button" className="min-h-10 rounded-lg bg-danger-soft px-2 text-xs font-semibold text-danger hover:bg-red-100" onClick={onRemove}>Remove</button>
+            <button type="button" className="min-h-10 rounded-lg bg-danger-soft px-2 text-xs font-semibold text-danger hover:bg-red-100" onClick={() => onRemove(item.id)}>Remove</button>
           </div>
         ) : (
           <IconButton aria-label={`Remove ${item.product.name}`} disabled={busy} onClick={() => setConfirmRemove(true)}>
@@ -81,7 +93,7 @@ export function CartLine({
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <IconButton aria-label={`Decrease ${item.product.name}`} disabled={busy} onClick={() => onQuantity(nextQuantity(item.quantity, "decrease", item.product.unit))}>
+          <IconButton aria-label={`Decrease ${item.product.name}`} disabled={busy} onClick={() => onQuantity(item.id, nextQuantity(item.quantity, "decrease", item.product.unit))}>
             <Minus className="size-4" />
           </IconButton>
           <Input
@@ -92,7 +104,7 @@ export function CartLine({
             disabled={busy}
             onFocus={(event) => {
               event.target.select();
-              onFocusItem?.();
+              onFocusItem?.(item.id);
             }}
             onChange={(event) => setQuantity(event.target.value)}
             onBlur={() => commit(quantity)}
@@ -103,7 +115,7 @@ export function CartLine({
               }
             }}
           />
-          <IconButton aria-label={`Increase ${item.product.name}`} disabled={busy} onClick={() => onQuantity(nextQuantity(item.quantity, "increase", item.product.unit))}>
+          <IconButton aria-label={`Increase ${item.product.name}`} disabled={busy} onClick={() => onQuantity(item.id, nextQuantity(item.quantity, "increase", item.product.unit))}>
             <Plus className="size-4" />
           </IconButton>
         </div>
@@ -116,4 +128,4 @@ export function CartLine({
       </div>
     </article>
   );
-}
+});

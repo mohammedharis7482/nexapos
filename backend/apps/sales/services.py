@@ -1,7 +1,8 @@
+from collections import Counter
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count, DecimalField, Q, Sum
+from django.db.models import Count, DecimalField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -9,7 +10,6 @@ from apps.accounts.models import User
 from apps.inventory.models import InventoryBalance, StockMovement
 from apps.payments.models import Payment
 from apps.products.models import Product
-from apps.shops.models import Shop
 
 from .calculations import (
     calculate_discount,
@@ -79,49 +79,93 @@ def open_shift(
 
 
 def shift_summary(shift: CashierShift) -> dict:
-    completed = shift.sales.filter(status=Sale.Status.COMPLETED)
-    payment_totals = {
-        row["payment_method"]: row["total"]
-        for row in Payment.objects.filter(
-            shift=shift, sale__status=Sale.Status.COMPLETED
-        ).values("payment_method").annotate(
-            total=Coalesce(
-                Sum("amount"), Decimal("0.00"),
-                output_field=DecimalField(max_digits=14, decimal_places=2),
+    return bulk_shift_summaries([shift])[shift.id]
+
+
+def bulk_shift_summaries(shifts) -> dict:
+    """Compute shift_summary()'s fields for many shifts in a fixed number of
+    queries, independent of how many shifts are passed.
+
+    Each grouped aggregate below is scoped to exactly one joined relation
+    (payments, sale items, or neither) so no aggregate ever fans out across
+    two joins at once - mixing joins in a single aggregate() call would let a
+    completed sale with N items get counted/summed N times instead of once.
+    """
+    shifts = list(shifts)
+    if not shifts:
+        return {}
+    shift_ids = [shift.id for shift in shifts]
+    money_field = DecimalField(max_digits=14, decimal_places=2)
+
+    payment_totals: dict = {}
+    for row in (
+        Payment.objects.filter(shift_id__in=shift_ids, sale__status=Sale.Status.COMPLETED)
+        .values("shift_id", "payment_method")
+        .annotate(total=Coalesce(Sum("amount"), Decimal("0.00"), output_field=money_field))
+    ):
+        payment_totals.setdefault(row["shift_id"], {})[row["payment_method"]] = row["total"]
+
+    sale_aggregates = {
+        row["shift_id"]: row
+        for row in (
+            Sale.objects.filter(shift_id__in=shift_ids, status=Sale.Status.COMPLETED)
+            .values("shift_id")
+            .annotate(
+                completed_bills=Count("id"),
+                gross_sales=Coalesce(Sum("grand_total"), Decimal("0.00"), output_field=money_field),
             )
         )
     }
-    cash = payment_totals.get(Payment.Method.CASH, Decimal("0.00"))
-    card = payment_totals.get(Payment.Method.CARD, Decimal("0.00"))
-    aggregate = completed.aggregate(
-        completed_bills=Count("id"),
-        gross_sales=Coalesce(
-            Sum("grand_total"), Decimal("0.00"),
-            output_field=DecimalField(max_digits=14, decimal_places=2),
-        ),
-        items_sold=Coalesce(
-            Sum("items__quantity"), Decimal("0.000"),
-            output_field=DecimalField(max_digits=15, decimal_places=3),
-        ),
-    )
-    split_count = completed.annotate(payment_count=Count("payments")).filter(
-        payment_count__gt=1
-    ).count()
-    expected = round_money(shift.opening_cash + cash)
-    return {
-        "opening_cash": shift.opening_cash,
-        "completed_bills": aggregate["completed_bills"],
-        "gross_sales": aggregate["gross_sales"],
-        "cash_sales": cash,
-        "card_sales": card,
-        "split_payment_count": split_count,
-        "expected_closing_cash": expected,
-        "counted_closing_cash": shift.counted_closing_cash,
-        "cash_difference": shift.cash_difference,
-        "items_sold": aggregate["items_sold"],
-        "opened_at": shift.opened_at,
-        "closed_at": shift.closed_at,
+
+    items_sold_by_shift = {
+        row["sale__shift_id"]: row["items_sold"]
+        for row in (
+            SaleItem.objects.filter(
+                sale__shift_id__in=shift_ids, sale__status=Sale.Status.COMPLETED
+            )
+            .values("sale__shift_id")
+            .annotate(
+                items_sold=Coalesce(
+                    Sum("quantity"), Decimal("0.000"),
+                    output_field=DecimalField(max_digits=15, decimal_places=3),
+                )
+            )
+        )
     }
+
+    # Deliberately not a second .values().annotate() chained onto the first
+    # annotate()/filter(): re-grouping by shift_id there would rewrite the
+    # HAVING clause to apply across the whole shift instead of per sale.
+    # Pulling the (already correctly per-sale-filtered) shift_id values and
+    # counting them in Python avoids that regrouping trap.
+    split_counts = Counter(
+        Sale.objects.filter(shift_id__in=shift_ids, status=Sale.Status.COMPLETED)
+        .annotate(payment_count=Count("payments"))
+        .filter(payment_count__gt=1)
+        .values_list("shift_id", flat=True)
+    )
+
+    summaries = {}
+    for shift in shifts:
+        agg = sale_aggregates.get(shift.id, {})
+        shift_payments = payment_totals.get(shift.id, {})
+        cash = shift_payments.get(Payment.Method.CASH, Decimal("0.00"))
+        card = shift_payments.get(Payment.Method.CARD, Decimal("0.00"))
+        summaries[shift.id] = {
+            "opening_cash": shift.opening_cash,
+            "completed_bills": agg.get("completed_bills", 0),
+            "gross_sales": agg.get("gross_sales", Decimal("0.00")),
+            "cash_sales": cash,
+            "card_sales": card,
+            "split_payment_count": split_counts.get(shift.id, 0),
+            "expected_closing_cash": round_money(shift.opening_cash + cash),
+            "counted_closing_cash": shift.counted_closing_cash,
+            "cash_difference": shift.cash_difference,
+            "items_sold": items_sold_by_shift.get(shift.id, Decimal("0.000")),
+            "opened_at": shift.opened_at,
+            "closed_at": shift.closed_at,
+        }
+    return summaries
 
 
 @transaction.atomic
@@ -440,9 +484,22 @@ def resume_held_sale(*, sale_id, user: User) -> Sale:
 
 
 def _next_sale_number(*, sale: Sale) -> str:
-    Shop.objects.select_for_update().get(pk=sale.shop_id)
     sequence_date = timezone.localdate()
-    sequence, _ = SaleSequence.objects.get_or_create(
+    # Ensure today's counter row exists before locking it. The first sale of
+    # the day is the only racing path here, and get_or_create handles it
+    # internally: it retries the read after an IntegrityError against the
+    # (shop, sequence_date) unique constraint, inside its own savepoint so
+    # the surrounding transaction survives.
+    SaleSequence.objects.get_or_create(
+        shop_id=sale.shop_id,
+        sequence_date=sequence_date,
+    )
+    # Lock only this shop's counter for today, not the whole Shop row.
+    # Locking shops_shop as the mutex serialised every checkout in a shop
+    # against every other checkout, and against unrelated shop writes
+    # (settings, onboarding, quota enforcement) - concurrent sales of
+    # different products on different registers had no reason to contend.
+    sequence = SaleSequence.objects.select_for_update().get(
         shop_id=sale.shop_id,
         sequence_date=sequence_date,
     )

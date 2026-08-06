@@ -20,7 +20,7 @@ const draft: DraftSale = {
   created_by: { id: "user-id", full_name: "Cashier", role: "CASHIER" },
   items: [{
     id: "item-id",
-    product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE" },
+    product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
     quantity: "2.000",
     unit_price: "6.00",
     tax_rate: "0.00",
@@ -40,6 +40,8 @@ const draft: DraftSale = {
   cancelled_by: null,
   created_at: "",
   updated_at: "",
+  held_at: null,
+  shift: "shift-id",
 };
 const completed = {
   ...draft,

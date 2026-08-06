@@ -1,9 +1,20 @@
-from django.db.models import F, Q, QuerySet
+from django.db.models import Count, F, Q, QuerySet
 
 from apps.accounts.models import User
 from apps.products.models import Product
+from common.params import parse_bool_param
 
 from .models import InventoryBalance, StockMovement
+
+
+def stock_status_for(balance: InventoryBalance | None) -> str:
+    if balance is None:
+        return "NOT_INITIALIZED"
+    if balance.quantity_on_hand == 0:
+        return "OUT_OF_STOCK"
+    if balance.quantity_on_hand <= balance.low_stock_threshold:
+        return "LOW_STOCK"
+    return "IN_STOCK"
 
 
 def inventory_products_for_user(user: User) -> QuerySet[Product]:
@@ -32,8 +43,9 @@ def filter_inventory_products(
         )
     if category:
         queryset = queryset.filter(category_id=category)
-    if is_active.lower() in {"true", "false"}:
-        queryset = queryset.filter(is_active=is_active.lower() == "true")
+    parsed_is_active = parse_bool_param(is_active)
+    if parsed_is_active is not None:
+        queryset = queryset.filter(is_active=parsed_is_active)
 
     status = stock_status.upper()
     if status == "NOT_INITIALIZED":
@@ -83,16 +95,24 @@ def movements_for_product(
 
 def inventory_summary(user: User) -> dict[str, int]:
     products = inventory_products_for_user(user)
-    balances = InventoryBalance.objects.filter(
-        shop=user.shop,
-        product__in=products,
+    # inventory_balance is a OneToOneField, so joining to it never fans a
+    # product row out into more than one - a single conditional-Count
+    # aggregate is safe here (unlike a reverse FK/M2M join, which would be).
+    counts = products.aggregate(
+        total_products=Count("id"),
+        initialized=Count("inventory_balance"),
+        low_stock=Count(
+            "inventory_balance",
+            filter=Q(
+                inventory_balance__quantity_on_hand__gt=0,
+                inventory_balance__quantity_on_hand__lte=F(
+                    "inventory_balance__low_stock_threshold"
+                ),
+            ),
+        ),
+        out_of_stock=Count(
+            "inventory_balance",
+            filter=Q(inventory_balance__quantity_on_hand=0),
+        ),
     )
-    return {
-        "total_products": products.count(),
-        "initialized": balances.count(),
-        "low_stock": balances.filter(
-            quantity_on_hand__gt=0,
-            quantity_on_hand__lte=F("low_stock_threshold"),
-        ).count(),
-        "out_of_stock": balances.filter(quantity_on_hand=0).count(),
-    }
+    return counts

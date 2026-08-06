@@ -43,15 +43,24 @@ uses the direct peer address.
 
 ## Cookies, CORS, CSRF, and topology
 
-The expected deployment is same-site HTTPS, preferably frontend and API on
-subdomains of one registrable domain. Production defaults use Secure,
-HttpOnly session cookies and `SameSite=Lax`; CSRF cookies remain script-readable
-because the SPA sends `X-CSRFToken`.
+Production uses Secure, HttpOnly session cookies with `SameSite=Lax`.
 
-If truly cross-site domains are selected, set both cookie SameSite values to
-`None`, keep Secure enabled, explicitly list the frontend in CORS and CSRF
-origins, and test every browser. Wildcard hosts and CORS origins are rejected.
-Development remains HTTP localhost with non-secure cookies.
+`CSRF_USE_SESSIONS = True`: the CSRF secret is stored in the session, and the
+token is delivered in the `GET /api/v1/auth/csrf/` response body rather than in
+a readable cookie. This removes the dependency on a second cookie surviving the
+round trip - under a cross-domain deployment a browser's third-party cookie
+policy can silently drop it even with `SameSite=None; Secure`. The token still
+must be echoed in `X-CSRFToken`, so CSRF protection is unchanged; only its
+transport moved.
+
+Cross-site deployments additionally need `SameSite=None`, Secure enabled, and
+the frontend explicitly listed in CORS and CSRF origins. Wildcard hosts and
+CORS origins are rejected. Development is HTTP localhost with non-secure
+cookies.
+
+Residual risk: session-cookie survival in a cross-domain browser is a separate
+concern from the CSRF token and still needs real-browser verification per
+target deployment.
 
 ## Request and error safety
 
@@ -66,6 +75,23 @@ selectors now expose only draft/cancelled records to draft operations, the
 service itself enforces the DRAFT state under its transaction lock, and a
 regression test proves a completed sale remains completed with its payment and
 SALE movement intact.
+
+## Concurrency integrity
+
+Multi-step writes run in one transaction and take row locks in a fixed order.
+Two audited races are closed and covered by `apps/*/test_concurrency.py`:
+
+- **Plan quota**: `enforce_user_limit`/`enforce_product_limit` lock the shop's
+  `ShopSubscription` row before counting. Previously every concurrent create
+  read the same pre-insert count and all passed - a shop could land arbitrarily
+  past its cap, not just one over.
+- **Sale numbering**: the per-shop/day `SaleSequence` row is locked for the
+  increment, yielding distinct contiguous invoice numbers without serialising
+  the whole shop.
+
+Stock deduction re-validates availability under lock inside the completion
+transaction, so `quantity_on_hand` cannot go negative; a database
+`CheckConstraint` enforces the same floor independently.
 
 ## Headers and CSP
 
@@ -121,7 +147,7 @@ be returned. Wrong Shop ID, username, or password always uses
 `INVALID_CREDENTIALS`. Denied attempts create no session. Development logs use
 reason categories at debug level and never include passwords, request bodies,
 session identifiers, or account tokens.
-# Email and cleanup controls
+## Email and cleanup controls
 
 Email failures are logged using safe event IDs, backend names, states, and
 exception categories. Logs exclude recipients, bodies, action URLs, tokens,

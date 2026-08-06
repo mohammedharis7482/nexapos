@@ -12,7 +12,7 @@ const wholeUnitItem: SaleItem = {
     name: "Baladna Milk",
     sku: "MILK-001",
     barcode: "123",
-    unit: "BOTTLE",
+    unit: "BOTTLE", image_url: null,
   },
   quantity: "2.000",
   unit_price: "6.00",
@@ -49,18 +49,18 @@ describe("CartLine", () => {
     const onQuantity = vi.fn();
     render(<CartLine item={wholeUnitItem} busy={false} onQuantity={onQuantity} onRemove={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Increase Baladna Milk" }));
-    expect(onQuantity).toHaveBeenCalledWith("3");
+    expect(onQuantity).toHaveBeenCalledWith("item-id", "3");
     fireEvent.click(screen.getByRole("button", { name: "Decrease Baladna Milk" }));
-    expect(onQuantity).toHaveBeenCalledWith("1");
+    expect(onQuantity).toHaveBeenCalledWith("item-id", "1");
   });
 
   it("steps weight-based products by 0.001 and keeps decimals", () => {
     const onQuantity = vi.fn();
     render(<CartLine item={weightUnitItem} busy={false} onQuantity={onQuantity} onRemove={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Increase Loose Tomatoes" }));
-    expect(onQuantity).toHaveBeenCalledWith("0.751");
+    expect(onQuantity).toHaveBeenCalledWith("produce-id", "0.751");
     fireEvent.click(screen.getByRole("button", { name: "Decrease Loose Tomatoes" }));
-    expect(onQuantity).toHaveBeenCalledWith("0.749");
+    expect(onQuantity).toHaveBeenCalledWith("produce-id", "0.749");
   });
 
   it("commits direct typed input and supports remove", () => {
@@ -70,11 +70,11 @@ describe("CartLine", () => {
     const input = screen.getByLabelText("Quantity for Baladna Milk");
     fireEvent.change(input, { target: { value: "5" } });
     fireEvent.blur(input);
-    expect(onQuantity).toHaveBeenCalledWith("5");
+    expect(onQuantity).toHaveBeenCalledWith("item-id", "5");
     fireEvent.click(screen.getByRole("button", { name: "Remove Baladna Milk" }));
     expect(onRemove).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    expect(onRemove).toHaveBeenCalledOnce();
+    expect(onRemove).toHaveBeenCalledWith("item-id");
   });
 
   it("does not re-commit on blur when the typed value is numerically unchanged", () => {
@@ -92,6 +92,19 @@ describe("CartLine", () => {
     const selectSpy = vi.spyOn(input, "select");
     fireEvent.focus(input);
     expect(selectSpy).toHaveBeenCalledOnce();
+  });
+
+  it("updates in place (not remount) when a server-confirmed quantity prop changes, preserving focus", () => {
+    const { rerender } = render(
+      <CartLine item={wholeUnitItem} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />,
+    );
+    const input = screen.getByLabelText<HTMLInputElement>("Quantity for Baladna Milk");
+    input.focus();
+    expect(input).toHaveFocus();
+    const updatedItem = { ...wholeUnitItem, quantity: "3.000" };
+    rerender(<CartLine item={updatedItem} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />);
+    expect(input).toHaveFocus();
+    expect(screen.getByDisplayValue("3")).toBeInTheDocument();
   });
 });
 

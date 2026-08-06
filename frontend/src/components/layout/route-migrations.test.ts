@@ -10,6 +10,10 @@ describe("navigation compatibility routes", () => {
       { source: "/shifts", destination: "/sales/shifts", permanent: false },
       { source: "/team", destination: "/settings/team", permanent: false },
     ]);
-    expect(compatibilityRedirects.every(({ source, destination }) => source !== destination)).toBe(true);
+    expect(
+      compatibilityRedirects.every(
+        ({ source, destination }) => (source as string) !== (destination as string),
+      ),
+    ).toBe(true);
   });
 });

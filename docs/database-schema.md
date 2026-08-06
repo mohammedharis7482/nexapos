@@ -110,7 +110,7 @@ Create the Shop migration before or together with the initial User migration.
 Inspect both files before applying them. Do not migrate using Django's default
 user and later swap models: `AUTH_USER_MODEL` must remain configured from the
 first migration onward.
-# Sales completion additions
+## Sales completion additions
 
 `sales.Sale` retains its draft snapshot totals and adds a nullable, globally
 unique `sale_number`, completion actor/time, cash/card amount received, and

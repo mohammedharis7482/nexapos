@@ -1,5 +1,7 @@
 from django.db.models import Q, QuerySet
 
+from common.params import parse_bool_param
+
 from .models import Product, ProductCategory
 
 
@@ -13,8 +15,9 @@ def categories_for_user(user) -> QuerySet[ProductCategory]:
 def filter_categories(queryset, *, search: str = "", is_active: str = ""):
     if search:
         queryset = queryset.filter(name__icontains=search.strip())
-    if is_active in {"true", "false"}:
-        queryset = queryset.filter(is_active=is_active == "true")
+    parsed_is_active = parse_bool_param(is_active)
+    if parsed_is_active is not None:
+        queryset = queryset.filter(is_active=parsed_is_active)
     return queryset
 
 
@@ -45,8 +48,9 @@ def filter_products(
         queryset = queryset.filter(category_id=category)
     if unit:
         queryset = queryset.filter(unit=unit)
-    if is_active in {"true", "false"}:
-        queryset = queryset.filter(is_active=is_active == "true")
+    parsed_is_active = parse_bool_param(is_active)
+    if parsed_is_active is not None:
+        queryset = queryset.filter(is_active=parsed_is_active)
 
     allowed_ordering = {
         "name",

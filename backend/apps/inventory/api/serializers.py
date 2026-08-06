@@ -4,6 +4,8 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.inventory.models import InventoryBalance, StockMovement
+from apps.inventory.selectors import stock_status_for
+from apps.products.api.serializers import product_image_url
 from apps.products.models import Product, ProductCategory
 
 
@@ -15,6 +17,7 @@ class InventoryCategorySerializer(serializers.ModelSerializer):
 
 class InventoryProductSerializer(serializers.ModelSerializer):
     category = InventoryCategorySerializer(read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -27,17 +30,13 @@ class InventoryProductSerializer(serializers.ModelSerializer):
             "selling_price",
             "category",
             "is_active",
+            "image_url",
         )
 
+    def get_image_url(self, product) -> str | None:
+        return product_image_url(product, self.context.get("request"))
 
-def stock_status_for(balance: InventoryBalance | None) -> str:
-    if balance is None:
-        return "NOT_INITIALIZED"
-    if balance.quantity_on_hand == 0:
-        return "OUT_OF_STOCK"
-    if balance.quantity_on_hand <= balance.low_stock_threshold:
-        return "LOW_STOCK"
-    return "IN_STOCK"
+
 
 
 class InventoryItemSerializer(serializers.Serializer):

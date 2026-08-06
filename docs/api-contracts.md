@@ -1,8 +1,8 @@
 # API contracts
 
-All API paths are versioned under `/api/v1/` except schema interfaces. JSON is
-the default representation. Future list endpoints use page-number pagination
-with a default size of 25, a `page_size` override, and a maximum of 100.
+All API paths are versioned under `/api/v1/` except schema interfaces. JSON
+throughout. List endpoints use page-number pagination (`common/pagination.py`):
+default size 25, `page_size` override, maximum 100.
 
 ## Health
 
@@ -22,42 +22,65 @@ details.
 
 ## Errors
 
-Handled DRF errors use:
+Handled errors use one envelope (`common/exceptions.py`):
 
 ```json
 {
   "success": false,
-  "message": "Please check the entered details.",
-  "errors": {}
+  "message": "Requested quantity exceeds available stock.",
+  "errors": {"quantity": "Requested quantity exceeds available stock."}
 }
 ```
 
-Specific authentication and not-found messages may replace the generic message;
-field and detail data remains in `errors`. Unexpected exceptions return HTTP
-500 with `NexaPOS could not complete the request.` and an empty `errors` object.
-Every response includes a non-sensitive `X-Request-ID` for log correlation.
+`message` resolution, in priority order:
+
+1. Coded errors (`{"code": ..., "detail": ...}`) use `detail`, and the response
+   gains a top-level `code`.
+2. A validation error with **exactly one key mapping to plain text** is
+   promoted into `message` - this is how domain rejections ("Stock changed
+   before payment.", "This user already has an open shift.") reach the user.
+3. Everything else keeps `"Please check the entered details."` This is
+   deliberate for multi-field form errors: the client shows a summary banner
+   plus per-field messages from `errors`.
+
+Single-key errors whose value is structured (for example `import_errors`, a
+list of objects) are never stringified into `message`.
+
+Unhandled exceptions return HTTP 500 with
+`"NexaPOS could not complete the request."` and empty `errors`. Every response
+carries a non-sensitive `X-Request-ID` for log correlation.
 
 ## Session authentication
 
-Authentication uses Django server-side sessions. The browser receives an
-HttpOnly session cookie; API response bodies never contain a session identifier.
-Unsafe requests require the CSRF cookie value in the `X-CSRFToken` header.
-Session and CSRF cookies explicitly use `SameSite=Lax`; session cookies are
-HttpOnly, while CSRF cookies remain readable so Next.js can construct the
-header. Production cookies are Secure.
+Django server-side sessions. The browser receives an HttpOnly session cookie;
+response bodies never contain a session identifier.
+
+`CSRF_USE_SESSIONS = True`: the CSRF secret lives in the session, **not** in a
+separate readable cookie. Clients obtain the token from the response body of
+`GET /api/v1/auth/csrf/` and send it as `X-CSRFToken` on every unsafe request.
+This is required because the frontend and API are served from different
+registrable domains, where a browser's third-party cookie policy can silently
+drop a cross-site cookie even with `SameSite=None; Secure` - with no way for JS
+to detect it. Nothing reads `document.cookie`.
+
+Cookies use `SameSite=Lax` by default; production adds `Secure`. Local
+development must use `localhost` for both apps (not `127.0.0.1`) - they are
+different cookie sites.
 
 ### Initialize CSRF
 
-`GET /api/v1/auth/csrf/` is public, initializes or refreshes the CSRF cookie,
-and returns:
+`GET /api/v1/auth/csrf/` is public and returns the token in the body:
 
 ```json
 {
   "success": true,
-  "message": "CSRF cookie initialized.",
-  "data": null
+  "message": "CSRF token issued.",
+  "data": {"csrf_token": "..."}
 }
 ```
+
+The frontend caches this in module memory (`lib/csrf.ts`), fetches it once on
+demand, and refetches only after a `403 CSRF Failed` retry.
 
 ### Login
 
@@ -102,27 +125,41 @@ the valid current session is preserved after a successful change.
 ## SaaS account APIs
 
 - `POST /api/v1/saas/register/`: public atomic shop, primary owner, trial, and
-  verification creation. A successful request returns HTTP `201`:
+  verification creation. Returns HTTP `201`:
 
   ```json
   {
     "success": true,
-    "message": "Shop registered. Check your email to verify the account.",
+    "message": "Shop created. Verify the owner email before signing in.",
     "data": {
-      "shop": {
-        "id": "00000000-0000-0000-0000-000000000000",
-        "name": "Example Grocery"
-      },
+      "shop": {"id": "uuid", "name": "Example Grocery"},
+      "owner": {"username": "owner"},
       "verification_required": true,
-      "owner_email": "owner@example.test"
+      "owner_email": "owner@example.test",
+      "registration_status": "PENDING_VERIFICATION",
+      "email_delivery": "EMAIL_SENT",
+      "next_step": "VERIFY_EMAIL"
     }
   }
   ```
 
-  Expected validation failures use HTTP `400` and the standard error envelope,
-  with field errors under `errors`. The response never contains passwords,
-  raw verification tokens, session identifiers, or subscription internals.
-  The client cannot select roles or subscription state.
+  Clients read these fields rather than inferring from build environment:
+
+  | `REQUIRE_EMAIL_VERIFICATION` | `registration_status` | `next_step` |
+  | --- | --- | --- |
+  | `True` | `PENDING_VERIFICATION` | `VERIFY_EMAIL` |
+  | `False` | `ONBOARDING` | `SIGN_IN` |
+
+  `email_delivery` is `EMAIL_SENT`, `DEVELOPMENT_CONSOLE`,
+  `EMAIL_DELIVERY_FAILED`, or `NOT_REQUIRED`. Delivery failure still returns
+  `201` - the tenant was durably created and stays recoverable.
+
+  A possible duplicate returns generic `ACCOUNT_MAY_EXIST` guidance and creates
+  no additional records. Resend returns the same acknowledgement for eligible
+  and unknown contexts.
+
+  The response never contains passwords, raw tokens, session identifiers, or
+  subscription internals. Clients cannot select role or subscription state.
 - `POST /api/v1/auth/email-verification/resend/` and
   `POST /api/v1/auth/email-verification/verify/`: generic resend and one-time
   hashed-token verification. Successful verification returns only the verified
@@ -214,39 +251,30 @@ server-side authenticated session and returns a success envelope.
 
 ### Next.js request flow
 
-Use `http://localhost:3000` for Next.js and `http://localhost:8000` for Django.
-Keeping the hostname identical allows `SameSite=Lax` cookies across ports.
-Do not mix `localhost` and `127.0.0.1`, and do not proxy auth requests through
-Next.js because its URL normalization can redirect Django's slash-terminated
-routes.
+Use `http://localhost:3000` and `http://localhost:8000`. Do not mix `localhost`
+with `127.0.0.1`, and do not proxy auth requests through Next.js - its URL
+normalization redirects Django's slash-terminated routes.
 
-1. Request `/api/v1/auth/csrf/` with `credentials: "include"`.
-2. Read the `csrftoken` cookie.
-3. Send `X-CSRFToken` on POST, PUT, PATCH, and DELETE requests.
-4. Always set `credentials: "include"`.
-5. Clear user-scoped browser state and redirect to login after HTTP 401.
-6. Keep HTTP 403 as a permission error; it does not invalidate the session.
+`lib/api-client.ts` handles this automatically:
 
-The typed frontend API client performs this sequence automatically for POST,
-PUT, PATCH, and DELETE requests. It parses both the success and error envelopes,
-maps backend field errors to forms, and converts transport failures into a
-user-facing network message. Password values are never logged, and authentication
-tokens or session IDs are never copied into application storage. Requests have
-a configurable timeout and unsafe mutations are not automatically retried.
+1. On the first unsafe request, GET `/api/v1/auth/csrf/` and cache
+   `data.csrf_token` in module memory.
+2. Send it as `X-CSRFToken` on POST/PUT/PATCH/DELETE, always with
+   `credentials: "include"`.
+3. On `403 CSRF Failed`, clear the cached token, refetch once, and retry once.
+4. HTTP 401 dispatches an unauthorized event - clear user state, redirect to
+   login. HTTP 403 is a permission error and does not invalidate the session.
 
-The frontend authentication provider requests `/auth/me/` once during
-initialization. Protected routes render a deliberate loading state until that
-request resolves, then either render the application shell or redirect to
-`/login`. Successful login redirects to `/dashboard`; logout invalidates the
-backend session before clearing frontend user state.
+Requests have a configurable timeout; unsafe mutations are not auto-retried
+except for the single CSRF retry above. Tokens and session IDs are never
+written to browser storage, and passwords are never logged.
 
-Navigation uses the backend role:
+The auth provider requests `/auth/me/` once on init (guarded against React
+Strict Mode double-invoke). Protected routes hold a loading state until it
+resolves, then render the shell or redirect to `/login`.
 
-- OWNER: Dashboard, New Bill, Products, Inventory, Sales, Reports, Settings.
-- CASHIER: Dashboard, New Bill, Products, and limited Sales navigation.
-
-Navigation visibility is only presentation. Backend permissions remain
-authoritative.
+Role-based navigation visibility is presentation only - backend permissions
+remain authoritative. See `docs/navigation.md`.
 
 ## Documentation
 
@@ -310,6 +338,26 @@ Product lists accept `search`, `category`, `unit`, `is_active`, `ordering`,
 `name`, `selling_price`, `created_at`, and `updated_at` (prefix with `-` for
 descending). Category responses contain only `id` and `name`; product responses
 do not expose a shop identifier or inventory state.
+
+### Product image
+
+- `POST /api/v1/products/{uuid}/image/` — owner-only, `multipart/form-data`,
+  field `image`. Replaces any existing image and deletes the old file.
+- `DELETE /api/v1/products/{uuid}/image/` — owner-only, idempotent.
+
+Both return the full product. Validation rejects anything over 5 MB or whose
+*decoded* format is not JPEG, PNG, or WEBP (the declared content type and the
+filename are not trusted), using the standard error envelope with
+`errors.image`.
+
+`image_url` is `null` when no image is set and is serialized on the product,
+inventory (`product.image_url`), and sale-item (`product.image_url`)
+representations. Sale items snapshot name/SKU/unit at sale time but read the
+image live, so a receipt reprint shows the product's current photo. URLs are
+absolute and produced by the configured storage backend; with the default
+`FileSystemStorage` they resolve under `MEDIA_URL`, which Django serves only
+when `DEBUG` is on — production serves `/media/` from the web server or a
+cloud backend selected via `DJANGO_DEFAULT_FILE_STORAGE`.
 
 All catalogue routes require session authentication and exact trailing slashes.
 No public registration, JWT token, catalogue hard-delete, or billing endpoints
@@ -444,20 +492,3 @@ current snapshot, so date, cashier, and payment filters do not alter quantities;
 the category filter does. Payment values use allocated Payment amounts and
 never tendered cash. No purchase price, profit, COGS, supplier, accounting, or
 export data is returned.
-# Registration delivery metadata
-
-`POST /api/v1/saas/register/` returns `registration_status:
-PENDING_VERIFICATION` and `email_delivery` as `DEVELOPMENT_CONSOLE`,
-`EMAIL_SENT`, or `EMAIL_DELIVERY_FAILED`. Delivery failure still returns `201`
-because the tenant was durably created and remains recoverable. Raw tokens and
-provider errors are never returned.
-
-Possible duplicate registration returns generic `ACCOUNT_MAY_EXIST` guidance
-and creates no additional core records. Resend intentionally returns the same
-generic acknowledgement for eligible and unknown contexts.
-
-When `REQUIRE_EMAIL_VERIFICATION=False`, registration returns an `ONBOARDING`
-Shop, normalized `owner.username`, `verification_required: false`,
-`email_delivery: NOT_REQUIRED`, and `next_step: SIGN_IN`. When enabled it
-returns `PENDING_VERIFICATION`, `verification_required: true`, and
-`next_step: VERIFY_EMAIL`.

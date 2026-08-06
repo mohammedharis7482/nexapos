@@ -11,6 +11,7 @@ from apps.inventory.models import InventoryBalance
 from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.sales.models import Sale, SaleItem
+from common.money import round_money, round_quantity
 
 QAR_ZERO = Decimal("0.00")
 QUANTITY_ZERO = Decimal("0.000")
@@ -41,11 +42,11 @@ def visible_completed_sales(user: User):
 
 
 def _money(value) -> Decimal:
-    return (value or QAR_ZERO).quantize(Decimal("0.01"), ROUND_HALF_UP)
+    return round_money(value or QAR_ZERO)
 
 
 def _quantity(value) -> Decimal:
-    return (value or QUANTITY_ZERO).quantize(Decimal("0.001"), ROUND_HALF_UP)
+    return round_quantity(value or QUANTITY_ZERO)
 
 
 def dashboard_summary(user: User, *, now=None) -> dict:

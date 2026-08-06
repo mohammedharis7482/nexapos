@@ -96,6 +96,15 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Uploaded media (currently only product images and the unwired shop logo).
+# The default backend is env-driven so moving to Cloudinary/S3 later is a
+# configuration change, not a code change: application code only ever touches
+# `field.url` and `field.name`, never MEDIA_ROOT or a filesystem path.
+DEFAULT_FILE_STORAGE_BACKEND = config(
+    "DJANGO_DEFAULT_FILE_STORAGE",
+    default="django.core.files.storage.FileSystemStorage",
+)
+
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv(), default="")
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", cast=Csv(), default="")
 

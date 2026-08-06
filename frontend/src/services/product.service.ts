@@ -37,6 +37,21 @@ export const productService = {
       body: JSON.stringify(payload),
     });
   },
+  uploadImage(id: string, file: File) {
+    const body = new FormData();
+    body.append("image", file);
+    // No Content-Type header: the api client leaves FormData alone so the
+    // browser sets the multipart boundary.
+    return apiRequest<ApiSuccess<Product>>(`/products/${id}/image/`, {
+      method: "POST",
+      body,
+    });
+  },
+  removeImage(id: string) {
+    return apiRequest<ApiSuccess<Product>>(`/products/${id}/image/`, {
+      method: "DELETE",
+    });
+  },
   barcode(barcode: string) {
     return apiRequest<ApiSuccess<Product>>(
       `/products/barcode/${encodeURIComponent(barcode)}/`,

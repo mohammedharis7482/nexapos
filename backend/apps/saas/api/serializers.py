@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
@@ -5,7 +6,28 @@ from apps.accounts.models import User
 from apps.saas.models import Plan, ShopInvitation, ShopSubscription
 
 
-class RegistrationSerializer(serializers.Serializer):
+class PasswordConfirmMixin:
+    """Rejects a payload whose confirmation field doesn't match its
+    password field, then drops the confirmation field from validated_data.
+
+    Subclasses set password_field/confirm_field since the two fields are
+    named differently across serializers (password/password_confirm,
+    temporary_password/temporary_password_confirm, new_password/
+    confirm_password).
+    """
+
+    password_field = "password"
+    confirm_field = "password_confirm"
+
+    def validate(self, attrs):
+        if attrs[self.password_field] != attrs.pop(self.confirm_field):
+            raise serializers.ValidationError(
+                {self.confirm_field: "Passwords do not match."}
+            )
+        return attrs
+
+
+class RegistrationSerializer(PasswordConfirmMixin, serializers.Serializer):
     shop_name = serializers.CharField(max_length=150)
     owner_full_name = serializers.CharField(max_length=150)
     owner_email = serializers.EmailField()
@@ -17,13 +39,6 @@ class RegistrationSerializer(serializers.Serializer):
     country = serializers.ChoiceField(choices=["Qatar"], default="Qatar")
     timezone = serializers.ChoiceField(choices=["Asia/Qatar"], default="Asia/Qatar")
     currency = serializers.ChoiceField(choices=["QAR"], default="QAR")
-
-    def validate(self, attrs):
-        if attrs["password"] != attrs.pop("password_confirm"):
-            raise serializers.ValidationError(
-                {"password_confirm": "Passwords do not match."}
-            )
-        return attrs
 
 
 class PublicShopIdentitySerializer(serializers.Serializer):
@@ -107,8 +122,6 @@ class InvitationSerializer(serializers.ModelSerializer):
             return "ACCEPTED"
         if invitation.revoked_at:
             return "REVOKED"
-        from django.utils import timezone
-
         return "EXPIRED" if invitation.expires_at <= timezone.now() else "PENDING"
 
 
@@ -120,18 +133,11 @@ class InvitationContextSerializer(serializers.Serializer):
     expires_at = serializers.DateTimeField(read_only=True)
 
 
-class AcceptInvitationSerializer(TokenSerializer):
+class AcceptInvitationSerializer(PasswordConfirmMixin, TokenSerializer):
     full_name = serializers.CharField(max_length=150)
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
     password_confirm = serializers.CharField(write_only=True, trim_whitespace=False)
-
-    def validate(self, attrs):
-        if attrs["password"] != attrs.pop("password_confirm"):
-            raise serializers.ValidationError(
-                {"password_confirm": "Passwords do not match."}
-            )
-        return attrs
 
 
 class ManagedUserSerializer(serializers.ModelSerializer):
@@ -185,7 +191,10 @@ class ManagedUserSerializer(serializers.ModelSerializer):
         return actions
 
 
-class StaffCreateSerializer(serializers.Serializer):
+class StaffCreateSerializer(PasswordConfirmMixin, serializers.Serializer):
+    password_field = "temporary_password"
+    confirm_field = "temporary_password_confirm"
+
     full_name = serializers.CharField(max_length=150)
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField(required=False, allow_blank=True)
@@ -195,26 +204,15 @@ class StaffCreateSerializer(serializers.Serializer):
         write_only=True, trim_whitespace=False
     )
 
-    def validate(self, attrs):
-        if attrs["temporary_password"] != attrs.pop("temporary_password_confirm"):
-            raise serializers.ValidationError(
-                {"temporary_password_confirm": "Passwords do not match."}
-            )
-        return attrs
 
+class StaffPasswordResetSerializer(PasswordConfirmMixin, serializers.Serializer):
+    password_field = "temporary_password"
+    confirm_field = "temporary_password_confirm"
 
-class StaffPasswordResetSerializer(serializers.Serializer):
     temporary_password = serializers.CharField(write_only=True, trim_whitespace=False)
     temporary_password_confirm = serializers.CharField(
         write_only=True, trim_whitespace=False
     )
-
-    def validate(self, attrs):
-        if attrs["temporary_password"] != attrs.pop("temporary_password_confirm"):
-            raise serializers.ValidationError(
-                {"temporary_password_confirm": "Passwords do not match."}
-            )
-        return attrs
 
 
 class UserUpdateSerializer(serializers.Serializer):
@@ -281,13 +279,9 @@ class OnboardingSerializer(serializers.Serializer):
     next_step = serializers.IntegerField(min_value=1, max_value=7, required=False)
 
 
-class PasswordResetConfirmSerializer(TokenSerializer):
+class PasswordResetConfirmSerializer(PasswordConfirmMixin, TokenSerializer):
+    password_field = "new_password"
+    confirm_field = "confirm_password"
+
     new_password = serializers.CharField(write_only=True, trim_whitespace=False)
     confirm_password = serializers.CharField(write_only=True, trim_whitespace=False)
-
-    def validate(self, attrs):
-        if attrs["new_password"] != attrs.pop("confirm_password"):
-            raise serializers.ValidationError(
-                {"confirm_password": "Passwords do not match."}
-            )
-        return attrs

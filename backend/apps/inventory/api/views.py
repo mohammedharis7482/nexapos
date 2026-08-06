@@ -19,6 +19,7 @@ from apps.inventory.services import (
     update_low_stock_threshold,
 )
 from common.pagination import StandardResultsSetPagination
+from common.params import parse_uuid_query_param
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
 
@@ -60,7 +61,7 @@ def product_for_request(request, product_id):
 def paginated_inventory_response(request, view, queryset, message):
     paginator = StandardResultsSetPagination()
     page = paginator.paginate_queryset(queryset, request, view=view)
-    data = InventoryItemSerializer(page, many=True).data
+    data = InventoryItemSerializer(page, many=True, context={"request": request}).data
     return success_response(message, paginator.get_paginated_data(data))
 
 
@@ -72,12 +73,7 @@ class InventoryListView(APIView):
         responses={200: InventoryItemSerializer(many=True)},
     )
     def get(self, request):
-        category = request.query_params.get("category", "")
-        if category:
-            try:
-                category = str(serializers.UUIDField().run_validation(category))
-            except serializers.ValidationError as exc:
-                raise serializers.ValidationError({"category": exc.detail}) from exc
+        category = parse_uuid_query_param(request, "category")
         queryset = filter_inventory_products(
             inventory_products_for_user(request.user),
             search=request.query_params.get("search", ""),
@@ -103,7 +99,7 @@ class InventoryDetailView(APIView):
         product = product_for_request(request, product_id)
         return success_response(
             "Inventory retrieved.",
-            InventoryItemSerializer(product).data,
+            InventoryItemSerializer(product, context={"request": request}).data,
         )
 
     @extend_schema(request=ThresholdSerializer, responses={200: InventoryItemSerializer})
@@ -122,7 +118,7 @@ class InventoryDetailView(APIView):
         product = inventory_products_for_user(request.user).get(pk=product.pk)
         return success_response(
             "Low-stock threshold updated.",
-            InventoryItemSerializer(product).data,
+            InventoryItemSerializer(product, context={"request": request}).data,
         )
 
 
@@ -149,7 +145,7 @@ class OpeningStockView(APIView):
         return success_response(
             "Opening stock configured.",
             {
-                "inventory": InventoryItemSerializer(product).data,
+                "inventory": InventoryItemSerializer(product, context={"request": request}).data,
                 "movement": StockMovementSerializer(movement).data,
             },
             status_code=201,
@@ -179,7 +175,7 @@ class AdjustmentView(APIView):
         return success_response(
             "Inventory adjusted.",
             {
-                "inventory": InventoryItemSerializer(product).data,
+                "inventory": InventoryItemSerializer(product, context={"request": request}).data,
                 "movement": StockMovementSerializer(movement).data,
             },
         )

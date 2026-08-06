@@ -11,11 +11,11 @@ import {
   ShoppingCart,
   Users,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 
-import { ChangePasswordDialog } from "@/components/auth/change-password-dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge, StatusBadge } from "@/components/ui/display";
 import { DropdownMenu, Sheet } from "@/components/ui/overlay";
@@ -23,6 +23,14 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 
 import { getNavigationForRole, isNavigationItemActive, navigationItems } from "./navigation";
+
+// Pulls in react-hook-form/zod/resolvers, only needed for the rarely-opened
+// "change password" action - loaded on demand instead of shipping in every
+// protected page's initial bundle (AppShell wraps the whole app).
+const ChangePasswordDialog = dynamic(
+  () => import("@/components/auth/change-password-dialog").then((mod) => mod.ChangePasswordDialog),
+  { ssr: false },
+);
 
 function subscribeToNetwork(callback: () => void) {
   window.addEventListener("online", callback);
@@ -337,7 +345,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Button variant="secondary" className="w-full" leadingIcon={<KeyRound className="size-4" />} onClick={() => { setAccountOpen(false); setPasswordOpen(true); }}>Change password</Button>
         <Button variant="destructive" className="mt-3 w-full" loading={isLoggingOut} leadingIcon={<LogOut className="size-4" />} onClick={() => void handleLogout()}>Logout</Button>
       </Sheet>
-      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+      {passwordOpen ? (
+        <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+      ) : null}
     </div>
   );
 }

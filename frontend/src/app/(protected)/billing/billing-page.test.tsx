@@ -67,7 +67,7 @@ const inventoryItem: InventoryItem = {
     name: "Baladna Milk",
     sku: "MILK-001",
     barcode: "6281007023412",
-    unit: "BOTTLE",
+    unit: "BOTTLE", image_url: null,
     selling_price: "6.00",
     category: null,
     is_active: true,
@@ -162,6 +162,45 @@ describe("BillingPage", () => {
     );
   });
 
+  it("does not double-search when Enter is pressed before the debounce timer fires", async () => {
+    render(<BillingPage />);
+    const search = await screen.findByLabelText("Product or barcode search");
+    fireEvent.change(search, { target: { value: "6281007023412" } });
+    fireEvent.submit(search.closest("form")!);
+    await waitFor(() => expect(billing.addItem).toHaveBeenCalled());
+    // Wait past the 250ms debounce window the pending timer from the
+    // keystroke would have fired in, if it hadn't been cancelled - a
+    // second search for the *same* term here means the timer wasn't
+    // actually cancelled by the immediate Enter-triggered search.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const callsForBarcode = inventory.list.mock.calls.filter(
+      ([params]) => params?.search === "6281007023412",
+    );
+    expect(callsForBarcode).toHaveLength(1);
+  });
+
+  it("does not add the same scanned product twice from a double Enter before the add resolves", async () => {
+    let resolveAdd: (value: { success: true; message: string; data: DraftSale }) => void;
+    billing.addItem.mockReturnValue(
+      new Promise((resolve) => { resolveAdd = resolve; }),
+    );
+    render(<BillingPage />);
+    const search = await screen.findByLabelText("Product or barcode search");
+    const form = search.closest("form")!;
+    fireEvent.change(search, { target: { value: "6281007023412" } });
+    fireEvent.submit(form);
+    await waitFor(() => expect(billing.addItem).toHaveBeenCalledTimes(1));
+    // A second Enter (or scan) while the first add is still in flight must
+    // not fire a second addItem call for the same product.
+    fireEvent.submit(form);
+    // Give the second submit's async chain (searchProducts -> addProduct)
+    // room to actually run before asserting - otherwise this check can
+    // pass vacuously before the second call would have landed.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    resolveAdd!({ success: true, message: "", data: draft });
+    await waitFor(() => expect(billing.addItem).toHaveBeenCalledTimes(1));
+  });
+
   it("confirms cancellation and prepares a fresh draft", async () => {
     billing.create
       .mockResolvedValueOnce({ success: true, message: "", data: draft })
@@ -179,12 +218,115 @@ describe("BillingPage", () => {
     expect(localStorage.getItem("nexapos.activeDraftId")).toBe("fresh-id");
   });
 
+  // Product cards gained an image (and a placeholder for products without
+  // one). Both render inside the card button, so this guards the grid's
+  // arrow-key navigation, which resolves cards by querying the grid for
+  // `button` elements and indexing into that list: any extra focusable
+  // element inside a card would silently shift every index.
+  describe("product grid arrow-key navigation with images", () => {
+    const withImage = (index: number, imageUrl: string | null): InventoryItem => ({
+      ...inventoryItem,
+      product: {
+        ...inventoryItem.product,
+        id: `product-${index}`,
+        name: `Product ${index}`,
+        sku: `SKU-${index}`,
+        barcode: `barcode-${index}`,
+        image_url: imageUrl,
+        category: { id: "category-id", name: "Dairy" },
+      },
+    });
+
+    beforeEach(() => {
+      inventory.list.mockResolvedValue({
+        success: true,
+        message: "",
+        data: {
+          count: 4,
+          next: null,
+          previous: null,
+          results: [
+            withImage(0, "http://localhost:8000/media/product-images/0.jpg"),
+            withImage(1, null),
+            withImage(2, "http://localhost:8000/media/product-images/2.png"),
+            withImage(3, null),
+          ],
+        },
+      });
+    });
+
+    async function productCards() {
+      await screen.findByText("Product 0");
+      const grid = screen.getByText("Product 0").closest("button")?.parentElement;
+      return Array.from(grid?.querySelectorAll<HTMLButtonElement>("button") ?? []);
+    }
+
+    it("renders exactly one focusable card per product", async () => {
+      render(<BillingPage />);
+      const cards = await productCards();
+      expect(cards).toHaveLength(4);
+      expect(cards.map((card) => card.textContent)).toEqual([
+        expect.stringContaining("Product 0"),
+        expect.stringContaining("Product 1"),
+        expect.stringContaining("Product 2"),
+        expect.stringContaining("Product 3"),
+      ]);
+    });
+
+    it("shows a real image where one exists and a placeholder where it does not", async () => {
+      render(<BillingPage />);
+      const cards = await productCards();
+      expect(cards[0].querySelector("img")).toHaveAttribute(
+        "src",
+        "http://localhost:8000/media/product-images/0.jpg",
+      );
+      expect(cards[1].querySelector("img")).toBeNull();
+      expect(cards[1].querySelector("[data-testid='product-thumb-placeholder']")).not.toBeNull();
+    });
+
+    it("moves focus across cards with ArrowRight and ArrowLeft", async () => {
+      render(<BillingPage />);
+      const cards = await productCards();
+      cards[0].focus();
+      fireEvent.keyDown(cards[0], { key: "ArrowRight" });
+      expect(cards[1]).toHaveFocus();
+      fireEvent.keyDown(cards[1], { key: "ArrowRight" });
+      expect(cards[2]).toHaveFocus();
+      fireEvent.keyDown(cards[2], { key: "ArrowLeft" });
+      expect(cards[1]).toHaveFocus();
+    });
+
+    it("clamps at the grid edges instead of escaping the grid", async () => {
+      render(<BillingPage />);
+      const cards = await productCards();
+      cards[0].focus();
+      fireEvent.keyDown(cards[0], { key: "ArrowLeft" });
+      expect(cards[0]).toHaveFocus();
+      cards[3].focus();
+      fireEvent.keyDown(cards[3], { key: "ArrowRight" });
+      expect(cards[3]).toHaveFocus();
+    });
+
+    it("still adds the focused product to the draft on click", async () => {
+      render(<BillingPage />);
+      const cards = await productCards();
+      cards[2].focus();
+      fireEvent.click(cards[2]);
+      await waitFor(() =>
+        expect(billing.addItem).toHaveBeenCalledWith("draft-id", {
+          product_id: "product-2",
+          quantity: "1.000",
+        }),
+      );
+    });
+  });
+
   describe("keyboard shortcuts", () => {
     const draftWithItem: DraftSale = {
       ...draft,
       items: [{
         id: "item-id",
-        product: { id: "product-id", name: "Baladna Milk", sku: "MILK-001", barcode: "6281007023412", unit: "BOTTLE" },
+        product: { id: "product-id", name: "Baladna Milk", sku: "MILK-001", barcode: "6281007023412", unit: "BOTTLE", image_url: null },
         quantity: "1",
         unit_price: "6.00",
         tax_rate: "5.00",

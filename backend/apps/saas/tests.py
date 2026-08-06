@@ -801,6 +801,106 @@ class SaasFoundationTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class StaffManagementPermissionBoundaryTests(TestCase):
+    """UserDetailView/UserActivationView/UserDeactivateView/UserRoleView/
+    UserPasswordResetView were only ever exercised by calling their
+    underlying service functions directly in other tests - never through
+    the actual HTTP endpoints, so their permission_classes = [IsOwner] and
+    the shop-scoping in users_for_manager() had no test proving a CASHIER
+    is rejected or that cross-shop access 404s rather than leaking another
+    shop's staff account.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.shop = Shop.objects.create(
+            name="Staff Boundary Grocery", address="Doha", phone="+97450000101",
+        )
+        cls.owner = User.objects.create_user(
+            shop=cls.shop, username="boundary_owner", password=PASSWORD,
+            full_name="Boundary Owner", role=User.Role.OWNER,
+        )
+        cls.shop.primary_owner = cls.owner
+        cls.shop.save(update_fields=["primary_owner", "updated_at"])
+        cls.cashier = User.objects.create_user(
+            shop=cls.shop, username="boundary_cashier", password=PASSWORD,
+            full_name="Boundary Cashier", role=User.Role.CASHIER,
+        )
+        cls.staff = User.objects.create_user(
+            shop=cls.shop, username="boundary_staff", password=PASSWORD,
+            full_name="Boundary Staff", role=User.Role.CASHIER,
+        )
+        cls.other_shop = Shop.objects.create(
+            name="Other Boundary Grocery", address="Al Wakrah", phone="+97450000102",
+        )
+        cls.other_owner = User.objects.create_user(
+            shop=cls.other_shop, username="other_boundary_owner", password=PASSWORD,
+            full_name="Other Boundary Owner", role=User.Role.OWNER,
+        )
+        cls.other_shop_user = User.objects.create_user(
+            shop=cls.other_shop, username="other_boundary_staff", password=PASSWORD,
+            full_name="Other Boundary Staff", role=User.Role.CASHIER,
+        )
+
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=True)
+
+    def csrf(self):
+        return self.client.get(reverse("accounts_api:csrf")).json()["data"]["csrf_token"]
+
+    def post(self, path, data=None):
+        return self.client.post(
+            path, data or {}, content_type="application/json",
+            HTTP_X_CSRFTOKEN=self.csrf(),
+        )
+
+    def patch(self, path, data):
+        return self.client.patch(
+            path, data, content_type="application/json",
+            HTTP_X_CSRFTOKEN=self.csrf(),
+        )
+
+    def endpoints(self, user_id):
+        return {
+            "detail": (self.patch, reverse("user-detail", args=[user_id]),
+                       {"full_name": "Renamed"}),
+            "activate": (self.post, reverse("user-activate", args=[user_id]), None),
+            "deactivate": (self.post, reverse("user-deactivate", args=[user_id]), None),
+            "role": (self.post, reverse("user-role", args=[user_id]),
+                     {"role": "OWNER"}),
+            "reset_password": (self.post, reverse("user-password", args=[user_id]),
+                                {"temporary_password": NEW_PASSWORD,
+                                 "temporary_password_confirm": NEW_PASSWORD}),
+        }
+
+    def test_cashier_is_forbidden_from_every_staff_management_endpoint(self):
+        self.client.force_login(self.cashier)
+        for name, (call, path, data) in self.endpoints(self.staff.id).items():
+            with self.subTest(endpoint=name):
+                response = call(path, data) if data is not None else call(path)
+                self.assertEqual(response.status_code, 403)
+
+    def test_owner_cannot_reach_a_staff_member_in_another_shop(self):
+        self.client.force_login(self.owner)
+        for name, (call, path, data) in self.endpoints(self.other_shop_user.id).items():
+            with self.subTest(endpoint=name):
+                response = call(path, data) if data is not None else call(path)
+                self.assertEqual(response.status_code, 404)
+        # Confirm the cross-shop target was genuinely untouched, not just
+        # that some other validation short-circuited before the lookup.
+        self.other_shop_user.refresh_from_db()
+        self.assertEqual(self.other_shop_user.full_name, "Other Boundary Staff")
+        self.assertEqual(self.other_shop_user.role, User.Role.CASHIER)
+        self.assertTrue(self.other_shop_user.is_active)
+
+    def test_owner_can_reach_every_staff_management_endpoint_for_own_shop(self):
+        self.client.force_login(self.owner)
+        for name, (call, path, data) in self.endpoints(self.staff.id).items():
+            with self.subTest(endpoint=name):
+                response = call(path, data) if data is not None else call(path)
+                self.assertEqual(response.status_code, 200)
+
+
 @override_settings(REQUIRE_EMAIL_VERIFICATION=False)
 class DevelopmentRegistrationTests(TestCase):
     def setUp(self):

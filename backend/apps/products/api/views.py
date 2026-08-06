@@ -22,18 +22,22 @@ from apps.products.selectors import (
     products_for_user,
 )
 from apps.products.services import (
+    clear_product_image,
     create_category,
     create_product,
+    set_product_image,
     update_category,
     update_product,
 )
 from apps.saas.services import SaasOperationError
 from common.pagination import StandardResultsSetPagination
+from common.params import parse_uuid_query_param
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
 
 from .serializers import (
     ProductCategorySerializer,
+    ProductImageUploadSerializer,
     ProductImportConfirmSerializer,
     ProductImportRowSerializer,
     ProductImportSerializer,
@@ -152,13 +156,7 @@ class ProductListCreateView(StaffReadOwnerWriteMixin, APIView):
         responses={200: ProductSerializer(many=True)},
     )
     def get(self, request):
-        category = request.query_params.get("category", "")
-        if category:
-            uuid_field = serializers.UUIDField()
-            try:
-                category = str(uuid_field.run_validation(category))
-            except serializers.ValidationError as exc:
-                raise serializers.ValidationError({"category": exc.detail}) from exc
+        category = parse_uuid_query_param(request, "category")
 
         queryset = filter_products(
             products_for_user(request.user),
@@ -170,7 +168,7 @@ class ProductListCreateView(StaffReadOwnerWriteMixin, APIView):
         )
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
-        serializer = ProductSerializer(page, many=True)
+        serializer = ProductSerializer(page, many=True, context={"request": request})
         return success_response(
             "Products retrieved.",
             paginator.get_paginated_data(serializer.data),
@@ -194,7 +192,7 @@ class ProductListCreateView(StaffReadOwnerWriteMixin, APIView):
             ) from exc
         return success_response(
             "Product created.",
-            ProductSerializer(product).data,
+            ProductSerializer(product, context={"request": request}).data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -206,7 +204,10 @@ class ProductDetailView(StaffReadOwnerWriteMixin, APIView):
     @extend_schema(responses={200: ProductSerializer})
     def get(self, request, product_id):
         product = self.get_object(request, product_id)
-        return success_response("Product retrieved.", ProductSerializer(product).data)
+        return success_response(
+            "Product retrieved.",
+            ProductSerializer(product, context={"request": request}).data,
+        )
 
     @extend_schema(request=ProductSerializer, responses={200: ProductSerializer})
     def patch(self, request, product_id):
@@ -227,7 +228,10 @@ class ProductDetailView(StaffReadOwnerWriteMixin, APIView):
             raise serializers.ValidationError(
                 {"non_field_errors": exc.message}
             ) from exc
-        return success_response("Product updated.", ProductSerializer(product).data)
+        return success_response(
+            "Product updated.",
+            ProductSerializer(product, context={"request": request}).data,
+        )
 
 
 class ProductBarcodeView(APIView):
@@ -242,7 +246,50 @@ class ProductBarcodeView(APIView):
         )
         return success_response(
             "Product retrieved.",
-            ProductSerializer(product).data,
+            ProductSerializer(product, context={"request": request}).data,
+        )
+
+
+class ProductImageView(APIView):
+    """Owner-only image upload/removal for one product.
+
+    A sub-resource endpoint rather than a multipart field on product
+    create/update, matching the existing shape of
+    /inventory/products/{id}/opening-stock/. This keeps the JSON product
+    contract (and the CSV import path) untouched, and lets the form work
+    identically whether or not an image is chosen.
+    """
+
+    permission_classes = [IsOwner]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_object(self, request, product_id):
+        return get_object_or_404(products_for_user(request.user), pk=product_id)
+
+    @extend_schema(
+        request=ProductImageUploadSerializer,
+        responses={200: ProductSerializer},
+    )
+    def post(self, request, product_id):
+        product = self.get_object(request, product_id)
+        serializer = ProductImageUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = set_product_image(
+            product=product,
+            image=serializer.validated_data["image"],
+        )
+        return success_response(
+            "Product image updated.",
+            ProductSerializer(product, context={"request": request}).data,
+        )
+
+    @extend_schema(responses={200: ProductSerializer})
+    def delete(self, request, product_id):
+        product = self.get_object(request, product_id)
+        product = clear_product_image(product=product)
+        return success_response(
+            "Product image removed.",
+            ProductSerializer(product, context={"request": request}).data,
         )
 
 

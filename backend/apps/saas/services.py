@@ -7,7 +7,6 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -327,7 +326,37 @@ def usage_for_shop(shop: Shop) -> dict:
     }
 
 
+def _lock_shop_quota(shop: Shop) -> None:
+    """Serialize one shop's quota checks so a count taken before an insert
+    cannot be invalidated by a concurrent insert.
+
+    Without this, N concurrent creates each run their own COUNT(*) under
+    READ COMMITTED, all observe the same pre-insert total, and all pass -
+    so a shop can land arbitrarily far past its plan cap, not just one
+    over.
+
+    Locks the ShopSubscription row (the row that actually defines the
+    limit) rather than the Shop row, so quota checks don't contend with
+    unrelated shop writes - settings updates, onboarding steps, status
+    transitions - or with sale completion.
+
+    Outside an atomic block there is nothing to hold a lock for, so the
+    check degrades to advisory rather than raising. The only such caller
+    is the create_cashier management command, which deliberately checks
+    early (before an interactive password prompt, since holding a row
+    lock across human input would be far worse than the race) and then
+    re-checks authoritatively inside its own transaction before inserting.
+    """
+    if not transaction.get_connection().in_atomic_block:
+        return
+    if ShopSubscription.objects.select_for_update().filter(shop=shop).first() is None:
+        # Defensive: a shop with no subscription row still needs a mutex,
+        # and usage_for_shop() falls back to the default plan for it.
+        Shop.objects.select_for_update().filter(pk=shop.pk).first()
+
+
 def enforce_user_limit(shop: Shop) -> None:
+    _lock_shop_quota(shop)
     usage = usage_for_shop(shop)
     if usage["active_users"] >= usage["max_users"]:
         raise SaasOperationError(
@@ -336,6 +365,7 @@ def enforce_user_limit(shop: Shop) -> None:
 
 
 def enforce_product_limit(shop: Shop) -> None:
+    _lock_shop_quota(shop)
     usage = usage_for_shop(shop)
     if usage["active_products"] >= usage["max_products"]:
         raise SaasOperationError(

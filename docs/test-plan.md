@@ -244,7 +244,7 @@ production API URL, safe request-log fields, Team MVP copy and hidden invitation
 UI, full PostgreSQL regression, OpenAPI, lint, Vitest, and production build.
 Live HTTPS sessions, devices, printer/scanner, SMTP, backups, and cross-shop
 browser checks remain mandatory on the selected host.
-# Authentication delivery and cleanup coverage
+## Authentication delivery and cleanup coverage
 
 Tests cover durable registration on delivery failure, delivery states, generic
 duplicate recovery, token supersession, verification then login, console-mode

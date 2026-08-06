@@ -18,6 +18,7 @@ export interface SaleItem {
     sku: string;
     barcode: string | null;
     unit: ProductUnit;
+    image_url: string | null;
   };
   quantity: string;
   unit_price: string;

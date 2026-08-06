@@ -28,6 +28,7 @@ export default function TeamPage() {
   const [editTarget, setEditTarget] = useState<ManagedUser | null>(null);
   const [resetTarget, setResetTarget] = useState<ManagedUser | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -113,18 +114,25 @@ export default function TeamPage() {
     } finally { setBusy(false); }
   }
   async function changeRole(member: ManagedUser) {
+    if (busyMemberId) return;
     const role = member.role === "OWNER" ? "CASHIER" : "OWNER";
     if (!window.confirm(`Change ${member.full_name} to ${role.toLowerCase()}? Their sessions will end.`)) return;
+    setBusyMemberId(member.id);
     try { await saasService.changeRole(member.id, role); await load(); }
     catch (caught) { setNotice(caught instanceof ApiError ? caught.message : "Role could not be changed."); }
+    finally { setBusyMemberId(null); }
   }
   async function action(id: string, kind: "activate" | "deactivate") {
+    if (busyMemberId) return;
     if (!window.confirm(`Confirm user ${kind}?`)) return;
+    setBusyMemberId(id);
     try {
       await saasService.userAction(id, kind);
       await load();
     } catch (caught) {
       setNotice(caught instanceof ApiError ? caught.message : "User could not be updated.");
+    } finally {
+      setBusyMemberId(null);
     }
   }
 
@@ -165,9 +173,9 @@ export default function TeamPage() {
               </div>
               {!member.is_primary_owner && member.id !== user?.id ? <div className="flex flex-wrap gap-2">
                 {member.available_actions.includes("edit") ? <Button variant="ghost" onClick={() => setEditTarget(member)}>Edit</Button> : null}
-                {member.available_actions.includes("change_role") && user?.is_primary_owner ? <Button variant="ghost" onClick={() => void changeRole(member)}>Make {member.role === "OWNER" ? "cashier" : "owner"}</Button> : null}
-                {member.available_actions.includes("reset_password") ? <Button variant="outline" onClick={() => setResetTarget(member)}>Reset password</Button> : null}
-                <Button variant="outline" onClick={() => void action(member.id, member.is_active ? "deactivate" : "activate")}>{member.is_active ? "Deactivate" : "Activate"}</Button>
+                {member.available_actions.includes("change_role") && user?.is_primary_owner ? <Button variant="ghost" disabled={busyMemberId !== null} loading={busyMemberId === member.id} onClick={() => void changeRole(member)}>Make {member.role === "OWNER" ? "cashier" : "owner"}</Button> : null}
+                {member.available_actions.includes("reset_password") ? <Button variant="outline" disabled={busyMemberId !== null} onClick={() => setResetTarget(member)}>Reset password</Button> : null}
+                <Button variant="outline" disabled={busyMemberId !== null} loading={busyMemberId === member.id} onClick={() => void action(member.id, member.is_active ? "deactivate" : "activate")}>{member.is_active ? "Deactivate" : "Activate"}</Button>
               </div> : null}
             </Card>
           ))}

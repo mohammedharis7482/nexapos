@@ -2,6 +2,7 @@ import uuid
 
 from django.db import transaction
 
+from .image_rules import PRODUCT_IMAGE_EXTENSIONS
 from .models import Product, ProductCategory
 
 
@@ -60,4 +61,34 @@ def update_product(*, product: Product, validated_data: dict) -> Product:
         setattr(product, field, value)
     product.full_clean()
     product.save()
+    return product
+
+
+@transaction.atomic
+def set_product_image(*, product: Product, image) -> Product:
+    """Replace a product's image, deleting the previous file.
+
+    The old file is removed via the storage API (`field.delete`), never by
+    touching the filesystem, so this stays correct under a cloud backend.
+    """
+    # Capture the name as a plain string first: product.image is a FieldFile
+    # that .save() mutates in place, so holding the object would compare a
+    # name against itself and silently orphan the old file.
+    previous_name = product.image.name or ""
+    storage = product.image.storage
+    normalized_name = f"{product.pk}.{PRODUCT_IMAGE_EXTENSIONS[image.image.format]}"
+    product.image.save(normalized_name, image, save=False)
+    product.save(update_fields=["image", "updated_at"])
+    if previous_name and previous_name != product.image.name:
+        storage.delete(previous_name)
+    return product
+
+
+@transaction.atomic
+def clear_product_image(*, product: Product) -> Product:
+    if not product.image:
+        return product
+    product.image.delete(save=False)
+    product.image = ""
+    product.save(update_fields=["image", "updated_at"])
     return product

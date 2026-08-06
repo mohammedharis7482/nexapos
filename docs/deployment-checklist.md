@@ -37,7 +37,7 @@
 - [ ] Reconcile the smoke-test sale and remove it only through an approved
       business process—never direct database deletion.
 - [ ] Make an explicit continue/rollback decision and record it.
-# Authentication email delivery
+## Authentication email delivery
 
 - Configure a real non-console `DJANGO_EMAIL_BACKEND`.
 - Set `REQUIRE_EMAIL_VERIFICATION=True`.

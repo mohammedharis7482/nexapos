@@ -47,10 +47,19 @@ function errorMessage(error: unknown) {
   return error.message;
 }
 
+function isProductImportIssue(value: unknown): value is ProductImportIssue {
+  return (
+    typeof value === "object"
+    && value !== null
+    && "row_number" in value
+    && "column" in value
+    && "error_code" in value
+  );
+}
+
 function structuredIssues(error: unknown): ProductImportIssue[] {
-  return error instanceof ApiError
-    ? (error.structuredErrors as ProductImportIssue[])
-    : [];
+  if (!(error instanceof ApiError)) return [];
+  return error.structuredErrors.filter(isProductImportIssue);
 }
 
 function statusTone(status: ProductImport["status"]) {

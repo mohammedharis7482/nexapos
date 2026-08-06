@@ -4,8 +4,9 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
 from apps.payments.models import Payment
+from apps.products.api.serializers import product_image_url
 from apps.sales.models import CashierShift, Sale, SaleItem
-from apps.sales.services import shift_summary
+from apps.sales.services import shift_summary as compute_shift_summary
 
 
 class SaleCreatorSerializer(serializers.Serializer):
@@ -20,6 +21,16 @@ class SaleItemProductSerializer(serializers.Serializer):
     sku = serializers.CharField(read_only=True)
     barcode = serializers.CharField(read_only=True, allow_null=True)
     unit = serializers.CharField(read_only=True)
+    image_url = serializers.SerializerMethodField()
+
+    def get_image_url(self, item) -> str | None:
+        # Name/sku/unit above are denormalised snapshots on SaleItem, but the
+        # image is intentionally read live from the product so a cart line
+        # reflects the current photo. Callers prefetch items__product.
+        product = getattr(item, "product", None)
+        if product is None:
+            return None
+        return product_image_url(product, self.context.get("request"))
 
 
 class SaleItemSerializer(serializers.ModelSerializer):
@@ -332,4 +343,7 @@ class CashierShiftSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField())
     def get_summary(self, shift) -> dict:
-        return shift_summary(shift)
+        precomputed = self.context.get("shift_summaries")
+        if precomputed is not None:
+            return precomputed.get(shift.id) or compute_shift_summary(shift)
+        return compute_shift_summary(shift)

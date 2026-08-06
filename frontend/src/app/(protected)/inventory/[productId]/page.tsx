@@ -14,6 +14,7 @@ import { Badge, MetricCard, PageHeader, QuantityDisplay } from "@/components/ui/
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { FormField, QuantityInput } from "@/components/ui/input";
 import { Pagination, SectionCard } from "@/components/ui/layout";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { inventoryService } from "@/services/inventory.service";
@@ -107,20 +108,31 @@ export default function InventoryDetailPage() {
       <Link href="/inventory" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
         <ArrowLeft className="size-4" /> Back to inventory
       </Link>
-      <PageHeader
-        eyebrow="Inventory detail"
-        title={item.product.name}
-        description={`${item.product.sku} · ${item.product.category?.name ?? "Uncategorized"}`}
-        action={
-          owner ? (
-            item.is_initialized ? (
-              <Button leadingIcon={<Settings2 className="size-4" />} onClick={() => setAdjustmentOpen(true)}>Adjust stock</Button>
-            ) : (
-              <Button leadingIcon={<Plus className="size-4" />} onClick={() => setOpeningOpen(true)}>Configure opening stock</Button>
-            )
-          ) : undefined
-        }
-      />
+      <div className="flex items-start gap-4">
+        <ProductThumb
+          src={item.product.image_url}
+          alt={item.product.name}
+          categoryName={item.product.category?.name}
+          size="xl"
+          className="mt-1"
+        />
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            eyebrow="Inventory detail"
+            title={item.product.name}
+            description={`${item.product.sku} · ${item.product.category?.name ?? "Uncategorized"}`}
+            action={
+              owner ? (
+                item.is_initialized ? (
+                  <Button leadingIcon={<Settings2 className="size-4" />} onClick={() => setAdjustmentOpen(true)}>Adjust stock</Button>
+                ) : (
+                  <Button leadingIcon={<Plus className="size-4" />} onClick={() => setOpeningOpen(true)}>Configure opening stock</Button>
+                )
+              ) : undefined
+            }
+          />
+        </div>
+      </div>
       {success ? <Alert title={success} tone="success" /> : null}
       {error ? <Alert title={error} /> : null}
 

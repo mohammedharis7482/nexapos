@@ -28,6 +28,7 @@ from ..report_selectors import (
     inventory_report,
     payment_report,
     product_report,
+    resolve_filtered_sale_ids,
     sales_report,
 )
 
@@ -106,6 +107,7 @@ class ReportsView(APIView):
         filter_serializer = ReportFilterSerializer(data=raw_filters)
         filter_serializer.is_valid(raise_exception=True)
         filters = filter_serializer.validated_data
+        sale_ids = resolve_filtered_sale_ids(request.user, filters)
         data = {
             "currency": request.user.shop.currency,
             "timezone": zone.key,
@@ -117,11 +119,11 @@ class ReportsView(APIView):
                 "category": filters.get("category"),
                 "payment_method": filters.get("payment_method"),
             },
-            "sales": sales_report(request.user, filters),
-            "products": product_report(request.user, filters),
+            "sales": sales_report(request.user, filters, sale_ids=sale_ids),
+            "products": product_report(request.user, filters, sale_ids=sale_ids),
             "inventory": inventory_report(request.user, filters),
-            "payments": payment_report(request.user, filters),
-            "cashiers": cashier_report(request.user, filters),
+            "payments": payment_report(request.user, filters, sale_ids=sale_ids),
+            "cashiers": cashier_report(request.user, filters, sale_ids=sale_ids),
         }
         serializer = ReportsResponseSerializer(data)
         return success_response("Reports loaded.", serializer.data)

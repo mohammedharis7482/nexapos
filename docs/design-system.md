@@ -1,4 +1,8 @@
-# NexaPOS design system
+# NexaPOS design system (V1 - superseded)
+
+> **Status**: V2 is the current system - see `design-system-v2.md`. V1 remains
+> documented because routes migrate one at a time through compatibility tokens
+> and wrappers (`design-system-v2-migration.md`). Use V2 for new work.
 
 ## Direction
 

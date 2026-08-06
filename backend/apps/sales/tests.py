@@ -356,3 +356,160 @@ class DraftCancellationTests(DraftBillingApiTestCase):
             reverse("sales_api:draft-cancel", args=[other_id])
         )
         self.assertEqual(allowed.status_code, 200)
+
+
+class HoldResumeDraftTests(DraftBillingApiTestCase):
+    """hold_draft_sale/resume_held_sale and their views/URLs had zero
+    references anywhere in the test suite before this."""
+
+    def test_owner_holds_and_resumes_a_draft(self):
+        sale_id = self.create_draft(self.owner).json()["data"]["id"]
+        self.add_product(sale_id, quantity="2.000")
+
+        held = self.client.post(
+            reverse("sales_api:draft-hold", args=[sale_id]),
+            {"note": "Customer stepped out"},
+            content_type="application/json",
+        )
+        self.assertEqual(held.status_code, 200)
+        self.assertEqual(held.json()["data"]["status"], "HELD")
+        self.assertIsNotNone(Sale.objects.get(pk=sale_id).held_at)
+
+        resumed = self.client.post(reverse("sales_api:draft-resume", args=[sale_id]))
+        self.assertEqual(resumed.status_code, 200)
+        self.assertEqual(resumed.json()["data"]["status"], "DRAFT")
+
+    def test_only_a_held_bill_can_be_resumed(self):
+        sale_id = self.create_draft(self.owner).json()["data"]["id"]
+        response = self.client.post(reverse("sales_api:draft-resume", args=[sale_id]))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("status", response.json()["errors"])
+
+    def test_resuming_rejects_a_bill_with_a_since_deactivated_product(self):
+        sale_id = self.create_draft(self.owner).json()["data"]["id"]
+        self.add_product(sale_id, product=self.exclusive, quantity="1.000")
+        self.client.post(reverse("sales_api:draft-hold", args=[sale_id]))
+        self.exclusive.is_active = False
+        self.exclusive.save(update_fields=["is_active", "updated_at"])
+
+        response = self.client.post(reverse("sales_api:draft-resume", args=[sale_id]))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("items", response.json()["errors"])
+
+    def test_cashier_cannot_hold_or_resume_another_cashiers_draft(self):
+        # Unlike DraftCancelView, DraftHoldView/DraftResumeView don't
+        # pre-check via sale_for_request()/get_object_or_404 - denial comes
+        # from hold_draft_sale()/resume_held_sale() raising
+        # BillingOperationError("sale_id", ...), which the view maps to a
+        # 400 ValidationError, not a 404.
+        other_id = self.create_draft(self.other_cashier).json()["data"]["id"]
+        self.add_product(other_id, quantity="1.000")
+        self.login(self.cashier)
+        denied_hold = self.client.post(
+            reverse("sales_api:draft-hold", args=[other_id])
+        )
+        self.assertEqual(denied_hold.status_code, 400)
+        self.assertIn("sale_id", denied_hold.json()["errors"])
+
+        self.login(self.other_cashier)
+        self.client.post(reverse("sales_api:draft-hold", args=[other_id]))
+        self.login(self.cashier)
+        denied_resume = self.client.post(
+            reverse("sales_api:draft-resume", args=[other_id])
+        )
+        self.assertEqual(denied_resume.status_code, 400)
+        self.assertIn("sale_id", denied_resume.json()["errors"])
+
+
+class ShiftApiTests(DraftBillingApiTestCase):
+    """OpenShiftView/CurrentShiftView/CloseShiftView/ShiftListView/
+    ShiftDetailView had zero test coverage before this - permission and
+    shop/cashier scoping on financial reconciliation data was unverified.
+    setUpTestData already opens one shift per fixture user (owner,
+    cashier, other_cashier, other_owner)."""
+
+    def open_url(self):
+        return reverse("shift_api:open")
+
+    def close_url(self, shift_id):
+        return reverse("shift_api:close", args=[shift_id])
+
+    def detail_url(self, shift_id):
+        return reverse("shift_api:detail", args=[shift_id])
+
+    def test_cashier_sees_only_their_own_shift_in_the_list(self):
+        self.login(self.cashier)
+        response = self.client.get(reverse("shift_api:list"))
+        self.assertEqual(response.status_code, 200)
+        cashier_ids = {row["cashier"]["id"] for row in response.json()["data"]["results"]}
+        self.assertEqual(cashier_ids, {str(self.cashier.id)})
+
+    def test_owner_sees_every_shift_in_the_shop_in_the_list(self):
+        self.login(self.owner)
+        response = self.client.get(reverse("shift_api:list"))
+        self.assertEqual(response.status_code, 200)
+        cashier_ids = {row["cashier"]["id"] for row in response.json()["data"]["results"]}
+        self.assertEqual(cashier_ids, {str(self.owner.id), str(self.cashier.id), str(self.other_cashier.id)})
+        self.assertNotIn(str(self.other_owner.id), cashier_ids)
+
+    def test_cashier_cannot_view_another_cashiers_shift_detail(self):
+        other_shift = CashierShift.objects.get(cashier=self.other_cashier)
+        self.login(self.cashier)
+        response = self.client.get(self.detail_url(other_shift.id))
+        self.assertEqual(response.status_code, 404)
+
+    def test_owner_can_view_a_cashiers_shift_detail_but_not_another_shops(self):
+        cashier_shift = CashierShift.objects.get(cashier=self.cashier)
+        other_shop_shift = CashierShift.objects.get(cashier=self.other_owner)
+        self.login(self.owner)
+        own_shop = self.client.get(self.detail_url(cashier_shift.id))
+        self.assertEqual(own_shop.status_code, 200)
+        cross_shop = self.client.get(self.detail_url(other_shop_shift.id))
+        self.assertEqual(cross_shop.status_code, 404)
+
+    def test_opening_a_second_shift_while_one_is_already_open_is_rejected(self):
+        self.login(self.owner)
+        response = self.client.post(
+            self.open_url(), {"opening_cash": "50.00"}, content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("status", response.json()["errors"])
+
+    def test_negative_opening_cash_is_rejected(self):
+        self.login(self.owner)
+        response = self.client.post(
+            self.open_url(), {"opening_cash": "-10.00"}, content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_negative_counted_closing_cash_is_rejected(self):
+        shift = CashierShift.objects.get(cashier=self.owner)
+        self.login(self.owner)
+        response = self.client.post(
+            self.close_url(shift.id),
+            {"counted_closing_cash": "-1.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_cashier_cannot_close_another_cashiers_shift(self):
+        other_shift = CashierShift.objects.get(cashier=self.other_cashier)
+        self.login(self.cashier)
+        response = self.client.post(
+            self.close_url(other_shift.id),
+            {"counted_closing_cash": "100.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("shift", response.json()["errors"])
+
+    def test_owner_closes_own_shift_successfully(self):
+        shift = CashierShift.objects.get(cashier=self.owner)
+        self.login(self.owner)
+        response = self.client.post(
+            self.close_url(shift.id),
+            {"counted_closing_cash": "100.00"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"]["status"], "CLOSED")

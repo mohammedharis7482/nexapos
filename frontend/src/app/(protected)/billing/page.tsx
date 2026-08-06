@@ -9,7 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { CartLine, nextQuantity } from "@/components/billing/cart-line";
 import { DiscountControl } from "@/components/billing/discount-control";
@@ -21,6 +21,7 @@ import { Badge, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/u
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { useShortcuts, type ShortcutBinding } from "@/hooks/use-shortcuts";
 import { ApiError } from "@/lib/api-client";
 import { computeGridNavigationIndex, type ArrowKey } from "@/lib/grid-navigation";
@@ -50,6 +51,56 @@ export function availableForDraft(item: InventoryItem) {
   return item.product.is_active && item.is_initialized && Number(item.quantity_on_hand) > 0;
 }
 
+const ProductResultCard = memo(function ProductResultCard({
+  item,
+  disabled,
+  onAdd,
+}: {
+  item: InventoryItem;
+  disabled: boolean;
+  onAdd: (productId: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onAdd(item.product.id)}
+      className="group min-h-36 rounded-[var(--radius-card)] border border-border bg-surface p-4 text-left shadow-[var(--shadow-card)] transition-colors hover:border-blue-300 hover:bg-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <div className="flex items-start gap-3">
+        <ProductThumb
+          src={item.product.image_url}
+          alt={item.product.name}
+          categoryName={item.product.category?.name}
+          size="md"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="font-semibold">{item.product.name}</h2>
+            <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
+          </div>
+          <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
+        </div>
+      </div>
+      <div className="mt-5 flex items-end justify-between">
+        <div>
+          <p className="text-xs text-text-muted">Available</p>
+          <p className="font-semibold"><QuantityDisplay value={item.quantity_on_hand ?? "—"} unit={item.product.unit} /></p>
+        </div>
+        <Badge tone={
+          item.stock_status === "IN_STOCK"
+            ? "success"
+            : item.stock_status === "LOW_STOCK"
+              ? "warning"
+              : "danger"
+        }>
+          {item.stock_status.replaceAll("_", " ")}
+        </Badge>
+      </div>
+    </button>
+  );
+});
+
 function apiMessage(error: unknown, fallback: string) {
   return error instanceof ApiError ? error.message : fallback;
 }
@@ -57,6 +108,8 @@ function apiMessage(error: unknown, fallback: string) {
 export default function BillingPage() {
   const initializationStarted = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const addInFlightRef = useRef(false);
+  const searchTimerRef = useRef<number | null>(null);
   const [draft, setDraft] = useState<DraftSale | null>(null);
   const [results, setResults] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -153,12 +206,25 @@ export default function BillingPage() {
   }, [initializeDraft]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void searchProducts(search), 250);
-    return () => window.clearTimeout(timer);
+    searchTimerRef.current = window.setTimeout(() => {
+      searchTimerRef.current = null;
+      void searchProducts(search);
+    }, 250);
+    return () => {
+      if (searchTimerRef.current !== null) {
+        window.clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = null;
+      }
+    };
   }, [search, category, searchProducts]);
 
-  async function addProduct(productId: string) {
-    if (!draft) return;
+  const addProduct = useCallback(async (productId: string) => {
+    // Guards both the product-grid click path and the barcode-scan/Enter
+    // path (submitSearch) with one check, since a fast double Enter or a
+    // double scan could otherwise fire two concurrent add requests before
+    // the first sets busyItem.
+    if (!draft || addInFlightRef.current) return;
+    addInFlightRef.current = true;
     setBusyItem(productId);
     setError(null);
     setSuccess(null);
@@ -177,12 +243,17 @@ export default function BillingPage() {
       setError(apiMessage(addError, "The product could not be added."));
     } finally {
       setBusyItem(null);
+      addInFlightRef.current = false;
     }
-  }
+  }, [draft]);
 
   async function submitSearch() {
     const term = search.trim();
     if (!term) return;
+    if (searchTimerRef.current !== null) {
+      window.clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
     const items = await searchProducts(term);
     const exact = items.find(
       (item) =>
@@ -192,7 +263,10 @@ export default function BillingPage() {
     if (exact) await addProduct(exact.product.id);
   }
 
-  async function updateQuantity(itemId: string, quantity: string) {
+  // Stable across renders unless `draft` itself changes (an actual draft
+  // mutation, not a keystroke in the search box) - passed directly to
+  // CartLine so React.memo can actually skip unrelated re-renders.
+  const updateQuantity = useCallback(async (itemId: string, quantity: string) => {
     if (!draft) return;
     setBusyItem(itemId);
     setError(null);
@@ -208,9 +282,9 @@ export default function BillingPage() {
     } finally {
       setBusyItem(null);
     }
-  }
+  }, [draft]);
 
-  async function removeItem(itemId: string) {
+  const removeItem = useCallback(async (itemId: string) => {
     if (!draft) return;
     setBusyItem(itemId);
     setError(null);
@@ -222,7 +296,7 @@ export default function BillingPage() {
     } finally {
       setBusyItem(null);
     }
-  }
+  }, [draft]);
 
   async function cancelDraft() {
     if (!draft) return;
@@ -298,10 +372,10 @@ export default function BillingPage() {
   }
 
   const state = billingWorkspaceState(loading, draft, error);
-  const itemCount = draft?.items.reduce(
-    (total, item) => total + Number(item.quantity),
-    0,
-  ) ?? 0;
+  const itemCount = useMemo(
+    () => draft?.items.reduce((total, item) => total + Number(item.quantity), 0) ?? 0,
+    [draft?.items],
+  );
 
   function adjustActiveQuantity(direction: "increase" | "decrease") {
     if (!draft?.items.length) return;
@@ -482,39 +556,14 @@ export default function BillingPage() {
             <EmptyState title="No products found" description="Search by product name, SKU, or barcode." />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3" onKeyDown={handleResultsGridKeyDown}>
-              {results.map((item) => {
-                const available = availableForDraft(item);
-                return (
-                  <button
-                    type="button"
-                    key={item.product.id}
-                    disabled={!available || busyItem !== null}
-                    onClick={() => void addProduct(item.product.id)}
-                    className="group min-h-36 rounded-[var(--radius-card)] border border-border bg-surface p-4 text-left shadow-[var(--shadow-card)] transition-colors hover:border-blue-300 hover:bg-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <h2 className="font-semibold">{item.product.name}</h2>
-                      <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
-                    </div>
-                    <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
-                    <div className="mt-5 flex items-end justify-between">
-                      <div>
-                        <p className="text-xs text-text-muted">Available</p>
-                        <p className="font-semibold"><QuantityDisplay value={item.quantity_on_hand ?? "—"} unit={item.product.unit} /></p>
-                      </div>
-                      <Badge tone={
-                        item.stock_status === "IN_STOCK"
-                          ? "success"
-                          : item.stock_status === "LOW_STOCK"
-                            ? "warning"
-                            : "danger"
-                      }>
-                        {item.stock_status.replaceAll("_", " ")}
-                      </Badge>
-                    </div>
-                  </button>
-                );
-              })}
+              {results.map((item) => (
+                <ProductResultCard
+                  key={item.product.id}
+                  item={item}
+                  disabled={!availableForDraft(item) || busyItem !== null}
+                  onAdd={addProduct}
+                />
+              ))}
             </div>
           )}
         </section>
@@ -533,12 +582,12 @@ export default function BillingPage() {
             <div className="max-h-[48vh] overflow-y-auto px-5 lg:max-h-[390px]">
               {draft?.items.length ? draft.items.map((item) => (
                 <CartLine
-                  key={`${item.id}-${item.quantity}`}
+                  key={item.id}
                   item={item}
                   busy={busyItem === item.id}
-                  onQuantity={(quantity) => void updateQuantity(item.id, quantity)}
-                  onRemove={() => void removeItem(item.id)}
-                  onFocusItem={() => setLastActiveItemId(item.id)}
+                  onQuantity={updateQuantity}
+                  onRemove={removeItem}
+                  onFocusItem={setLastActiveItemId}
                 />
               )) : (
                 <div className="py-10 text-center">
