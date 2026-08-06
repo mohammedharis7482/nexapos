@@ -91,7 +91,7 @@ describe("login Shop ID handoff", () => {
       new ApiError(
         "Verify your email before signing in.",
         403,
-        { can_resend_verification: true },
+        {},
         "EMAIL_NOT_VERIFIED",
       ),
     );
@@ -115,7 +115,7 @@ describe("login Shop ID handoff", () => {
       new ApiError(
         "Verify your email before signing in.",
         403,
-        { can_resend_verification: true },
+        {},
         "EMAIL_NOT_VERIFIED",
       ),
     );

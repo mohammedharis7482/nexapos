@@ -184,11 +184,11 @@ describe("API client", () => {
         method: "POST",
         body: JSON.stringify({ shop_id: "id", username: "user", password: "x" }),
       }),
-    ).rejects.toMatchObject<ApiError>({
+    ).rejects.toMatchObject({
       status: 401,
       message: "Invalid shop or credentials.",
       code: "INVALID_CREDENTIALS",
-    });
+    } satisfies Partial<ApiError>);
   });
 
   it("signals expired sessions for 401 but not permission-only 403 responses", async () => {
@@ -246,9 +246,9 @@ describe("API client", () => {
 
     await expect(
       apiRequest("/products/", { signal: controller.signal }),
-    ).rejects.toMatchObject<ApiError>({
+    ).rejects.toMatchObject({
       status: 0,
       message: "NexaPOS cannot reach the server. Check your connection and try again.",
-    });
+    } satisfies Partial<ApiError>);
   });
 });

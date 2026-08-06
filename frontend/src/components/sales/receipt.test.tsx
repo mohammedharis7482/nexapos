@@ -47,6 +47,8 @@ const receipt: ReceiptData = {
     completed_at: "2026-07-24T10:00:00Z",
     created_at: "",
     updated_at: "",
+    held_at: null,
+    shift: "shift-id",
   },
 };
 

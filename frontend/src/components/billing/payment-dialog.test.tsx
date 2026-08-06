@@ -40,6 +40,8 @@ const draft: DraftSale = {
   cancelled_by: null,
   created_at: "",
   updated_at: "",
+  held_at: null,
+  shift: "shift-id",
 };
 const completed = {
   ...draft,
