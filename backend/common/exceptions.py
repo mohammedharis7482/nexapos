@@ -8,6 +8,31 @@ from rest_framework.views import exception_handler
 logger = logging.getLogger("nexapos.api")
 
 
+def _single_field_message(detail: Any) -> str | None:
+    """Return the human-readable message from a single-field validation error.
+
+    Domain rejections raised as ``ValidationError({field: message})`` -
+    "Requested quantity exceeds available stock.", "This user already has an
+    open shift." - carry their real reason under a field key rather than
+    under ``detail``, so without this they would surface to the user as the
+    generic fallback message with the actual reason buried in ``errors``.
+
+    Returns None for anything that isn't a single key mapping to plain text
+    (multi-field form errors, which intentionally keep the generic summary
+    and render per-field; and structured payloads like ``import_errors``,
+    whose list-of-dicts must never be stringified into a user-facing
+    message).
+    """
+    if not isinstance(detail, dict) or len(detail) != 1:
+        return None
+    value = next(iter(detail.values()))
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return None
+        value = value[0]
+    return str(value) if isinstance(value, str) else None
+
+
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
     """Wrap handled DRF errors in the public NexaPOS error contract."""
 
@@ -57,8 +82,12 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
             key: value for key, value in detail.items() if key not in {"code", "detail"}
         }
         response_errors.update(getattr(exc, "response_context", {}))
-    if isinstance(detail, dict) and set(detail) == {"detail"}:
-        message = str(detail["detail"])
+    elif (single_message := _single_field_message(detail)) is not None:
+        # Covers both the plain {"detail": ...} shape (404/403/throttle) and
+        # single-field domain rejections. Multi-field form errors fall
+        # through to the generic message on purpose - those forms show a
+        # summary banner plus per-field errors from `errors`.
+        message = single_message
 
     response.data = {
         "success": False,
