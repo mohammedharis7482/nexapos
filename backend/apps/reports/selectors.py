@@ -67,7 +67,7 @@ def dashboard_summary(user: User, *, now=None) -> dict:
     total = _money(sale_totals["total"])
     items = SaleItem.objects.filter(sale__in=today_sales).aggregate(
         quantity=Coalesce(
-            Sum("quantity"),
+            Sum("stock_quantity"),
             QUANTITY_ZERO,
             output_field=DecimalField(max_digits=15, decimal_places=3),
         )
@@ -204,7 +204,7 @@ def top_products(user: User, *, period: str = "today", now=None) -> list[dict]:
             sale__completed_at__lt=today_end,
         )
         .values("product_id", "product_name", "sku")
-        .annotate(quantity_sold=Sum("quantity"), sales_total=Sum("line_total"))
+        .annotate(quantity_sold=Sum("stock_quantity"), sales_total=Sum("line_total"))
         .order_by("-quantity_sold", "-sales_total", "product_name", "product_id")[
             :DASHBOARD_LIST_LIMIT
         ]

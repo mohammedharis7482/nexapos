@@ -41,7 +41,10 @@ class SaleItemSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "product",
+            "pricing_mode",
+            "packet_size",
             "quantity",
+            "stock_quantity",
             "unit_price",
             "tax_rate",
             "is_tax_inclusive",
@@ -242,6 +245,14 @@ class AddItemSerializer(serializers.Serializer):
         decimal_places=3,
         min_value=Decimal("0.001"),
     )
+    # Omitted for standard products, which keeps every existing caller
+    # (including barcode scans) working unchanged.
+    pricing_mode = serializers.ChoiceField(
+        choices=SaleItem.PricingMode.choices,
+        required=False,
+        allow_blank=True,
+    )
+    packet_id = serializers.UUIDField(required=False, allow_null=True)
 
     def validate(self, attrs):
         has_product = bool(attrs.get("product_id"))
@@ -249,6 +260,10 @@ class AddItemSerializer(serializers.Serializer):
         if has_product == has_barcode:
             raise serializers.ValidationError(
                 "Supply exactly one of product_id or barcode."
+            )
+        if attrs.get("packet_id") and attrs.get("pricing_mode") != SaleItem.PricingMode.PACKET:
+            raise serializers.ValidationError(
+                {"packet_id": "A packet size only applies to a packet sale."}
             )
         prohibited = {
             "shop",
@@ -260,6 +275,7 @@ class AddItemSerializer(serializers.Serializer):
             "subtotal",
             "line_subtotal",
             "line_total",
+            "stock_quantity",
         }
         supplied = prohibited.intersection(self.initial_data)
         if supplied:

@@ -1,12 +1,13 @@
 from datetime import datetime
 from decimal import Decimal
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.inventory.models import InventoryBalance, StockMovement
 from apps.inventory.selectors import stock_status_for
 from apps.products.api.serializers import product_image_url
-from apps.products.models import Product, ProductCategory
+from apps.products.models import Product, ProductCategory, ProductPacket
 
 
 class InventoryCategorySerializer(serializers.ModelSerializer):
@@ -15,9 +16,19 @@ class InventoryCategorySerializer(serializers.ModelSerializer):
         fields = ("id", "name")
 
 
+class InventoryPacketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPacket
+        fields = ("id", "size", "price")
+
+
 class InventoryProductSerializer(serializers.ModelSerializer):
     category = InventoryCategorySerializer(read_only=True)
     image_url = serializers.SerializerMethodField()
+    # The billing grid needs the packet offer to render its size selector.
+    # Inactive packets are withheld: they exist only so sale history keeps
+    # resolving, and must never be sellable again.
+    packets = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -31,7 +42,16 @@ class InventoryProductSerializer(serializers.ModelSerializer):
             "category",
             "is_active",
             "image_url",
+            "pricing_mode",
+            "packets",
         )
+
+    @extend_schema_field(InventoryPacketSerializer(many=True))
+    def get_packets(self, product) -> list:
+        return InventoryPacketSerializer(
+            [packet for packet in product.packets.all() if packet.is_active],
+            many=True,
+        ).data
 
     def get_image_url(self, product) -> str | None:
         return product_image_url(product, self.context.get("request"))

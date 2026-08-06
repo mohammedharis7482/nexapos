@@ -77,7 +77,7 @@ def sales_report(user, filters: dict, *, sale_ids=None) -> dict:
     count = totals["completed_sales_count"]
     items_sold = SaleItem.objects.filter(sale__in=sales).aggregate(
         total=Coalesce(
-            Sum("quantity"),
+            Sum("stock_quantity"),
             QUANTITY_ZERO,
             output_field=DecimalField(max_digits=18, decimal_places=3),
         )
@@ -123,7 +123,7 @@ def product_report(user, filters: dict, *, sale_ids=None) -> list[dict]:
     rows = (
         items.values("product_id", "product_name", "sku", "unit")
         .annotate(
-            quantity_sold=Sum("quantity"),
+            quantity_sold=Sum("stock_quantity"),
             sales_total=Sum("line_total"),
             sales_count=Count("sale_id", distinct=True),
         )
@@ -265,7 +265,7 @@ def cashier_report(user, filters: dict, *, sale_ids=None) -> list[dict]:
     item_rows = (
         SaleItem.objects.filter(sale__in=sales)
         .values("sale__completed_by_id")
-        .annotate(items_sold=Sum("quantity"))
+        .annotate(items_sold=Sum("stock_quantity"))
     )
     items_by_cashier = {
         row["sale__completed_by_id"]: row["items_sold"] for row in item_rows

@@ -22,7 +22,11 @@ def filter_categories(queryset, *, search: str = "", is_active: str = ""):
 
 
 def products_for_user(user) -> QuerySet[Product]:
-    queryset = Product.objects.filter(shop=user.shop).select_related("category")
+    queryset = (
+        Product.objects.filter(shop=user.shop)
+        .select_related("category")
+        .prefetch_related("packets")
+    )
     if user.role == user.Role.CASHIER and not user.is_superuser:
         queryset = queryset.filter(is_active=True)
     return queryset
