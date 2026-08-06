@@ -29,6 +29,7 @@ from apps.products.services import (
 )
 from apps.saas.services import SaasOperationError
 from common.pagination import StandardResultsSetPagination
+from common.params import parse_uuid_query_param
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
 
@@ -152,13 +153,7 @@ class ProductListCreateView(StaffReadOwnerWriteMixin, APIView):
         responses={200: ProductSerializer(many=True)},
     )
     def get(self, request):
-        category = request.query_params.get("category", "")
-        if category:
-            uuid_field = serializers.UUIDField()
-            try:
-                category = str(uuid_field.run_validation(category))
-            except serializers.ValidationError as exc:
-                raise serializers.ValidationError({"category": exc.detail}) from exc
+        category = parse_uuid_query_param(request, "category")
 
         queryset = filter_products(
             products_for_user(request.user),

@@ -10,6 +10,7 @@ from rest_framework.test import APIRequestFactory
 
 from common.exceptions import api_exception_handler
 from common.logging import SafeJsonFormatter
+from common.params import parse_bool_param
 
 
 class HealthEndpointTests(SimpleTestCase):
@@ -72,6 +73,20 @@ class ReadinessEndpointTests(TestCase):
             {"status": "unavailable", "service": "NexaPOS API"},
         )
         self.assertNotContains(response, "database", status_code=503)
+
+
+class ParseBoolParamTests(SimpleTestCase):
+    def test_accepts_true_and_false_case_insensitively(self):
+        self.assertIs(parse_bool_param("true"), True)
+        self.assertIs(parse_bool_param("True"), True)
+        self.assertIs(parse_bool_param("TRUE"), True)
+        self.assertIs(parse_bool_param("false"), False)
+        self.assertIs(parse_bool_param("False"), False)
+
+    def test_treats_anything_else_as_no_filter(self):
+        self.assertIsNone(parse_bool_param(""))
+        self.assertIsNone(parse_bool_param("maybe"))
+        self.assertIsNone(parse_bool_param("1"))
 
 
 class ApiExceptionHandlerTests(SimpleTestCase):

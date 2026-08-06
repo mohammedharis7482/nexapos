@@ -19,6 +19,7 @@ from apps.inventory.services import (
     update_low_stock_threshold,
 )
 from common.pagination import StandardResultsSetPagination
+from common.params import parse_uuid_query_param
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
 
@@ -72,12 +73,7 @@ class InventoryListView(APIView):
         responses={200: InventoryItemSerializer(many=True)},
     )
     def get(self, request):
-        category = request.query_params.get("category", "")
-        if category:
-            try:
-                category = str(serializers.UUIDField().run_validation(category))
-            except serializers.ValidationError as exc:
-                raise serializers.ValidationError({"category": exc.detail}) from exc
+        category = parse_uuid_query_param(request, "category")
         queryset = filter_inventory_products(
             inventory_products_for_user(request.user),
             search=request.query_params.get("search", ""),

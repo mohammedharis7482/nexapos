@@ -2,6 +2,7 @@ from django.db.models import Count, F, Q, QuerySet
 
 from apps.accounts.models import User
 from apps.products.models import Product
+from common.params import parse_bool_param
 
 from .models import InventoryBalance, StockMovement
 
@@ -42,8 +43,9 @@ def filter_inventory_products(
         )
     if category:
         queryset = queryset.filter(category_id=category)
-    if is_active.lower() in {"true", "false"}:
-        queryset = queryset.filter(is_active=is_active.lower() == "true")
+    parsed_is_active = parse_bool_param(is_active)
+    if parsed_is_active is not None:
+        queryset = queryset.filter(is_active=parsed_is_active)
 
     status = stock_status.upper()
     if status == "NOT_INITIALIZED":
