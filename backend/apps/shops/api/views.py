@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.views import APIView
 
+from apps.saas.models import AuditEvent
 from common.permissions import IsCashierOrOwner, IsOwner
 from common.views import success_response
 
@@ -33,4 +34,9 @@ class ShopSettingsView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        AuditEvent.objects.create(
+            shop=shop,
+            actor=request.user,
+            event=AuditEvent.Event.SHOP_SETTINGS_UPDATED,
+        )
         return success_response("Shop settings updated.", serializer.data)

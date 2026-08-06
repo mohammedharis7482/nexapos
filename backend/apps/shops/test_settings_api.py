@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.accounts.models import User
+from apps.saas.models import AuditEvent
 
 from .models import Shop
 
@@ -87,6 +88,13 @@ class ShopSettingsApiTests(TestCase):
         self.shop.refresh_from_db()
         self.assertEqual(self.shop.name, "Al Noor Market")
         self.assertEqual(self.shop.default_tax_rate, Decimal("5.00"))
+        self.assertTrue(
+            AuditEvent.objects.filter(
+                shop=self.shop,
+                actor=self.owner,
+                event=AuditEvent.Event.SHOP_SETTINGS_UPDATED,
+            ).exists()
+        )
 
     def test_cashier_update_is_forbidden(self):
         self.login(self.cashier)

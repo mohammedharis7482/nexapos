@@ -187,6 +187,7 @@ class AuditEvent(BaseModel):
         RECEIPT_REPRINTED = "RECEIPT_REPRINTED", "Receipt reprinted"
         CARD_PAYMENT_RECORDED = "CARD_PAYMENT_RECORDED", "Card payment recorded"
         DATA_EXPORTED = "DATA_EXPORTED", "Data exported"
+        SHOP_SETTINGS_UPDATED = "SHOP_SETTINGS_UPDATED", "Shop settings updated"
 
     shop = models.ForeignKey(
         "shops.Shop", on_delete=models.PROTECT, related_name="audit_events"
