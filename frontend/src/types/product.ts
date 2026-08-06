@@ -44,6 +44,7 @@ export interface Product {
   is_tax_inclusive: boolean;
   is_active: boolean;
   category: CategorySummary | null;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }

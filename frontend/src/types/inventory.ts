@@ -29,6 +29,7 @@ export interface InventoryProduct {
   selling_price: string;
   category: CategorySummary | null;
   is_active: boolean;
+  image_url: string | null;
 }
 
 export interface InventoryItem {

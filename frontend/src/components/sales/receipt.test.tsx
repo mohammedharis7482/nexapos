@@ -23,7 +23,7 @@ const receipt: ReceiptData = {
     completed_by: { id: "user-id", full_name: "Cashier", role: "CASHIER" },
     items: [{
       id: "item-id",
-      product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE" },
+      product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
       quantity: "2.000",
       unit_price: "6.00",
       tax_rate: "0.00",

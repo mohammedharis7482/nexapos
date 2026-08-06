@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { Checkbox, FormField, Input, MoneyInput, PercentageInput, Select, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
+import { ProductImageField } from "@/components/catalogue/product-image-field";
 import { ApiError } from "@/lib/api-client";
 import {
   productSchema,
@@ -35,6 +36,29 @@ const defaults: ProductFormValues = {
   category_id: "",
 };
 
+/**
+ * Image selection is entirely optional: an untouched picker leaves `file` null
+ * and `removeExisting` false, so the save path never calls an image endpoint.
+ * `identity` records which (open, product) pair the state belongs to.
+ */
+interface ImageState {
+  identity: string;
+  file: File | null;
+  existingUrl: string | null;
+  removeExisting: boolean;
+  error: string | null;
+}
+
+function freshImageState(identity: string, product: Product | null): ImageState {
+  return {
+    identity,
+    file: null,
+    existingUrl: product?.image_url ?? null,
+    removeExisting: false,
+    error: null,
+  };
+}
+
 export function ProductDialog({
   open,
   onOpenChange,
@@ -50,6 +74,14 @@ export function ProductDialog({
 }) {
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [submitAction, setSubmitAction] = useState<"save" | "stock">("save");
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // The image picker resets whenever the dialog opens or targets a different
+  // product. Adjusting during render keyed on that identity - rather than in
+  // the reset effect below - avoids a cascading second render.
+  const imageIdentity = `${open}:${product?.id ?? "new"}`;
+  const [image, setImage] = useState(() => freshImageState(imageIdentity, product));
+  if (image.identity !== imageIdentity) setImage(freshImageState(imageIdentity, product));
   const {
     register,
     reset,
@@ -91,7 +123,35 @@ export function ProductDialog({
       const response = product
         ? await productService.update(product.id, payload)
         : await productService.create(payload);
-      onSaved(response.data, !product && addStock);
+
+      // The image is a separate sub-resource call, made only when the user
+      // actually chose or cleared one. A failure here must not discard the
+      // saved product, so it surfaces on the image field and leaves the
+      // dialog open rather than throwing away the write that succeeded.
+      let saved = response.data;
+      if (image.file || image.removeExisting) {
+        setUploadingImage(true);
+        try {
+          const imageResponse = image.file
+            ? await productService.uploadImage(saved.id, image.file)
+            : await productService.removeImage(saved.id);
+          saved = imageResponse.data;
+        } catch (imageFailure) {
+          setImage((current) => ({
+            ...current,
+            error:
+              imageFailure instanceof ApiError
+                ? imageFailure.message
+                : "The image could not be uploaded. The product was saved.",
+          }));
+          onSaved(saved, false);
+          return;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
+      onSaved(saved, !product && addStock);
       onOpenChange(false);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -163,6 +223,24 @@ export function ProductDialog({
         <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
           <Textarea id="product-description" {...register("description")} />
         </FormField>
+        <ProductImageField
+          existingUrl={image.removeExisting ? null : image.existingUrl}
+          categoryName={product?.category?.name}
+          productName={product?.name ?? "Product"}
+          file={image.file}
+          onFileChange={(next) => {
+            setImage((current) => ({
+              ...current,
+              file: next,
+              error: null,
+              removeExisting: next ? false : current.removeExisting,
+            }));
+          }}
+          onRemoveExisting={() => setImage((current) => ({ ...current, removeExisting: true }))}
+          disabled={isSubmitting}
+          uploading={uploadingImage}
+          error={image.error}
+        />
         </fieldset>
         <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
           <legend className="px-1 text-sm font-bold text-text-primary">Product codes</legend>

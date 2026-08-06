@@ -26,7 +26,7 @@ def completed_sales_for_user(user: User) -> QuerySet[Sale]:
     queryset = (
         Sale.objects.filter(shop=user.shop, status=Sale.Status.COMPLETED)
         .select_related("shop", "created_by", "completed_by")
-        .prefetch_related("items", "payments")
+        .prefetch_related("items__product", "payments")
     )
     if user.role == User.Role.CASHIER and not user.is_superuser:
         queryset = queryset.filter(created_by=user)

@@ -13,6 +13,7 @@ import { Badge, MoneyDisplay, PageHeader } from "@/components/ui/display";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { SearchInput, Select } from "@/components/ui/input";
 import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { categoryService } from "@/services/category.service";
@@ -138,7 +139,12 @@ export default function ProductsPage() {
               <tbody>
                 {products.map((product) => (
                   <tr key={product.id} className="border-t border-border transition-colors hover:bg-surface-subtle">
-                    <td className="px-4 py-4 font-semibold">{product.name}</td>
+                    <td className="px-4 py-4 font-semibold">
+                      <div className="flex items-center gap-3">
+                        <ProductThumb src={product.image_url} alt={product.name} categoryName={product.category?.name} size="sm" />
+                        <span>{product.name}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-4 text-text-secondary"><span className="block">{product.sku}</span><span className="text-xs text-text-muted">{product.barcode ?? "No barcode"}</span></td>
                     <td className="px-4 py-4 text-text-secondary">{product.category?.name ?? "Uncategorized"}</td>
                     <td className="px-4 py-4 text-text-secondary">{product.unit}</td>
@@ -154,7 +160,10 @@ export default function ProductsPage() {
             {products.map((product) => (
               <Card key={product.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div><h2 className="font-semibold">{product.name}</h2><p className="mt-1 text-sm text-text-muted">{product.category?.name ?? "Uncategorized"} · {product.unit}</p></div>
+                  <div className="flex min-w-0 items-start gap-3">
+                    <ProductThumb src={product.image_url} alt={product.name} categoryName={product.category?.name} size="md" />
+                    <div className="min-w-0"><h2 className="font-semibold">{product.name}</h2><p className="mt-1 text-sm text-text-muted">{product.category?.name ?? "Uncategorized"} · {product.unit}</p></div>
+                  </div>
                   {owner ? <IconButton aria-label={`Edit ${product.name}`} onClick={() => { setEditing(product); setDialogOpen(true); }}><Edit3 className="size-4" /></IconButton> : null}
                 </div>
                 <div className="mt-4 flex items-end justify-between gap-3"><div className="min-w-0 text-xs text-text-muted"><p className="break-words">{product.sku}</p><p className="break-words">{product.barcode ?? "No barcode"}</p></div><div className="shrink-0 text-right"><p className="font-bold"><MoneyDisplay value={product.selling_price} /></p><Badge tone={product.is_active ? "success" : "neutral"}>{product.is_active ? "Active" : "Inactive"}</Badge></div></div>

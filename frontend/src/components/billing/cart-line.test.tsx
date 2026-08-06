@@ -12,7 +12,7 @@ const wholeUnitItem: SaleItem = {
     name: "Baladna Milk",
     sku: "MILK-001",
     barcode: "123",
-    unit: "BOTTLE",
+    unit: "BOTTLE", image_url: null,
   },
   quantity: "2.000",
   unit_price: "6.00",

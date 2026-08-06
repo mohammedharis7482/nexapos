@@ -21,6 +21,7 @@ import { Badge, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/u
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { useShortcuts, type ShortcutBinding } from "@/hooks/use-shortcuts";
 import { ApiError } from "@/lib/api-client";
 import { computeGridNavigationIndex, type ArrowKey } from "@/lib/grid-navigation";
@@ -66,11 +67,21 @@ const ProductResultCard = memo(function ProductResultCard({
       onClick={() => onAdd(item.product.id)}
       className="group min-h-36 rounded-[var(--radius-card)] border border-border bg-surface p-4 text-left shadow-[var(--shadow-card)] transition-colors hover:border-blue-300 hover:bg-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="font-semibold">{item.product.name}</h2>
-        <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
+      <div className="flex items-start gap-3">
+        <ProductThumb
+          src={item.product.image_url}
+          alt={item.product.name}
+          categoryName={item.product.category?.name}
+          size="md"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="font-semibold">{item.product.name}</h2>
+            <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
+          </div>
+          <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
+        </div>
       </div>
-      <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
       <div className="mt-5 flex items-end justify-between">
         <div>
           <p className="text-xs text-text-muted">Available</p>

@@ -97,7 +97,7 @@ class CompletedSaleDetailView(APIView):
         sale = completed_sale_for_request(request, sale_id)
         return success_response(
             "Completed sale retrieved.",
-            CompletedSaleSerializer(sale).data,
+            CompletedSaleSerializer(sale, context={"request": request}).data,
         )
 
 

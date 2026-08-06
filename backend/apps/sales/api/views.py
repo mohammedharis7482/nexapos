@@ -55,7 +55,7 @@ class DraftListCreateView(APIView):
         queryset = drafts_for_user(request.user)
         paginator = StandardResultsSetPagination()
         page = paginator.paginate_queryset(queryset, request, view=self)
-        data = DraftSaleSerializer(page, many=True).data
+        data = DraftSaleSerializer(page, many=True, context={"request": request}).data
         return success_response(
             "Draft bills retrieved.",
             paginator.get_paginated_data(data),
@@ -68,7 +68,7 @@ class DraftListCreateView(APIView):
         sale = create_draft_sale(user=request.user, **serializer.validated_data)
         return success_response(
             "Draft bill created.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
             status_code=status.HTTP_201_CREATED,
         )
 
@@ -81,7 +81,7 @@ class DraftDetailView(APIView):
         sale = sale_for_request(request, sale_id)
         return success_response(
             "Draft bill retrieved.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
         )
 
 
@@ -104,7 +104,7 @@ class DraftItemCreateView(APIView):
         sale = sale_for_request(request, sale.pk)
         return success_response(
             "Product added to draft.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
         )
 
 
@@ -128,7 +128,7 @@ class DraftItemDetailView(APIView):
         sale = sale_for_request(request, sale.pk)
         return success_response(
             "Draft item updated.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
         )
 
     @extend_schema(responses={200: DraftSaleSerializer})
@@ -145,7 +145,7 @@ class DraftItemDetailView(APIView):
         sale = sale_for_request(request, sale.pk)
         return success_response(
             "Draft item removed.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
         )
 
 
@@ -168,7 +168,7 @@ class DraftDiscountView(APIView):
         sale = sale_for_request(request, sale.pk)
         return success_response(
             "Discount updated.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
         )
 
 
@@ -185,7 +185,7 @@ class DraftCancelView(APIView):
         sale = sale_for_request(request, sale.pk)
         return success_response(
             "Draft bill cancelled.",
-            DraftSaleSerializer(sale).data,
+            DraftSaleSerializer(sale, context={"request": request}).data,
         )
 
 
@@ -224,7 +224,7 @@ class DraftCompleteView(APIView):
         )
         return success_response(
             "Sale completed.",
-            CompletedSaleSerializer(sale).data,
+            CompletedSaleSerializer(sale, context={"request": request}).data,
         )
 
 
@@ -242,7 +242,7 @@ class DraftHoldView(APIView):
             )
         except BillingOperationError as exc:
             raise_operation_error(exc)
-        return success_response("Bill held.", DraftSaleSerializer(sale).data)
+        return success_response("Bill held.", DraftSaleSerializer(sale, context={"request": request}).data)
 
 
 class DraftResumeView(APIView):
@@ -254,4 +254,4 @@ class DraftResumeView(APIView):
             sale = resume_held_sale(sale_id=sale_id, user=request.user)
         except BillingOperationError as exc:
             raise_operation_error(exc)
-        return success_response("Bill resumed.", DraftSaleSerializer(sale).data)
+        return success_response("Bill resumed.", DraftSaleSerializer(sale, context={"request": request}).data)

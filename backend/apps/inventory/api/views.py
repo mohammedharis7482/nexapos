@@ -61,7 +61,7 @@ def product_for_request(request, product_id):
 def paginated_inventory_response(request, view, queryset, message):
     paginator = StandardResultsSetPagination()
     page = paginator.paginate_queryset(queryset, request, view=view)
-    data = InventoryItemSerializer(page, many=True).data
+    data = InventoryItemSerializer(page, many=True, context={"request": request}).data
     return success_response(message, paginator.get_paginated_data(data))
 
 
@@ -99,7 +99,7 @@ class InventoryDetailView(APIView):
         product = product_for_request(request, product_id)
         return success_response(
             "Inventory retrieved.",
-            InventoryItemSerializer(product).data,
+            InventoryItemSerializer(product, context={"request": request}).data,
         )
 
     @extend_schema(request=ThresholdSerializer, responses={200: InventoryItemSerializer})
@@ -118,7 +118,7 @@ class InventoryDetailView(APIView):
         product = inventory_products_for_user(request.user).get(pk=product.pk)
         return success_response(
             "Low-stock threshold updated.",
-            InventoryItemSerializer(product).data,
+            InventoryItemSerializer(product, context={"request": request}).data,
         )
 
 
@@ -145,7 +145,7 @@ class OpeningStockView(APIView):
         return success_response(
             "Opening stock configured.",
             {
-                "inventory": InventoryItemSerializer(product).data,
+                "inventory": InventoryItemSerializer(product, context={"request": request}).data,
                 "movement": StockMovementSerializer(movement).data,
             },
             status_code=201,
@@ -175,7 +175,7 @@ class AdjustmentView(APIView):
         return success_response(
             "Inventory adjusted.",
             {
-                "inventory": InventoryItemSerializer(product).data,
+                "inventory": InventoryItemSerializer(product, context={"request": request}).data,
                 "movement": StockMovementSerializer(movement).data,
             },
         )

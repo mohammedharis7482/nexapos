@@ -6,6 +6,7 @@ import { memo, useEffect, useState } from "react";
 import { IconButton } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/ui/display";
 import { Input } from "@/components/ui/input";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { billingQuantity } from "@/schemas/billing.schema";
 import type { SaleItem } from "@/types/billing";
 import { isDecimalUnit } from "@/types/product";
@@ -70,11 +71,14 @@ export const CartLine = memo(function CartLine({
   return (
     <article className="border-b border-border py-3.5 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold">{item.product.name}</h3>
-          <p className="mt-0.5 text-xs text-text-muted">
-            {item.product.sku} · <MoneyDisplay value={item.unit_price} />/{item.product.unit.toLowerCase()}
-          </p>
+        <div className="flex min-w-0 items-start gap-2.5">
+          <ProductThumb src={item.product.image_url} alt={item.product.name} size="sm" />
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold">{item.product.name}</h3>
+            <p className="mt-0.5 text-xs text-text-muted">
+              {item.product.sku} · <MoneyDisplay value={item.unit_price} />/{item.product.unit.toLowerCase()}
+            </p>
+          </div>
         </div>
         {confirmRemove ? (
           <div className="flex items-center gap-1">

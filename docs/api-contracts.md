@@ -339,6 +339,26 @@ Product lists accept `search`, `category`, `unit`, `is_active`, `ordering`,
 descending). Category responses contain only `id` and `name`; product responses
 do not expose a shop identifier or inventory state.
 
+### Product image
+
+- `POST /api/v1/products/{uuid}/image/` — owner-only, `multipart/form-data`,
+  field `image`. Replaces any existing image and deletes the old file.
+- `DELETE /api/v1/products/{uuid}/image/` — owner-only, idempotent.
+
+Both return the full product. Validation rejects anything over 5 MB or whose
+*decoded* format is not JPEG, PNG, or WEBP (the declared content type and the
+filename are not trusted), using the standard error envelope with
+`errors.image`.
+
+`image_url` is `null` when no image is set and is serialized on the product,
+inventory (`product.image_url`), and sale-item (`product.image_url`)
+representations. Sale items snapshot name/SKU/unit at sale time but read the
+image live, so a receipt reprint shows the product's current photo. URLs are
+absolute and produced by the configured storage backend; with the default
+`FileSystemStorage` they resolve under `MEDIA_URL`, which Django serves only
+when `DEBUG` is on — production serves `/media/` from the web server or a
+cloud backend selected via `DJANGO_DEFAULT_FILE_STORAGE`.
+
 All catalogue routes require session authentication and exact trailing slashes.
 No public registration, JWT token, catalogue hard-delete, or billing endpoints
 exist.
