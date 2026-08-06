@@ -25,11 +25,22 @@ active catalogue rows, stock movement history, and payment method/time.
 - Case-insensitive contains searches cannot fully exploit ordinary B-tree
   indexes. PostgreSQL trigram/search indexing should only be considered after
   measured catalogue-search degradation.
-- Inventory reporting performs several fixed count queries. It is bounded but
-  may later be consolidated if measured latency warrants it.
 - No realistic simultaneous-till load test was available. Row-lock ordering is
-  code-reviewed and sequential transaction tests pass, but staging contention
-  testing remains required.
+  code-reviewed and threaded concurrency tests cover correctness
+  (`apps/*/test_concurrency.py`), but staging contention/latency testing under
+  production-like volume remains required.
+
+## Resolved
+
+- `inventory_summary` collapsed four count queries into one conditional
+  aggregate.
+- Shift list no longer computes summaries per row (was ~3 queries per shift);
+  `bulk_shift_summaries` uses a fixed query count per page.
+- CSV exports apply their row limit in SQL instead of materialising the table.
+- `ReportsView` resolves its filtered sale set once instead of once per report
+  section.
+- Sale numbering locks the per-shop/day sequence row rather than the whole
+  `Shop` row, so registers no longer serialise against each other.
 
 ## Frontend
 

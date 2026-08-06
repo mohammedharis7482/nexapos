@@ -14,14 +14,19 @@ The authenticated session context exposes safe lifecycle, subscription summary,
 primary-owner status, and display capabilities. Capabilities improve UI
 decisions but never replace backend permissions.
 
-Shop registration runs in one database transaction. It creates one shop, its
-primary owner, one trial subscription, one registration audit event, and one
-active hashed verification token. Email generation is part of that policy: if
-the email backend raises an error, the transaction rolls back and the API
-returns a sanitized server failure. Case-insensitive database uniqueness for
-nonblank shop registration email addresses closes the concurrent
-duplicate-registration race while preserving the existing user membership
-rules; application validation provides the normal field-level response.
+Shop registration runs in one database transaction creating the shop, its
+primary owner, one trial subscription, one registration audit event, and (when
+verification is required) one hashed verification token.
+
+Email is sent **after** that transaction commits - there is no transactional
+outbox. `send_templated_email` never propagates: it catches delivery failures
+and returns safe metadata, so a failed send cannot roll back the tenant. The
+response reports `email_delivery: EMAIL_DELIVERY_FAILED` and the pending tenant
+stays recoverable via resend. No recurring deletion job is enabled.
+
+Case-insensitive database uniqueness on nonblank registration emails closes the
+concurrent duplicate-registration race; application validation supplies the
+normal field-level response.
 
 The Shop UUID is the stable tenant identifier used by the existing login
 contract. It is intentionally visible on registration/verification results,
@@ -38,15 +43,9 @@ stored identifier. Only a password-validated pending-registration owner
 receives `EMAIL_NOT_VERIFIED`; invalid identifiers, usernames, or passwords
 remain indistinguishable.
 
+With `REQUIRE_EMAIL_VERIFICATION=False` (development default) the owner is
+created verified/exempt and the shop starts at `ONBOARDING`; with `True`
+(production default) the pending-verification lifecycle applies.
+
 Automated payment collection, recurring charging, multi-branch operation,
 impersonation, and custom permission builders are deliberately deferred.
-# Registration and delivery boundary
-
-Core registration is one PostgreSQL transaction. Email is attempted after
-commit because no transactional outbox exists. Delivery failure is represented
-honestly and the pending tenant remains recoverable. No recurring deletion job
-is enabled.
-
-The transaction conditionally creates the verification token. Development
-creates the owner as verified/exempt and starts `ONBOARDING`; production keeps
-the pending verification lifecycle.

@@ -227,7 +227,7 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
   succeeds with the real HTTPS API URL and contains no localhost API target.
 - Complete [production-smoke-test.md](production-smoke-test.md) after both
   services are deployed.
-# Email-delivery recovery
+## Email-delivery recovery
 
 1. Register with the console backend and find the link in the Django terminal.
 2. Configure private SMTP settings and run `send_test_email`.
@@ -235,7 +235,7 @@ data. Validate at 360, 390, 430, 768, 1024, 1280, and 1440 CSS pixels.
 4. Resend, verify the prior token is superseded, and sign in with the latest.
 5. Run `cleanup_test_tenant` without `--confirm` and verify nothing changes.
 
-# Fresh verification-exempt development flow
+## Fresh verification-exempt development flow
 
 1. Preview and explicitly confirm `reset_development_data`.
 2. Confirm only the example Plans remain.

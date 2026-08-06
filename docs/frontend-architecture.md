@@ -1,11 +1,21 @@
 # Frontend architecture
 
-Billing checks the current shift before preparing a draft. When none is open it
-renders a focused guard with an Open Shift action; it does not create a draft
-or enter a redirect loop. The canonical current route is
-`/sales/shifts/current`, while the backend completion service remains
-authoritative. Dashboard uses a lightweight current-shift request only; the
-application shell never fetches shift history.
+Next.js App Router, TypeScript, React, Tailwind, Vitest. Session state lives in
+`AuthProvider`; business pages call one authoritative fetch client and retain
+only page-local server data.
+
+There is **no** React Query or shared business-data cache - no query keys, no
+invalidation API. Pages refresh affected resources explicitly after mutations.
+Introducing a cache later requires user/shop-keyed data and complete logout
+clearing.
+
+## Billing and shifts
+
+Billing checks the current shift before preparing a draft. With none open it
+renders a focused guard with an Open Shift action - it does not create a draft
+or enter a redirect loop. Canonical route is `/sales/shifts/current`; the
+backend completion service stays authoritative. Dashboard issues a lightweight
+current-shift request only; the shell never fetches shift history.
 
 ## SaaS routes and context
 
@@ -20,28 +30,20 @@ boundary prevents content flashes and redirects onboarding, suspended, and
 role-restricted sessions before rendering operational content. Backend
 permissions remain authoritative.
 
-Owner team management lives at `/settings/team`; subscription management
-remains at `/settings/subscription`, while self-service
-profile controls live at `/account`. Onboarding is resumable at `/onboarding`.
-No client cache library or browser authentication authority was introduced.
-
-NexaPOS uses Next.js App Router with TypeScript, React, Tailwind CSS, and
-Vitest. Session state lives in `AuthProvider`; business pages call one
-authoritative fetch client and retain only page-local server data.
+Owner team management lives at `/settings/team`, subscription at
+`/settings/subscription`, self-service profile at `/account`. Onboarding is
+resumable at `/onboarding`.
 
 ## API and authentication
 
 `lib/api-client.ts` owns URL joining, trailing slashes, credentials, CSRF
-initialization, JSON error conversion, and a configurable request timeout.
-Unsafe mutations are never automatically retried. No JWT or session identifier
-is stored in application code. A 401 emits one session-expired event; the auth
-provider clears identity and the active draft ID. A 403 remains a local
-permission error.
-
-There is no React Query dependency or shared business-data cache. Consequently
-there are no query keys or invalidation APIs; pages refresh affected resources
-explicitly after mutations. Introducing a cache later requires user/shop-keyed
-data and complete logout clearing.
+handling, JSON error conversion, and a configurable request timeout. The CSRF
+token is cached in module memory from the `/auth/csrf/` response body, never
+read from `document.cookie` (see `docs/api-contracts.md`). Unsafe mutations are
+never auto-retried apart from a single retry after `403 CSRF Failed`. No JWT or
+session identifier is stored in application code. A 401 emits one
+session-expired event and the auth provider clears identity and the active
+draft ID; a 403 stays a local permission error.
 
 ## Rendering and failures
 

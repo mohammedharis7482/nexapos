@@ -44,7 +44,7 @@ express every cross-table shop-equality rule as a simple check constraint.
 The Team UI describes the enforced active-user maximum as a system safety
 limit, not a subscription seat. Invitation APIs remain protected and tested but
 are hidden from the v1 UI; direct temporary-password staff creation is visible.
-# Primary-owner representation
+## Primary-owner representation
 
 `PRIMARY_OWNER` is a capability derived from `Shop.primary_owner`; stored roles
 remain `OWNER` and `CASHIER`. Only the primary owner manages owners and the

@@ -3,26 +3,26 @@
 ## Purpose
 
 NexaPOS supports day-to-day billing and shop operations for small grocery shops
-in Qatar. It must prioritize fast cashier workflows, reliable financial records,
-QAR currency, Qatar time, and straightforward operation by non-technical staff.
+in Qatar. It prioritises fast cashier workflows, reliable financial records, QAR
+currency, Qatar time, and operation by non-technical staff.
 
-## Confirmed MVP boundary
+## Delivered scope
 
-The planned MVP covers shop configuration, owner/cashier access, products,
-inventory, billing and sales, payments, and operational reports. This foundation
-phase implements only shop identity, user identity, platform configuration,
-health monitoring, API documentation, and test scaffolding.
+Shop configuration, owner/cashier access, products, inventory, draft billing and
+sales, cash/card/split payments, cashier shifts, receipts, operational reports,
+CSV export, and bulk product import. The `saas` layer adds registration,
+onboarding, invitations, plans, and subscription state.
 
-Branches, subscription plans, SaaS tenant administration, and generalized
-enterprise workflows are out of scope. Product, inventory, sales, payment,
-dashboard, and report behavior must be specified and implemented in later
-approved phases.
+Out of scope: branches, refunds/returns, purchasing and suppliers, payment
+gateway processing, automated subscription charging, loyalty, payroll, and
+advanced accounting. See `known-limitations.md`.
 
 ## Roles
 
-- Owner: manages the shop and, in future phases, operational configuration and
-  oversight.
-- Cashier: performs approved till workflows in future phases.
+- **Owner**: shop configuration, catalogue, inventory, team, reports, exports.
+- **Cashier**: till workflows - billing, checkout, own shifts and own sales.
 
-Every operational record must ultimately be scoped to a shop. Role checks never
-replace shop ownership checks.
+Exact permissions live in `authorization-matrix.md`.
+
+Every operational record is scoped to a shop. Role checks never replace shop
+ownership checks.
