@@ -4,6 +4,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.inventory.models import InventoryBalance, StockMovement
+from apps.inventory.selectors import stock_status_for
 from apps.products.models import Product, ProductCategory
 
 
@@ -30,14 +31,6 @@ class InventoryProductSerializer(serializers.ModelSerializer):
         )
 
 
-def stock_status_for(balance: InventoryBalance | None) -> str:
-    if balance is None:
-        return "NOT_INITIALIZED"
-    if balance.quantity_on_hand == 0:
-        return "OUT_OF_STOCK"
-    if balance.quantity_on_hand <= balance.low_stock_threshold:
-        return "LOW_STOCK"
-    return "IN_STOCK"
 
 
 class InventoryItemSerializer(serializers.Serializer):

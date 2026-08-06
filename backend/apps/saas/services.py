@@ -7,7 +7,6 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.sessions.models import Session
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models.functions import Lower
 from django.utils import timezone

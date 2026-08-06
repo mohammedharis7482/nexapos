@@ -1,10 +1,11 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db.models import Count, DecimalField, F, Q, Sum
+from django.db.models import Count, DecimalField, F, Sum
 from django.db.models.functions import Coalesce, TruncDate
 
 from apps.inventory.models import InventoryBalance
+from apps.inventory.selectors import stock_status_for
 from apps.payments.models import Payment
 from apps.products.models import Product
 from apps.sales.models import Sale, SaleItem
@@ -146,14 +147,7 @@ def product_report(user, filters: dict, *, sale_ids=None) -> list[dict]:
 
 
 def _stock_status(product: Product) -> str:
-    balance = getattr(product, "inventory_balance", None)
-    if balance is None:
-        return "NOT_INITIALIZED"
-    if balance.quantity_on_hand == 0:
-        return "OUT_OF_STOCK"
-    if balance.quantity_on_hand <= balance.low_stock_threshold:
-        return "LOW_STOCK"
-    return "IN_STOCK"
+    return stock_status_for(getattr(product, "inventory_balance", None))
 
 
 def inventory_report(user, filters: dict) -> dict:

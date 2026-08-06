@@ -22,10 +22,6 @@ def drafts_for_user(user: User) -> QuerySet[Sale]:
     )
 
 
-def draft_for_user(*, user: User, sale_id) -> Sale:
-    return drafts_for_user(user).get(pk=sale_id)
-
-
 def completed_sales_for_user(user: User) -> QuerySet[Sale]:
     queryset = (
         Sale.objects.filter(shop=user.shop, status=Sale.Status.COMPLETED)

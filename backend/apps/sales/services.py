@@ -2,7 +2,7 @@ from collections import Counter
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count, DecimalField, Q, Sum
+from django.db.models import Count, DecimalField, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 

@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
-from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.products.models import Product

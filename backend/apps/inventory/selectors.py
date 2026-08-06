@@ -6,6 +6,16 @@ from apps.products.models import Product
 from .models import InventoryBalance, StockMovement
 
 
+def stock_status_for(balance: InventoryBalance | None) -> str:
+    if balance is None:
+        return "NOT_INITIALIZED"
+    if balance.quantity_on_hand == 0:
+        return "OUT_OF_STOCK"
+    if balance.quantity_on_hand <= balance.low_stock_threshold:
+        return "LOW_STOCK"
+    return "IN_STOCK"
+
+
 def inventory_products_for_user(user: User) -> QuerySet[Product]:
     queryset = Product.objects.filter(shop=user.shop).select_related(
         "category",
