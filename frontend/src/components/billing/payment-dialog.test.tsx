@@ -21,7 +21,10 @@ const draft: DraftSale = {
   items: [{
     id: "item-id",
     product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
+    pricing_mode: "STANDARD",
+    packet_size: null,
     quantity: "2.000",
+    stock_quantity: "2.000",
     unit_price: "6.00",
     tax_rate: "0.00",
     is_tax_inclusive: false,

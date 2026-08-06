@@ -217,6 +217,24 @@ contains the single created product and does not initialize inventory.
 one-time owner action used by both later inventory setup and the frontend
 Save & Add Stock handoff.
 
+### Multi-pricing products
+
+`pricing_mode` is `STANDARD` (default) or `MULTI`. A MULTI product carries a
+writable nested `packets` array of `{size, price}`, replaced wholesale on each
+write; at least one packet is required, sizes must be unique, and packets on a
+STANDARD product are rejected. `size` is in the product's own `unit`.
+
+`POST /api/v1/billing/drafts/{id}/items/` accepts optional `pricing_mode`
+(`STANDARD`, `PACKET`, `LOOSE`) and `packet_id`. Both are omitted for standard
+products, so existing callers and barcode scans are unaffected. A MULTI product
+requires an explicit mode; `packet_id` is required for - and only valid with -
+`PACKET`.
+
+Sale items expose `pricing_mode`, `packet_size` (null unless PACKET),
+`quantity` (packets for a PACKET line, units otherwise) and `stock_quantity`
+(always the product's own unit). Billing list responses carry `pricing_mode`
+and the product's active `packets`; withdrawn packets are withheld.
+
 ### First login and verification
 
 Public registration creates an active owner record with

@@ -7,6 +7,7 @@ import { IconButton } from "@/components/ui/button";
 import { MoneyDisplay } from "@/components/ui/display";
 import { Input } from "@/components/ui/input";
 import { ProductThumb } from "@/components/ui/product-thumb";
+import { saleItemModeLabel } from "@/lib/pricing";
 import { billingQuantity } from "@/schemas/billing.schema";
 import type { SaleItem } from "@/types/billing";
 import { isDecimalUnit } from "@/types/product";
@@ -35,6 +36,16 @@ export function formatQuantityDisplay(quantity: string, unit: SaleItem["product"
   return Number.isInteger(numeric) ? String(numeric) : quantity;
 }
 
+/**
+ * The unit that a line's own `quantity` is counted in.
+ *
+ * A packet line counts whole packets, so it steps and formats like a
+ * piece-count product even when the product itself is sold by weight.
+ */
+export function quantityUnit(item: SaleItem): SaleItem["product"]["unit"] {
+  return item.pricing_mode === "PACKET" ? "PIECE" : item.product.unit;
+}
+
 export const CartLine = memo(function CartLine({
   item,
   busy,
@@ -48,23 +59,29 @@ export const CartLine = memo(function CartLine({
   onRemove: (itemId: string) => void;
   onFocusItem?: (itemId: string) => void;
 }) {
-  const [quantity, setQuantity] = useState(formatQuantityDisplay(item.quantity, item.product.unit));
+  const [quantity, setQuantity] = useState(formatQuantityDisplay(item.quantity, quantityUnit(item)));
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const modeLabel = saleItemModeLabel(item);
+  // A packet line is priced per packet, not per kilo, so the unit shown
+  // beside the price has to follow the pricing mode rather than the product.
+  const priceUnit = item.pricing_mode === "PACKET"
+    ? "packet"
+    : item.product.unit.toLowerCase();
 
   // Mirrors the server-confirmed quantity whenever it changes from outside
   // (a successful update, or reverting after a failed one) - the input is
   // disabled via `busy` for the whole round trip, so this never clobbers an
   // in-progress edit.
   useEffect(() => {
-    setQuantity(formatQuantityDisplay(item.quantity, item.product.unit));
-  }, [item.quantity, item.product.unit]);
+    setQuantity(formatQuantityDisplay(item.quantity, quantityUnit(item)));
+  }, [item]);
 
   function commit(value: string) {
     const parsed = billingQuantity.safeParse(value);
     if (parsed.success && Number(value) !== Number(item.quantity)) {
       onQuantity(item.id, value);
     } else {
-      setQuantity(formatQuantityDisplay(item.quantity, item.product.unit));
+      setQuantity(formatQuantityDisplay(item.quantity, quantityUnit(item)));
     }
   }
 
@@ -75,8 +92,13 @@ export const CartLine = memo(function CartLine({
           <ProductThumb src={item.product.image_url} alt={item.product.name} size="sm" />
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold">{item.product.name}</h3>
+            {/* Reads the line's own snapshot, so the cart and receipt stay
+                unambiguous even if the packet is later withdrawn. */}
+            {modeLabel ? (
+              <p className="mt-0.5 text-xs font-semibold text-primary">{modeLabel}</p>
+            ) : null}
             <p className="mt-0.5 text-xs text-text-muted">
-              {item.product.sku} · <MoneyDisplay value={item.unit_price} />/{item.product.unit.toLowerCase()}
+              {item.product.sku} · <MoneyDisplay value={item.unit_price} />/{priceUnit}
             </p>
           </div>
         </div>
@@ -93,7 +115,7 @@ export const CartLine = memo(function CartLine({
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <IconButton aria-label={`Decrease ${item.product.name}`} disabled={busy} onClick={() => onQuantity(item.id, nextQuantity(item.quantity, "decrease", item.product.unit))}>
+          <IconButton aria-label={`Decrease ${item.product.name}`} disabled={busy} onClick={() => onQuantity(item.id, nextQuantity(item.quantity, "decrease", quantityUnit(item)))}>
             <Minus className="size-4" />
           </IconButton>
           <Input
@@ -115,7 +137,7 @@ export const CartLine = memo(function CartLine({
               }
             }}
           />
-          <IconButton aria-label={`Increase ${item.product.name}`} disabled={busy} onClick={() => onQuantity(item.id, nextQuantity(item.quantity, "increase", item.product.unit))}>
+          <IconButton aria-label={`Increase ${item.product.name}`} disabled={busy} onClick={() => onQuantity(item.id, nextQuantity(item.quantity, "increase", quantityUnit(item)))}>
             <Plus className="size-4" />
           </IconButton>
         </div>

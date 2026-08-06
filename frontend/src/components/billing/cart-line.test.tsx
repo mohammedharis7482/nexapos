@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SaleItem } from "@/types/billing";
 
-import { CartLine, formatQuantityDisplay, nextQuantity } from "./cart-line";
+import { CartLine, formatQuantityDisplay, nextQuantity, quantityUnit } from "./cart-line";
 
 const wholeUnitItem: SaleItem = {
   id: "item-id",
@@ -14,7 +14,10 @@ const wholeUnitItem: SaleItem = {
     barcode: "123",
     unit: "BOTTLE", image_url: null,
   },
+  pricing_mode: "STANDARD",
+  packet_size: null,
   quantity: "2.000",
+  stock_quantity: "2.000",
   unit_price: "6.00",
   tax_rate: "5.00",
   is_tax_inclusive: false,
@@ -134,5 +137,58 @@ describe("formatQuantityDisplay", () => {
 
   it("falls back to the raw value for an unexpected fractional whole-unit quantity", () => {
     expect(formatQuantityDisplay("1.500", "PIECE")).toBe("1.500");
+  });
+});
+
+describe("CartLine pricing modes", () => {
+  const packetLine: SaleItem = {
+    ...wholeUnitItem,
+    product: { ...wholeUnitItem.product, name: "Basmati Rice", unit: "KG" },
+    pricing_mode: "PACKET",
+    packet_size: "0.500",
+    quantity: "2.000",
+    stock_quantity: "1.000",
+    unit_price: "7.50",
+  };
+  const looseLine: SaleItem = {
+    ...wholeUnitItem,
+    product: { ...wholeUnitItem.product, name: "Basmati Rice", unit: "KG" },
+    pricing_mode: "LOOSE",
+    packet_size: null,
+    quantity: "0.750",
+    stock_quantity: "0.750",
+    unit_price: "12.00",
+  };
+
+  it("labels a packet line and prices it per packet, not per kilo", () => {
+    render(<CartLine item={packetLine} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByText("0.5 kg packet")).toBeInTheDocument();
+    expect(screen.getByText(/\/packet/)).toBeInTheDocument();
+  });
+
+  it("labels a loose line and prices it per unit", () => {
+    render(<CartLine item={looseLine} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByText("loose")).toBeInTheDocument();
+    expect(screen.getByText(/\/kg/)).toBeInTheDocument();
+  });
+
+  it("leaves a standard line unlabelled", () => {
+    render(<CartLine item={wholeUnitItem} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.queryByText("loose")).toBeNull();
+    expect(screen.queryByText(/packet/)).toBeNull();
+  });
+
+  it("counts a packet line in whole packets even for a weight product", () => {
+    // quantityUnit() reports PIECE for a packet line, so the field shows "2"
+    // rather than the API's "2.000" and steps by one packet.
+    render(<CartLine item={packetLine} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByLabelText("Quantity for Basmati Rice")).toHaveValue("2");
+    expect(nextQuantity(packetLine.quantity, "increase", quantityUnit(packetLine))).toBe("3");
+  });
+
+  it("keeps decimal stepping for a loose line", () => {
+    render(<CartLine item={looseLine} busy={false} onQuantity={vi.fn()} onRemove={vi.fn()} />);
+    expect(screen.getByLabelText("Quantity for Basmati Rice")).toHaveValue("0.750");
+    expect(nextQuantity(looseLine.quantity, "increase", quantityUnit(looseLine))).toBe("0.751");
   });
 });

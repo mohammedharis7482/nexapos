@@ -9,6 +9,11 @@ import { Alert } from "@/components/ui/feedback";
 import { Checkbox, FormField, Input, MoneyInput, PercentageInput, Select, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ProductImageField } from "@/components/catalogue/product-image-field";
+import {
+  ProductPacketsField,
+  newPacketDraft,
+  type PacketDraft,
+} from "@/components/catalogue/product-packets-field";
 import { ApiError } from "@/lib/api-client";
 import {
   productSchema,
@@ -49,6 +54,34 @@ interface ImageState {
   error: string | null;
 }
 
+/**
+ * Multi-pricing is off unless the product already uses it, so an untouched
+ * form always posts pricing_mode STANDARD with no packets - byte-identical
+ * to what it posted before this feature existed.
+ */
+interface PricingState {
+  identity: string;
+  enabled: boolean;
+  packets: PacketDraft[];
+  error: string | null;
+}
+
+function freshPricingState(identity: string, product: Product | null): PricingState {
+  const enabled = product?.pricing_mode === "MULTI";
+  return {
+    identity,
+    enabled,
+    packets: enabled
+      ? (product?.packets ?? []).map((packet) => ({
+          key: packet.id,
+          size: packet.size,
+          price: packet.price,
+        }))
+      : [],
+    error: null,
+  };
+}
+
 function freshImageState(identity: string, product: Product | null): ImageState {
   return {
     identity,
@@ -82,9 +115,15 @@ export function ProductDialog({
   const imageIdentity = `${open}:${product?.id ?? "new"}`;
   const [image, setImage] = useState(() => freshImageState(imageIdentity, product));
   if (image.identity !== imageIdentity) setImage(freshImageState(imageIdentity, product));
+  // Packet definitions live outside react-hook-form: they are a variable-length
+  // list rather than a fixed set of fields, and they post as a nested array.
+  // Reset on the same identity as the image state, for the same reason.
+  const [pricing, setPricing] = useState(() => freshPricingState(imageIdentity, product));
+  if (pricing.identity !== imageIdentity) setPricing(freshPricingState(imageIdentity, product));
   const {
     register,
     reset,
+    watch,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
@@ -113,11 +152,44 @@ export function ProductDialog({
     );
   }, [open, product, reset]);
 
+  // Packet sizes are entered in the product's own unit, so the field's
+  // label has to follow the unit select live rather than the saved value.
+  const watchedUnit = watch("unit");
+
   const persist = async (values: ProductFormValues, addStock: boolean) => {
     setGeneralError(null);
+    const packets = pricing.packets.map(({ size, price }) => ({ size, price }));
+    if (pricing.enabled) {
+      if (!packets.length) {
+        setPricing((current) => ({ ...current, error: "Add at least one packet size." }));
+        return;
+      }
+      if (packets.some((packet) => !(Number(packet.size) > 0))) {
+        setPricing((current) => ({
+          ...current, error: "Every packet needs a size greater than zero.",
+        }));
+        return;
+      }
+      if (packets.some((packet) => !(Number(packet.price) >= 0))) {
+        setPricing((current) => ({
+          ...current, error: "Every packet needs a price.",
+        }));
+        return;
+      }
+      const sizes = packets.map((packet) => Number(packet.size));
+      if (new Set(sizes).size !== sizes.length) {
+        setPricing((current) => ({
+          ...current, error: "Each packet size may only be defined once.",
+        }));
+        return;
+      }
+    }
+    setPricing((current) => ({ ...current, error: null }));
     const payload: ProductInput = {
       ...values,
       category_id: values.category_id || null,
+      pricing_mode: pricing.enabled ? "MULTI" : "STANDARD",
+      ...(pricing.enabled ? { packets } : {}),
     };
     try {
       const response = product
@@ -285,10 +357,37 @@ export function ProductDialog({
           <FormField label="Purchase price" htmlFor="purchase-price" error={errors.purchase_price?.message}>
             <MoneyInput id="purchase-price" invalid={Boolean(errors.purchase_price)} {...register("purchase_price")} />
           </FormField>
-          <FormField label="Selling price" htmlFor="selling-price" error={errors.selling_price?.message}>
+          <FormField
+            label="Selling price"
+            htmlFor="selling-price"
+            hint={pricing.enabled ? `Price per ${watchedUnit.toLowerCase()} for loose sales.` : undefined}
+            error={errors.selling_price?.message}
+          >
             <MoneyInput id="selling-price" invalid={Boolean(errors.selling_price)} {...register("selling_price")} />
           </FormField>
         </div>
+        <ProductPacketsField
+          enabled={pricing.enabled}
+          onEnabledChange={(enabled) =>
+            setPricing((current) => ({
+              ...current,
+              enabled,
+              // Seed one blank row so the requirement is visible immediately
+              // rather than only surfacing as an error on save.
+              packets: enabled && !current.packets.length
+                ? [newPacketDraft()]
+                : current.packets,
+              error: null,
+            }))
+          }
+          unit={watchedUnit}
+          packets={pricing.packets}
+          onPacketsChange={(packets) =>
+            setPricing((current) => ({ ...current, packets, error: null }))
+          }
+          error={pricing.error}
+          disabled={isSubmitting}
+        />
         </fieldset>
         <fieldset className="space-y-4 rounded-xl border border-border bg-surface-secondary/50 p-4">
           <legend className="px-1 text-sm font-bold text-text-primary">Tax configuration</legend>

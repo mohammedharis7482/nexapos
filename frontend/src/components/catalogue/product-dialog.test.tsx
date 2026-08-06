@@ -26,7 +26,8 @@ const created: Product = {
   id: "product-id", name: "Bananas", description: "", sku: "BANANA-KG",
   barcode: null, unit: "KG", purchase_price: "2.00", selling_price: "3.50",
   tax_rate: "0.00", is_tax_inclusive: false, is_active: true,
-  category: null, image_url: null, created_at: "", updated_at: "",
+  category: null, image_url: null, pricing_mode: "STANDARD", packets: [],
+  created_at: "", updated_at: "",
 };
 
 function fillProduct() {
@@ -122,6 +123,95 @@ describe("ProductDialog", () => {
       await waitFor(() => expect(productService.removeImage).toHaveBeenCalledWith("product-id"));
       expect(productService.uploadImage).not.toHaveBeenCalled();
       expect(onSaved).toHaveBeenCalledWith(created, false);
+    });
+  });
+
+  describe("multi-pricing packets", () => {
+    const multi: Product = {
+      ...created,
+      pricing_mode: "MULTI",
+      packets: [
+        { id: "p250", size: "0.250", price: "3.50", display_order: 0, is_active: true },
+      ],
+    };
+
+    it("posts STANDARD with no packets when the toggle is untouched", async () => {
+      render(<ProductDialog open onOpenChange={vi.fn()} product={null} categories={[]} onSaved={vi.fn()} />);
+      fillProduct();
+      fireEvent.click(screen.getByRole("button", { name: "Save Product" }));
+      await waitFor(() => expect(productService.create).toHaveBeenCalledOnce());
+      const payload = vi.mocked(productService.create).mock.calls[0][0];
+      expect(payload.pricing_mode).toBe("STANDARD");
+      expect(payload.packets).toBeUndefined();
+    });
+
+    it("reveals a first blank packet row when multi-pricing is enabled", () => {
+      render(<ProductDialog open onOpenChange={vi.fn()} product={null} categories={[]} onSaved={vi.fn()} />);
+      expect(screen.queryByLabelText("Size")).toBeNull();
+      fireEvent.click(screen.getByLabelText("Sell as packets and loose"));
+      expect(screen.getByLabelText("Size")).toBeInTheDocument();
+      expect(screen.getByLabelText("Packet price")).toBeInTheDocument();
+    });
+
+    it("posts the defined packet sizes", async () => {
+      render(<ProductDialog open onOpenChange={vi.fn()} product={null} categories={[]} onSaved={vi.fn()} />);
+      fillProduct();
+      fireEvent.click(screen.getByLabelText("Sell as packets and loose"));
+      fireEvent.change(screen.getByLabelText("Size"), { target: { value: "0.250" } });
+      fireEvent.change(screen.getByLabelText("Packet price"), { target: { value: "3.50" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add packet size" }));
+      const sizes = screen.getAllByLabelText("Size");
+      const prices = screen.getAllByLabelText("Packet price");
+      fireEvent.change(sizes[1], { target: { value: "1.000" } });
+      fireEvent.change(prices[1], { target: { value: "13.00" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save Product" }));
+      await waitFor(() => expect(productService.create).toHaveBeenCalledOnce());
+      expect(vi.mocked(productService.create).mock.calls[0][0].packets).toEqual([
+        { size: "0.250", price: "3.50" },
+        { size: "1.000", price: "13.00" },
+      ]);
+    });
+
+    it("blocks saving a multi-pricing product with no packet size", async () => {
+      render(<ProductDialog open onOpenChange={vi.fn()} product={null} categories={[]} onSaved={vi.fn()} />);
+      fillProduct();
+      fireEvent.click(screen.getByLabelText("Sell as packets and loose"));
+      fireEvent.click(screen.getByRole("button", { name: /Remove packet size/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Save Product" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("at least one packet size");
+      expect(productService.create).not.toHaveBeenCalled();
+    });
+
+    it("blocks a duplicate packet size before it reaches the server", async () => {
+      render(<ProductDialog open onOpenChange={vi.fn()} product={null} categories={[]} onSaved={vi.fn()} />);
+      fillProduct();
+      fireEvent.click(screen.getByLabelText("Sell as packets and loose"));
+      fireEvent.change(screen.getByLabelText("Size"), { target: { value: "0.500" } });
+      fireEvent.change(screen.getByLabelText("Packet price"), { target: { value: "2.75" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add packet size" }));
+      const sizes = screen.getAllByLabelText("Size");
+      const prices = screen.getAllByLabelText("Packet price");
+      fireEvent.change(sizes[1], { target: { value: "0.500" } });
+      fireEvent.change(prices[1], { target: { value: "3.00" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save Product" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("only be defined once");
+      expect(productService.create).not.toHaveBeenCalled();
+    });
+
+    it("loads an existing product's packets for editing", () => {
+      render(<ProductDialog open onOpenChange={vi.fn()} product={multi} categories={[]} onSaved={vi.fn()} />);
+      expect(screen.getByLabelText("Sell as packets and loose")).toBeChecked();
+      expect(screen.getByLabelText("Size")).toHaveValue("0.250");
+      expect(screen.getByLabelText("Packet price")).toHaveValue("3.50");
+    });
+
+    it("posts STANDARD when multi-pricing is switched back off", async () => {
+      vi.mocked(productService.update).mockResolvedValue({ success: true, message: "", data: created });
+      render(<ProductDialog open onOpenChange={vi.fn()} product={multi} categories={[]} onSaved={vi.fn()} />);
+      fireEvent.click(screen.getByLabelText("Sell as packets and loose"));
+      fireEvent.click(screen.getByRole("button", { name: "Save Product" }));
+      await waitFor(() => expect(productService.update).toHaveBeenCalledOnce());
+      expect(vi.mocked(productService.update).mock.calls[0][1].pricing_mode).toBe("STANDARD");
     });
   });
 
