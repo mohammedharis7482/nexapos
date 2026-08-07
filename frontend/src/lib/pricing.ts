@@ -29,17 +29,24 @@ export function saleItemModeLabel(item: SaleItem): string | null {
 }
 
 /**
- * Full cart/receipt description, e.g. "Rice (500 g packet)" or
- * "Rice - 0.750 kg loose". Standard lines keep their plain product name.
+ * How a line's quantity should be read aloud: "2 x 0.25 kg packet",
+ * "0.75 kg", "3 bottle".
+ *
+ * A PACKET line counts packets, not units, so rendering `quantity` against
+ * `product.unit` states the wrong thing - "2 kg" for two 250 g packets, which
+ * on a tax receipt is a false statement about what was sold. Every surface
+ * that prints a quantity beside a unit uses this.
  */
-export function saleItemDescription(item: SaleItem): string {
+export function saleItemQuantityLabel(item: SaleItem): string {
   if (item.pricing_mode === "PACKET" && item.packet_size) {
-    return `${item.product.name} (${packetLabel(item.packet_size, item.product.unit)} packet)`;
+    return `${formatQuantity(item.quantity)} x ${packetLabel(item.packet_size, item.product.unit)} packet`;
   }
-  if (item.pricing_mode === "LOOSE") {
-    return `${item.product.name} - ${packetLabel(item.quantity, item.product.unit)} loose`;
-  }
-  return item.product.name;
+  return `${formatQuantity(item.quantity)} ${item.product.unit.toLowerCase()}`;
+}
+
+/** What one unit of the line is priced in: a packet, or the product's unit. */
+export function saleItemPriceUnit(item: SaleItem): string {
+  return item.pricing_mode === "PACKET" ? "packet" : item.product.unit.toLowerCase();
 }
 
 /**

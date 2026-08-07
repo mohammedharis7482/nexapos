@@ -145,7 +145,9 @@ no stock and are revalidated on resume. Card success is confirmed externally.
      otherwise - and `stock_quantity` is what inventory deducts. A packet bills
      its exact fixed price rather than a derived per-unit rate. Reports and
      shift summaries sum `stock_quantity`; packet counts and weights are not
-     commensurable.
+     commensurable. Any surface printing a quantity beside a unit must read the
+     pricing mode: "2 kg" for two 250 g packets is a false statement on a
+     receipt.
 38e. Packets are sold in whole numbers. A packet size already referenced by a
      sale is deactivated rather than deleted, so completed sales keep resolving
      the definition they were billed under.

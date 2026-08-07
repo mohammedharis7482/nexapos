@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { packetLabel, packetStockDraw, saleItemDescription, saleItemModeLabel } from "./pricing";
+import {
+  packetLabel,
+  packetStockDraw,
+  saleItemModeLabel,
+  saleItemPriceUnit,
+  saleItemQuantityLabel,
+} from "./pricing";
 import type { SaleItem } from "@/types/billing";
 
 function line(overrides: Partial<SaleItem> = {}): SaleItem {
@@ -57,20 +63,6 @@ describe("saleItemModeLabel", () => {
   });
 });
 
-describe("saleItemDescription", () => {
-  it("distinguishes packet from loose unambiguously", () => {
-    expect(
-      saleItemDescription(
-        line({ pricing_mode: "PACKET", packet_size: "0.500", quantity: "2.000" }),
-      ),
-    ).toBe("Basmati Rice (0.5 kg packet)");
-    expect(
-      saleItemDescription(line({ pricing_mode: "LOOSE", quantity: "0.750" })),
-    ).toBe("Basmati Rice - 0.75 kg loose");
-    expect(saleItemDescription(line())).toBe("Basmati Rice");
-  });
-});
-
 describe("packetStockDraw", () => {
   it("multiplies packet count by size, mirroring the server", () => {
     const packet = {
@@ -80,5 +72,45 @@ describe("packetStockDraw", () => {
     expect(packetStockDraw(packet, "4")).toBeCloseTo(1);
     expect(packetStockDraw(packet, "")).toBeNaN();
     expect(packetStockDraw(packet, "abc")).toBeNaN();
+  });
+});
+
+describe("saleItemQuantityLabel", () => {
+  it("counts packets, not units, for a packet line", () => {
+    // The receipt bug this exists to prevent: two 250 g packets are 0.5 kg,
+    // so "2 kg" would be a false statement on a tax document.
+    expect(
+      saleItemQuantityLabel(
+        line({ pricing_mode: "PACKET", packet_size: "0.250", quantity: "2.000" }),
+      ),
+    ).toBe("2 x 0.25 kg packet");
+  });
+
+  it("states a loose line in the product's own unit", () => {
+    expect(
+      saleItemQuantityLabel(line({ pricing_mode: "LOOSE", quantity: "0.750" })),
+    ).toBe("0.75 kg");
+  });
+
+  it("leaves a standard line reading as before", () => {
+    expect(saleItemQuantityLabel(line({ quantity: "3.000" }))).toBe("3 kg");
+  });
+
+  it("falls back to the unit if a packet line somehow lost its size", () => {
+    expect(
+      saleItemQuantityLabel(line({ pricing_mode: "PACKET", quantity: "2.000" })),
+    ).toBe("2 kg");
+  });
+});
+
+describe("saleItemPriceUnit", () => {
+  it("prices a packet line per packet", () => {
+    expect(saleItemPriceUnit(line({ pricing_mode: "PACKET", packet_size: "0.250" })))
+      .toBe("packet");
+  });
+
+  it("prices loose and standard lines per unit", () => {
+    expect(saleItemPriceUnit(line({ pricing_mode: "LOOSE" }))).toBe("kg");
+    expect(saleItemPriceUnit(line())).toBe("kg");
   });
 });

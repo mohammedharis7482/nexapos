@@ -8,15 +8,6 @@
  * money and quantities stay LTR.
  */
 
-import type { ShopLanguage } from "@/types/shop";
-
-/** The right-to-left languages in our supported set. */
-const RTL_LANGUAGES: ReadonlySet<string> = new Set(["ARABIC", "URDU"]);
-
-export function isRtlLanguage(language: ShopLanguage | "" | null | undefined): boolean {
-  return Boolean(language && RTL_LANGUAGES.has(language));
-}
-
 /**
  * The `dir` for an element holding a secondary name.
  *
