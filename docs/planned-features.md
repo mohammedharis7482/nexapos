@@ -1,8 +1,8 @@
 # Planned features
 
 Confirmed specs for features that are **not built yet**. Decisions here are
-settled - build to them without re-litigating. Anything genuinely undecided is
-called out as an open question; ask rather than guess.
+settled - build to them without re-litigating. Scope boundaries marked
+**deliberately out of scope** are choices, not oversights; do not "fix" them.
 
 Shipped features are documented in `business-rules.md` and `api-contracts.md`.
 Nothing in this file is implemented.
@@ -14,18 +14,23 @@ Second-language names for **product and category records only**. App UI chrome
 
 ### Languages
 
-- **Primary**: derived from the shop's country.
-- **Secondary**: one per shop, chosen by the owner from English, Arabic,
-  Malayalam, Hindi, Urdu.
+Both languages are explicit `Shop` fields:
+
+- **`Shop.primary_language`** - a new field, defaulting to English.
+- **`Shop.secondary_language`** - a new field, owner-selected from English,
+  Arabic, Malayalam, Hindi, Urdu.
 
 One secondary language per shop, not per product and not a list.
 
-> **Open question - resolve before building.** `Shop.country` is a free-text
-> `CharField(max_length=100, default="Qatar")`, not a country code. A language
-> cannot be reliably derived from free text ("Qatar", "qatar", "QA", "State of
-> Qatar" all differ). Either migrate `country` to a code with a country→language
-> map, or make primary language an explicit shop field. Confirm which before
-> writing the migration.
+**Decided: primary language is its own field, not derived from country.**
+`Shop.country` is free text (`CharField(max_length=100, default="Qatar")`), so
+"Qatar", "qatar", "QA" and "State of Qatar" are all valid and none maps
+reliably to a language. `country` is **left exactly as it is** - not migrated,
+not repurposed, not made an enum. The two are independent settings; a shop in
+Qatar may run in English, and nothing should infer one from the other.
+
+Share one language choice list between both fields (a single `TextChoices`),
+so the supported set is defined once.
 
 ### Data
 
@@ -66,16 +71,45 @@ actually chosen.
 Not in scope: reports, CSV exports, or the inventory ledger. Add them only if
 asked.
 
-### Notes for whoever builds this
+### Sale items snapshot the second name
+
+**Decided: snapshot, not a live lookup.** `SaleItem` gains a second-name column
+alongside the existing `product_name`, written at the moment the line is added.
+
+This follows the established snapshot rule (rule 34 in `business-rules.md`):
+name, SKU, barcode, unit, price and tax are frozen on the line so later
+catalogue edits never rewrite a past sale. The second name is a name, so it
+behaves like one. `image_url` reads live, but that is a deliberate exception for
+a photo, not the precedent to copy here.
+
+A reprinted receipt therefore shows the second name as it was sold, even if the
+product was later renamed or the shop changed its secondary language. Update
+rule 34 to name this column when the work is done.
+
+### RTL is scoped to secondary-language text only
+
+Arabic and Urdu are right-to-left. The app renders no RTL content today.
+
+**Decided: no app-wide RTL rebuild.** RTL support applies *only* to the
+surfaces that render secondary-language text:
+
+- the secondary-name line on receipts
+- search results and cart/catalogue rows displaying a secondary name
+- the secondary-name input in the product and category forms
+
+Achieved per element - `dir="rtl"` (or `dir="auto"`) on the element holding that
+text, driven by the shop's secondary language.
+
+**Deliberately out of scope:** mirroring the app layout, RTL navigation, RTL
+tables and reports, bidirectional icon/chevron flipping, and a global `dir` on
+`<html>`. Primary-language content, UI chrome, numbers, money and quantities all
+stay LTR. This boundary exists so the feature stays a product-name feature and
+does not become a UI rewrite - do not widen it without asking.
+
+### Other notes
 
 - Search across two columns needs an index plan; the existing per-field indexes
   on `Product` are the precedent.
-- Sale items snapshot `product_name` at sale time. Decide explicitly whether the
-  second name is also snapshotted (consistent with the existing snapshot rule)
-  or read live (consistent with `image_url`). Both are defensible - pick one and
-  write it into `business-rules.md`.
-- Arabic and Urdu are right-to-left. Receipts and search results need to render
-  RTL text correctly; the app does not currently handle any RTL content.
 
 ## App-like feel
 
@@ -84,17 +118,30 @@ that ship together.
 
 ### PWA installability
 
-- Web app manifest, icons, and a service worker. Neither exists today - there is
-  no manifest and no service worker anywhere in `frontend/`.
-- "Add to Home Screen" on Android and iOS.
-- Launches standalone, without browser chrome.
-- `next.config.ts` already sets security headers and Turbopack root; the
-  manifest and service worker registration slot in alongside.
+Installability only. Nothing exists today - there is no manifest and no service
+worker anywhere in `frontend/`.
 
-Offline behaviour is **not** specified here. A POS that appears to work offline
-while silently failing to reach the API is worse than one that plainly reports
-the network is down. Decide the offline story explicitly before adding a caching
-service worker - do not let a default caching strategy make that decision.
+In scope:
+
+- Web app manifest with name, icons, theme colour, and `display: standalone`.
+- Home-screen icon set for Android and iOS.
+- "Add to Home Screen" works on both.
+- Launches standalone, without browser chrome.
+
+`next.config.ts` already sets security headers and the Turbopack root; the
+manifest slots in alongside.
+
+**Deliberately out of scope in this pass: offline data caching.** No service
+worker caching strategy, no cached API responses, no offline page, no background
+sync. A POS displaying stale prices or a stock figure that is quietly hours old
+is worse than one that plainly says there is no connection - a cashier who
+cannot tell the difference will sell against numbers that do not exist.
+
+This is a decision, not a gap. If a service worker is added at all (for
+installability on browsers that require one), it must not cache API responses.
+Revisit offline support only as its own scoped piece of work, with an explicit
+answer for what a cashier sees and what happens to a bill written while
+disconnected.
 
 ### Interaction polish
 
