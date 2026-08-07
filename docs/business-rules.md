@@ -58,7 +58,19 @@ no stock and are revalidated on resume. Card success is confirmed externally.
     deactivation does not modify its products, and categories referenced by
     products are protected from deletion at the model level.
 22. Supported units are `PIECE`, `KG`, `GRAM`, `LITRE`, `MILLILITRE`, `PACK`,
-    `BOX`, `CARTON`, `BOTTLE`, `CAN`, and `BAG`.
+    `BOX`, `CARTON`, `BOTTLE`, `CAN`, `BAG`, `CUP`, `JAR`, `ROLL`, `TRAY`, and
+    `TUBE`.
+
+### Product images
+
+22a. A product image is optional. Every catalogue and billing surface falls back
+     to a category-tinted placeholder, so a product without one is never broken
+     or blank.
+22b. Uploads are OWNER-only and accepted only as JPEG, PNG, or WEBP at 5 MB or
+     less. The format is taken from the *decoded* image, not the filename or the
+     client-supplied content type, so a renamed file is rejected on content.
+22c. One image per product. Replacing deletes the previous file; the stored name
+     is normalised to `<product-id>.<ext>` under `product-images/`.
 23. Product quantity is deliberately absent. Stock is an inventory-ledger
     concern and is stored in `InventoryBalance`, never on Product.
 24. A product may exist without inventory. Opening stock explicitly creates its
@@ -120,6 +132,9 @@ no stock and are revalidated on resume. Card success is confirmed externally.
 38e. Packets are sold in whole numbers. A packet size already referenced by a
      sale is deactivated rather than deleted, so completed sales keep resolving
      the definition they were billed under.
+38f. Packet sizes are unique per product and must be positive; packet prices
+     must be non-negative. A line snapshots `packet_size` at sale time, so
+     editing a packet definition never rewrites what a past sale meant.
 39. Cancellation retains line items and totals, records cancelling user/time,
     and is idempotent. Cancelled drafts cannot be edited.
 40. Completion runs in one database transaction and locks the sale and inventory
