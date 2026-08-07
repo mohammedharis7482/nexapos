@@ -1,5 +1,6 @@
 "use client";
 
+import { secondaryNameDir } from "@/lib/rtl";
 import type { ReceiptData } from "@/types/sales";
 
 export function Receipt({ data }: { data: ReceiptData }) {
@@ -22,6 +23,14 @@ export function Receipt({ data }: { data: ReceiptData }) {
         {sale.items.map((item) => (
           <div key={item.id}>
             <p className="font-bold">{item.product.name}</p>
+            {/* Snapshotted at sale time, so a reprint shows the name as sold.
+                dir carries RTL for Arabic/Urdu; nothing else on the receipt
+                changes direction. */}
+            {item.product.secondary_name ? (
+              <p dir={secondaryNameDir(item.product.secondary_name)}>
+                {item.product.secondary_name}
+              </p>
+            ) : null}
             <div className="flex justify-between"><span>{item.quantity} {item.product.unit} × {item.unit_price}</span><span>{item.line_total}</span></div>
           </div>
         ))}

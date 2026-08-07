@@ -29,6 +29,7 @@ const user: AuthenticatedUser = {
   username: "ahmed",
   role: "OWNER",
   shop: {
+    secondary_language: "",
     id: "ba031a8a-ed3d-4ed6-b1be-444a812010f8",
     name: "Al Noor Grocery",
     currency: "QAR",

@@ -17,6 +17,9 @@ class ProductCategory(BaseModel):
         related_name="product_categories",
     )
     name = models.CharField(max_length=120)
+    # Optional second-language name. Blank behaves exactly as before this
+    # feature existed: every surface falls back to `name`.
+    secondary_name = models.CharField(max_length=120, blank=True)
     description = models.TextField(blank=True)
     display_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -40,6 +43,7 @@ class ProductCategory(BaseModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.name = self.name.strip()
+        self.secondary_name = self.secondary_name.strip()
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -82,6 +86,10 @@ class Product(BaseModel):
         blank=True,
     )
     name = models.CharField(max_length=200)
+    # Optional second-language name, in the shop's `secondary_language`.
+    # Blank is the default and changes nothing; mirrors the Product.image
+    # precedent of an optional field with no effect until opted into.
+    secondary_name = models.CharField(max_length=200, blank=True)
     description = models.TextField(blank=True)
     sku = models.CharField(max_length=80)
     barcode = models.CharField(max_length=80, null=True, blank=True)
@@ -142,6 +150,10 @@ class Product(BaseModel):
         indexes = [
             models.Index(fields=["shop", "category"], name="prod_shop_category_idx"),
             models.Index(fields=["shop", "name"], name="prod_shop_name_idx"),
+            models.Index(
+                fields=["shop", "secondary_name"],
+                name="prod_shop_sec_name_idx",
+            ),
             models.Index(fields=["shop", "sku"], name="prod_shop_sku_idx"),
             models.Index(fields=["shop", "barcode"], name="prod_shop_barcode_idx"),
             models.Index(fields=["shop", "is_active"], name="prod_shop_active_idx"),
@@ -157,6 +169,7 @@ class Product(BaseModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.name = self.name.strip()
+        self.secondary_name = self.secondary_name.strip()
         self.sku = self.sku.strip().upper()
         self.barcode = self.barcode.strip() if self.barcode else None
         super().save(*args, **kwargs)

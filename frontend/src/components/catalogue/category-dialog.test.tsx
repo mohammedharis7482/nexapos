@@ -25,6 +25,7 @@ describe("CategoryDialog", () => {
       success: true,
       message: "Category created.",
       data: {
+        secondary_name: "",
         id: "a2d6e62a-e2fa-455f-96bb-3a7fe471ed8a",
         name: "Dairy",
         description: "",

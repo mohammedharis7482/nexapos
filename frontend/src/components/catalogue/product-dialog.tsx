@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/feedback";
 import { Checkbox, FormField, Input, MoneyInput, PercentageInput, Select, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
 import { ProductImageField } from "@/components/catalogue/product-image-field";
+import { SecondaryNameField } from "@/components/catalogue/secondary-name-field";
 import {
   ProductPacketsField,
   newPacketDraft,
@@ -21,6 +22,7 @@ import {
 } from "@/schemas/product.schema";
 import { productService } from "@/services/product.service";
 import type { ProductCategory } from "@/types/category";
+import type { ShopLanguage } from "@/types/shop";
 import {
   PRODUCT_UNITS,
   type Product,
@@ -29,6 +31,7 @@ import {
 
 const defaults: ProductFormValues = {
   name: "",
+  secondary_name: "",
   description: "",
   sku: "",
   barcode: "",
@@ -97,12 +100,15 @@ export function ProductDialog({
   onOpenChange,
   product,
   categories,
+  secondaryLanguage = "",
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
   categories: ProductCategory[];
+  /** Shop-level; blank hides the second-name field entirely. */
+  secondaryLanguage?: ShopLanguage | "";
   onSaved: (product: Product, addStock: boolean) => void;
 }) {
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -137,6 +143,7 @@ export function ProductDialog({
       product
         ? {
             name: product.name,
+            secondary_name: product.secondary_name,
             description: product.description,
             sku: product.sku,
             barcode: product.barcode ?? "",
@@ -292,6 +299,13 @@ export function ProductDialog({
         <FormField label="Product name" htmlFor="product-name" error={errors.name?.message}>
           <Input id="product-name" invalid={Boolean(errors.name)} {...register("name")} />
         </FormField>
+        <SecondaryNameField
+          id="product-secondary-name"
+          registration={register("secondary_name")}
+          secondaryLanguage={secondaryLanguage}
+          error={errors.secondary_name?.message}
+          disabled={isSubmitting}
+        />
         <FormField label="Description" htmlFor="product-description" error={errors.description?.message}>
           <Textarea id="product-description" {...register("description")} />
         </FormField>

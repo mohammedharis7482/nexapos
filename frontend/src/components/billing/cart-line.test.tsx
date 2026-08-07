@@ -8,6 +8,7 @@ import { CartLine, formatQuantityDisplay, nextQuantity, quantityUnit } from "./c
 const wholeUnitItem: SaleItem = {
   id: "item-id",
   product: {
+    secondary_name: "",
     id: "product-id",
     name: "Baladna Milk",
     sku: "MILK-001",

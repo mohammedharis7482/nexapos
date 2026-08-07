@@ -220,9 +220,21 @@ Save & Add Stock handoff.
 ### Multi-pricing products
 
 `pricing_mode` is `STANDARD` (default) or `MULTI`. A MULTI product carries a
-writable nested `packets` array of `{size, price}`, replaced wholesale on each
-write; at least one packet is required, sizes must be unique, and packets on a
-STANDARD product are rejected. `size` is in the product's own `unit`.
+writable nested `packets` array, replaced wholesale on each write. `size` is in
+the product's own `unit` - a 250 g packet of a KG product is `"0.250"`.
+
+Two packet shapes exist. Product responses use the full one; billing and
+inventory responses use a trimmed one, and omit inactive packets entirely:
+
+| Endpoint | Packet fields |
+| --- | --- |
+| `/api/v1/products/` | `id`, `size`, `price`, `display_order`, `is_active` |
+| `/api/v1/inventory/` | `id`, `size`, `price` (active only) |
+
+Writes accept `size` and `price`; `display_order` defaults to array position.
+At least one packet is required for MULTI, sizes must be unique, and packets on
+a STANDARD product are rejected - all as `errors.packets`. Switching a product
+back to STANDARD clears its packet offer.
 
 `POST /api/v1/billing/drafts/{id}/items/` accepts optional `pricing_mode`
 (`STANDARD`, `PACKET`, `LOOSE`) and `packet_id`. Both are omitted for standard
@@ -357,11 +369,27 @@ Product lists accept `search`, `category`, `unit`, `is_active`, `ordering`,
 descending). Category responses contain only `id` and `name`; product responses
 do not expose a shop identifier or inventory state.
 
+### Second-language names
+
+`Shop` exposes `primary_language` (default `ENGLISH`) and `secondary_language`
+(`""` when unset), both from `ENGLISH`, `ARABIC`, `MALAYALAM`, `HINDI`, `URDU`.
+`secondary_language` is also included on the session shop payload from
+`GET /api/v1/auth/me/`, so catalogue forms can label the field without a second
+request.
+
+Products and categories carry a writable `secondary_name`, `""` when unset.
+Product search (`/api/v1/products/`) and billing search (`/api/v1/inventory/`)
+match it alongside `name`, `sku`, and `barcode`.
+
+Sale items expose `product.secondary_name`, snapshotted at sale time next to
+`product.name` - a reprint shows the name as sold, even after the product is
+renamed or the shop changes its secondary language.
+
 ### Product image
 
-- `POST /api/v1/products/{uuid}/image/` — owner-only, `multipart/form-data`,
+- `POST /api/v1/products/{uuid}/image/` - owner-only, `multipart/form-data`,
   field `image`. Replaces any existing image and deletes the old file.
-- `DELETE /api/v1/products/{uuid}/image/` — owner-only, idempotent.
+- `DELETE /api/v1/products/{uuid}/image/` - owner-only, idempotent.
 
 Both return the full product. Validation rejects anything over 5 MB or whose
 *decoded* format is not JPEG, PNG, or WEBP (the declared content type and the
@@ -374,7 +402,7 @@ representations. Sale items snapshot name/SKU/unit at sale time but read the
 image live, so a receipt reprint shows the product's current photo. URLs are
 absolute and produced by the configured storage backend; with the default
 `FileSystemStorage` they resolve under `MEDIA_URL`, which Django serves only
-when `DEBUG` is on — production serves `/media/` from the web server or a
+when `DEBUG` is on; production serves `/media/` from the web server or a
 cloud backend selected via `DJANGO_DEFAULT_FILE_STORAGE`.
 
 All catalogue routes require session authentication and exact trailing slashes.

@@ -13,6 +13,15 @@ sales, cash/card/split payments, cashier shifts, receipts, operational reports,
 CSV export, and bulk product import. The `saas` layer adds registration,
 onboarding, invitations, plans, and subscription state.
 
+Shipped since:
+
+- **Product images** - one optional JPEG/PNG/WEBP image per product, shown on
+  the catalogue, inventory detail, billing grid, and cart lines, with a
+  category-tinted placeholder when absent. Stored through Django's storage API,
+  so a cloud backend is a config change.
+- **Multi-pricing** - a product may be sold as a fixed-size, fixed-price packet
+  or as a cashier-entered loose amount, both deducting one shared stock pool.
+
 Out of scope: branches, refunds/returns, purchasing and suppliers, payment
 gateway processing, automated subscription charging, loyalty, payroll, and
 advanced accounting. See `known-limitations.md`.

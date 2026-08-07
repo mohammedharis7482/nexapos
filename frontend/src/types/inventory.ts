@@ -28,6 +28,7 @@ export type MovementType = "OPENING" | ManualMovementType;
 export interface InventoryProduct {
   id: string;
   name: string;
+  secondary_name: string;
   sku: string;
   barcode: string | null;
   unit: ProductUnit;

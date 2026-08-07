@@ -458,6 +458,7 @@ def add_product_to_draft(
             sale=sale,
             product=product,
             product_name=product.name,
+            secondary_product_name=product.secondary_name,
             sku=product.sku,
             barcode=product.barcode,
             unit=product.unit,

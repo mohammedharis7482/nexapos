@@ -1,3 +1,4 @@
+import { SHOP_LANGUAGES } from "@/types/shop";
 import { z } from "zod";
 
 const rate = z
@@ -15,6 +16,10 @@ export const shopSettingsSchema = z.object({
   country: z.literal("Qatar"),
   currency: z.literal("QAR"),
   timezone: z.literal("Asia/Qatar"),
+  primary_language: z.enum(SHOP_LANGUAGES),
+  // "" is a real, meaningful value: the shop has not opted into
+  // second-language names at all.
+  secondary_language: z.union([z.enum(SHOP_LANGUAGES), z.literal("")]),
   tax_registration_number: z.string().trim().max(50),
   default_tax_rate: rate,
   receipt_footer: z.string(),

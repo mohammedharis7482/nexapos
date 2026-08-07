@@ -25,6 +25,9 @@ def user_session_data(user: User) -> dict:
                 "name": user.shop.name,
                 "currency": user.shop.currency,
                 "timezone": user.shop.timezone,
+                # Shop-level like currency/timezone, so catalogue forms can
+                # label the second-name field without an extra request.
+                "secondary_language": user.shop.secondary_language,
                 "status": shop.status,
                 "onboarding_completed": shop.onboarding_completed_at is not None,
             },

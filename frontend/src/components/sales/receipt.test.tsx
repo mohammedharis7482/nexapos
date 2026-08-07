@@ -23,7 +23,7 @@ const receipt: ReceiptData = {
     completed_by: { id: "user-id", full_name: "Cashier", role: "CASHIER" },
     items: [{
       id: "item-id",
-      product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
+      product: { id: "product-id", name: "Milk", secondary_name: "", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
       pricing_mode: "STANDARD",
       packet_size: null,
       quantity: "2.000",
@@ -85,5 +85,44 @@ describe("Receipt", () => {
     render(<Receipt data={discounted} />);
     expect(screen.getByText("Discount (10.00%)")).toBeInTheDocument();
     expect(screen.getByText("-QAR 1.20")).toBeInTheDocument();
+  });
+});
+
+describe("Receipt secondary product names", () => {
+  it("prints the snapshotted second name under the product name", () => {
+    const withSecondary = {
+      ...receipt,
+      sale: {
+        ...receipt.sale,
+        items: receipt.sale.items.map((item) => ({
+          ...item,
+          product: { ...item.product, secondary_name: "أرز بسمتي" },
+        })),
+      },
+    };
+    render(<Receipt data={withSecondary} />);
+    expect(screen.getByText("أرز بسمتي")).toBeInTheDocument();
+  });
+
+  it("leaves the receipt unchanged when no second name was sold", () => {
+    const { container } = render(<Receipt data={receipt} />);
+    expect(container.querySelectorAll("[dir]")).toHaveLength(0);
+  });
+
+  it("directs only the secondary-name line, never the receipt body", () => {
+    const withSecondary = {
+      ...receipt,
+      sale: {
+        ...receipt.sale,
+        items: receipt.sale.items.map((item) => ({
+          ...item,
+          product: { ...item.product, secondary_name: "أرز بسمتي" },
+        })),
+      },
+    };
+    const { container } = render(<Receipt data={withSecondary} />);
+    const directed = Array.from(container.querySelectorAll("[dir]"));
+    expect(directed).toHaveLength(1);
+    expect(directed[0]).toHaveTextContent("أرز بسمتي");
   });
 });

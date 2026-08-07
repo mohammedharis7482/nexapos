@@ -14,7 +14,10 @@ def categories_for_user(user) -> QuerySet[ProductCategory]:
 
 def filter_categories(queryset, *, search: str = "", is_active: str = ""):
     if search:
-        queryset = queryset.filter(name__icontains=search.strip())
+        term = search.strip()
+        queryset = queryset.filter(
+            Q(name__icontains=term) | Q(secondary_name__icontains=term)
+        )
     parsed_is_active = parse_bool_param(is_active)
     if parsed_is_active is not None:
         queryset = queryset.filter(is_active=parsed_is_active)
@@ -45,6 +48,7 @@ def filter_products(
         term = search.strip()
         queryset = queryset.filter(
             Q(name__icontains=term)
+            | Q(secondary_name__icontains=term)
             | Q(sku__icontains=term)
             | Q(barcode__icontains=term)
         )

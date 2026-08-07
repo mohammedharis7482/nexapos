@@ -23,6 +23,7 @@ vi.mock("@/lib/image-resize", async (importOriginal) => ({
 }));
 
 const created: Product = {
+  secondary_name: "",
   id: "product-id", name: "Bananas", description: "", sku: "BANANA-KG",
   barcode: null, unit: "KG", purchase_price: "2.00", selling_price: "3.50",
   tax_rate: "0.00", is_tax_inclusive: false, is_active: true,

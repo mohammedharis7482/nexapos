@@ -41,6 +41,7 @@ def filter_inventory_products(
     if search := search.strip():
         queryset = queryset.filter(
             Q(name__icontains=search)
+            | Q(secondary_name__icontains=search)
             | Q(sku__icontains=search)
             | Q(barcode__icontains=search)
         )

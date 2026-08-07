@@ -1,3 +1,5 @@
+import type { ShopLanguage } from "@/types/shop";
+
 export type UserRole = "OWNER" | "CASHIER";
 
 export interface ShopSummary {
@@ -5,6 +7,8 @@ export interface ShopSummary {
   name: string;
   currency: string;
   timezone: string;
+  /** Empty when the shop has not opted into second-language names. */
+  secondary_language: ShopLanguage | "";
   status?:
     | "PENDING_VERIFICATION"
     | "ONBOARDING"

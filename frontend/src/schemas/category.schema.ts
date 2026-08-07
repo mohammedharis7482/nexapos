@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const categorySchema = z.object({
   name: z.string().trim().min(1, "Category name is required.").max(120),
+  secondary_name: z.string().trim().max(120),
   description: z.string().trim(),
   display_order: z
     .number()

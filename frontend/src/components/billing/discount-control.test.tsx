@@ -19,7 +19,7 @@ const draft: DraftSale = {
   created_by: { id: "user-id", full_name: "Cashier", role: "CASHIER" },
   items: [{
     id: "item-id",
-    product: { id: "product-id", name: "Milk", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
+    product: { id: "product-id", name: "Milk", secondary_name: "", sku: "MILK", barcode: null, unit: "BOTTLE", image_url: null },
     pricing_mode: "STANDARD",
     packet_size: null,
     quantity: "2.000",

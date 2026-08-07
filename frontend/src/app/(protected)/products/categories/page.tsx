@@ -73,7 +73,7 @@ export default function CategoriesPage() {
           ))}
         </Card>
       ) : null}
-      <CategoryDialog open={dialogOpen} onOpenChange={setDialogOpen} category={editing} onSaved={() => void load()} />
+      <CategoryDialog open={dialogOpen} onOpenChange={setDialogOpen} category={editing} secondaryLanguage={user?.shop.secondary_language ?? ""} onSaved={() => void load()} />
     </div>
   );
 }

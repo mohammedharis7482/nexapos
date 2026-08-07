@@ -63,6 +63,7 @@ const draft: DraftSale = {
 };
 const inventoryItem: InventoryItem = {
   product: {
+    secondary_name: "",
     id: "product-id",
     name: "Baladna Milk",
     sku: "MILK-001",
@@ -387,6 +388,92 @@ describe("BillingPage", () => {
     });
   });
 
+  // Second-language names add text to the cards. The grid's arrow-key
+  // navigation resolves cards by indexing its `button` elements, so this
+  // re-checks that invariant now that cards render more than before, and
+  // pins the RTL scope boundary: `dir` belongs on the secondary-name element
+  // and nowhere else.
+  describe("secondary product names", () => {
+    const named = (index: number, secondary: string): InventoryItem => ({
+      ...inventoryItem,
+      product: {
+        ...inventoryItem.product,
+        id: `product-${index}`,
+        name: `Product ${index}`,
+        secondary_name: secondary,
+        sku: `SKU-${index}`,
+        barcode: `barcode-${index}`,
+      },
+    });
+
+    function withProducts(results: InventoryItem[]) {
+      inventory.list.mockResolvedValue({
+        success: true, message: "",
+        data: { count: results.length, next: null, previous: null, results },
+      });
+    }
+
+    it("shows the second name on a card that has one", async () => {
+      withProducts([named(0, "أرز بسمتي")]);
+      render(<BillingPage />);
+      expect(await screen.findByText("أرز بسمتي")).toBeInTheDocument();
+    });
+
+    it("renders a card without a second name exactly as before", async () => {
+      withProducts([named(0, "")]);
+      render(<BillingPage />);
+      const card = await screen.findByRole("button", { name: /Product 0/ });
+      expect(card.querySelectorAll("[dir]")).toHaveLength(0);
+    });
+
+    it("puts dir only on the secondary-name element, not the card or grid", async () => {
+      withProducts([named(0, "أرز بسمتي")]);
+      render(<BillingPage />);
+      const card = await screen.findByRole("button", { name: /Product 0/ });
+      const directed = Array.from(card.querySelectorAll("[dir]"));
+      expect(directed).toHaveLength(1);
+      expect(directed[0]).toHaveTextContent("أرز بسمتي");
+      // The scope boundary: the card itself and the grid stay undirected.
+      expect(card).not.toHaveAttribute("dir");
+      expect(card.parentElement).not.toHaveAttribute("dir");
+      expect(document.documentElement).not.toHaveAttribute("dir");
+    });
+
+    it("keeps arrow-key grid navigation intact with second names present", async () => {
+      withProducts([named(0, "أرز"), named(1, "ملح"), named(2, "")]);
+      render(<BillingPage />);
+      const grid = (await screen.findByRole("button", { name: /Product 0/ })).parentElement!;
+      const cards = Array.from(grid.querySelectorAll<HTMLButtonElement>("button"));
+      // Still exactly one focusable element per product - the extra text is
+      // a <p>, not another control.
+      expect(cards).toHaveLength(3);
+
+      cards[0].focus();
+      fireEvent.keyDown(cards[0], { key: "ArrowRight" });
+      expect(cards[1]).toHaveFocus();
+      fireEvent.keyDown(cards[1], { key: "ArrowRight" });
+      expect(cards[2]).toHaveFocus();
+      fireEvent.keyDown(cards[2], { key: "ArrowLeft" });
+      expect(cards[1]).toHaveFocus();
+      // Clamps at the left edge rather than escaping the grid.
+      cards[0].focus();
+      fireEvent.keyDown(cards[0], { key: "ArrowLeft" });
+      expect(cards[0]).toHaveFocus();
+    });
+
+    it("still adds a product whose card carries a second name", async () => {
+      withProducts([named(0, "أرز بسمتي")]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Product 0/ }));
+      await waitFor(() =>
+        expect(billing.addItem).toHaveBeenCalledWith("draft-id", {
+          product_id: "product-0",
+          quantity: "1.000",
+        }),
+      );
+    });
+  });
+
   // Product cards gained an image (and a placeholder for products without
   // one). Both render inside the card button, so this guards the grid's
   // arrow-key navigation, which resolves cards by querying the grid for
@@ -402,7 +489,8 @@ describe("BillingPage", () => {
         sku: `SKU-${index}`,
         barcode: `barcode-${index}`,
         image_url: imageUrl,
-        category: { id: "category-id", name: "Dairy" },
+        category: { id: "category-id", name: "Dairy", secondary_name: "" },
+      secondary_name: "",
       },
     });
 
@@ -495,7 +583,7 @@ describe("BillingPage", () => {
       ...draft,
       items: [{
         id: "item-id",
-        product: { id: "product-id", name: "Baladna Milk", sku: "MILK-001", barcode: "6281007023412", unit: "BOTTLE", image_url: null },
+        product: { id: "product-id", name: "Baladna Milk", secondary_name: "", sku: "MILK-001", barcode: "6281007023412", unit: "BOTTLE", image_url: null },
         pricing_mode: "STANDARD",
         packet_size: null,
         quantity: "1",

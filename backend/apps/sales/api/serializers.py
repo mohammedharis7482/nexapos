@@ -18,6 +18,11 @@ class SaleCreatorSerializer(serializers.Serializer):
 class SaleItemProductSerializer(serializers.Serializer):
     id = serializers.UUIDField(source="product_id", read_only=True)
     name = serializers.CharField(source="product_name", read_only=True)
+    # The snapshot taken at sale time, not a live read - a reprint must show
+    # the name as sold.
+    secondary_name = serializers.CharField(
+        source="secondary_product_name", read_only=True
+    )
     sku = serializers.CharField(read_only=True)
     barcode = serializers.CharField(read_only=True, allow_null=True)
     unit = serializers.CharField(read_only=True)

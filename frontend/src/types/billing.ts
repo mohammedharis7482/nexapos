@@ -15,6 +15,8 @@ export interface SaleItem {
   product: {
     id: string;
     name: string;
+    /** Snapshotted at sale time, so a reprint shows the name as sold. */
+    secondary_name: string;
     sku: string;
     barcode: string | null;
     unit: ProductUnit;

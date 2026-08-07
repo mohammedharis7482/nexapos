@@ -39,7 +39,7 @@ describe("ReportsPage", () => {
   beforeEach(() => {
     reports.get.mockReset();
     sales.cashiers.mockResolvedValue({ success: true, message: "", data: [{ id: "cashier-id", full_name: "Cashier One", role: "CASHIER" }] });
-    categories.list.mockResolvedValue({ success: true, message: "", data: { count: 1, next: null, previous: null, results: [{ id: "category-id", name: "Dairy", description: "", display_order: 0, is_active: true, created_at: "", updated_at: "" }] } });
+    categories.list.mockResolvedValue({ success: true, message: "", data: { count: 1, next: null, previous: null, results: [{ id: "category-id", name: "Dairy", secondary_name: "", description: "", display_order: 0, is_active: true, created_at: "", updated_at: "" }] } });
   });
 
   it("creates a seven-day default inclusive range", () => {
