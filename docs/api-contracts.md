@@ -96,8 +96,10 @@ demand, and refetches only after a `403 CSRF Failed` retry.
 
 It requires CSRF, scopes authentication to the selected shop, rotates the
 session key, and rejects inactive users or shops with the same generic
-credential response. Success returns only user ID, name, username, role, and
-the shop's ID, name, currency, and timezone.
+credential response. Success returns the safe session payload: user ID, name,
+username, role, and the shop's ID, name, currency, timezone,
+`secondary_language`, status, and onboarding flag. Login and
+`GET /api/v1/auth/me/` share one builder, so the two never drift.
 
 Login is throttled by source IP and by a hashed IP/shop/username context.
 Exceeded limits return HTTP 429 without identifying whether an account exists.
