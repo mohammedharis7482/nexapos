@@ -74,6 +74,7 @@ Read the specific file rather than scanning `docs/` - 45+ files live there.
 | Design system (current) | `docs/design-system-v2.md` |
 | Navigation and routes | `docs/navigation.md` |
 | Known gaps | `docs/known-limitations.md` |
+| Confirmed specs, not yet built | `docs/planned-features.md` |
 | Deploy | `docs/deployment.md`, `docs/deployment-checklist.md` |
 
 Feature specifics: `cashier-shifts`, `held-bills`, `product-import`,
