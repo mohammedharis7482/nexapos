@@ -9,7 +9,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.inventory.models import InventoryBalance, StockMovement
 from apps.payments.models import Payment
-from apps.products.models import Product
+from apps.products.models import Product, ProductPacket
 
 from .calculations import (
     calculate_discount,
@@ -126,7 +126,7 @@ def bulk_shift_summaries(shifts) -> dict:
             .values("sale__shift_id")
             .annotate(
                 items_sold=Coalesce(
-                    Sum("quantity"), Decimal("0.000"),
+                    Sum("stock_quantity"), Decimal("0.000"),
                     output_field=DecimalField(max_digits=15, decimal_places=3),
                 )
             )
@@ -221,6 +221,12 @@ def _available_product(
 
 
 def _validate_stock(*, product: Product, quantity: Decimal, shop_id) -> None:
+    """Lock the product's single balance and check a base-unit demand against it.
+
+    `quantity` is always a stock quantity in the product's own unit, never a
+    packet count - a packet line and a loose line of the same product share
+    this one balance, which is what keeps their stock from drifting apart.
+    """
     try:
         balance = InventoryBalance.objects.select_for_update().get(
             shop_id=shop_id,
@@ -236,6 +242,76 @@ def _validate_stock(*, product: Product, quantity: Decimal, shop_id) -> None:
             "quantity",
             "Requested quantity exceeds available stock.",
         )
+
+
+def _other_lines_stock_demand(*, sale: Sale, product: Product, exclude_item_id=None) -> Decimal:
+    """Stock already claimed for this product by the draft's *other* lines.
+
+    A multi-pricing product can hold both a packet line and a loose line, so
+    availability has to be judged against their combined draw on the shared
+    pool - never one line at a time.
+    """
+    queryset = SaleItem.objects.filter(sale=sale, product=product)
+    if exclude_item_id is not None:
+        queryset = queryset.exclude(pk=exclude_item_id)
+    return sum(
+        (item.stock_quantity for item in queryset),
+        Decimal("0.000"),
+    )
+
+
+def _resolve_pricing(
+    *,
+    product: Product,
+    pricing_mode: str,
+    packet_id,
+    quantity: Decimal,
+) -> tuple[str, "ProductPacket | None", Decimal, Decimal]:
+    """Map a requested pricing mode onto (mode, packet, unit_price, stock_quantity).
+
+    Returns the stock quantity separately from the charged quantity: for a
+    packet line the customer is billed per packet at the packet's exact price,
+    while inventory is drawn down by quantity x packet size.
+    """
+    if product.pricing_mode == Product.PricingMode.STANDARD:
+        if pricing_mode and pricing_mode != SaleItem.PricingMode.STANDARD:
+            raise BillingOperationError(
+                "pricing_mode",
+                "This product is not set up for packet or loose selling.",
+            )
+        return (
+            SaleItem.PricingMode.STANDARD,
+            None,
+            product.selling_price,
+            quantity,
+        )
+
+    if pricing_mode == SaleItem.PricingMode.LOOSE:
+        return SaleItem.PricingMode.LOOSE, None, product.selling_price, quantity
+
+    if pricing_mode != SaleItem.PricingMode.PACKET:
+        raise BillingOperationError(
+            "pricing_mode",
+            "Choose a packet or loose price for this product.",
+        )
+    if not packet_id:
+        raise BillingOperationError("packet_id", "Choose a packet size.")
+    packet = ProductPacket.objects.filter(
+        pk=packet_id, product=product, is_active=True
+    ).first()
+    if packet is None:
+        raise BillingOperationError("packet_id", "That packet size is unavailable.")
+    if quantity != quantity.to_integral_value():
+        raise BillingOperationError(
+            "quantity",
+            "Packets are sold in whole numbers.",
+        )
+    return (
+        SaleItem.PricingMode.PACKET,
+        packet,
+        packet.price,
+        round_quantity(quantity * packet.size),
+    )
 
 
 def _apply_line_totals(item: SaleItem) -> None:
@@ -322,6 +398,8 @@ def add_product_to_draft(
     quantity: Decimal,
     product_id=None,
     barcode: str | None = None,
+    pricing_mode: str = "",
+    packet_id=None,
 ) -> Sale:
     sale = _locked_accessible_draft(sale_id=sale_id, user=user)
     _require_draft(sale)
@@ -333,23 +411,42 @@ def add_product_to_draft(
         product_id=product_id,
         barcode=barcode,
     )
+    mode, packet, unit_price, stock_quantity = _resolve_pricing(
+        product=product,
+        pricing_mode=pricing_mode,
+        packet_id=packet_id,
+        quantity=quantity,
+    )
+    # Merge on the full pricing identity, not just the product: two 250 g
+    # packets are the same line, but a packet and a loose weight are not.
     existing = SaleItem.objects.select_for_update().filter(
         sale=sale,
         product=product,
+        pricing_mode=mode,
+        packet=packet,
     ).first()
-    requested_total = quantity + (existing.quantity if existing else Decimal("0.000"))
+    if existing:
+        quantity = existing.quantity + quantity
+        stock_quantity = round_quantity(stock_quantity + existing.stock_quantity)
     _validate_stock(
         product=product,
-        quantity=requested_total,
+        quantity=stock_quantity
+        + _other_lines_stock_demand(
+            sale=sale,
+            product=product,
+            exclude_item_id=existing.pk if existing else None,
+        ),
         shop_id=user.shop_id,
     )
 
     if existing:
-        existing.quantity = requested_total
+        existing.quantity = quantity
+        existing.stock_quantity = stock_quantity
         _apply_line_totals(existing)
         existing.save(
             update_fields=[
                 "quantity",
+                "stock_quantity",
                 "line_subtotal",
                 "tax_amount",
                 "line_total",
@@ -364,8 +461,12 @@ def add_product_to_draft(
             sku=product.sku,
             barcode=product.barcode,
             unit=product.unit,
+            pricing_mode=mode,
+            packet=packet,
+            packet_size=packet.size if packet else None,
             quantity=quantity,
-            unit_price=product.selling_price,
+            stock_quantity=stock_quantity,
+            unit_price=unit_price,
             tax_rate=product.tax_rate,
             is_tax_inclusive=product.is_tax_inclusive,
             tax_amount=Decimal("0.00"),
@@ -402,12 +503,29 @@ def update_draft_item_quantity(
         raise BillingOperationError("item_id", "Draft item was not found.") from exc
     if not item.product.is_active:
         raise BillingOperationError("product", "Inactive products cannot be billed.")
-    _validate_stock(product=item.product, quantity=quantity, shop_id=user.shop_id)
+    if item.pricing_mode == SaleItem.PricingMode.PACKET:
+        if quantity != quantity.to_integral_value():
+            raise BillingOperationError("quantity", "Packets are sold in whole numbers.")
+        # packet_size is the snapshot taken when the line was added, so editing
+        # the packet definition afterwards cannot rewrite this line's stock draw.
+        stock_quantity = round_quantity(quantity * item.packet_size)
+    else:
+        stock_quantity = quantity
+    _validate_stock(
+        product=item.product,
+        quantity=stock_quantity
+        + _other_lines_stock_demand(
+            sale=sale, product=item.product, exclude_item_id=item.pk
+        ),
+        shop_id=user.shop_id,
+    )
     item.quantity = quantity
+    item.stock_quantity = stock_quantity
     _apply_line_totals(item)
     item.save(
         update_fields=[
             "quantity",
+            "stock_quantity",
             "line_subtotal",
             "tax_amount",
             "line_total",
@@ -465,18 +583,29 @@ def resume_held_sale(*, sale_id, user: User) -> Sale:
     sale = _locked_accessible_draft(sale_id=sale_id, user=user)
     if sale.status != Sale.Status.HELD:
         raise BillingOperationError("status", "Only a held bill can be resumed.")
-    for item in sale.items.select_related("product"):
+    demand_by_product: dict = {}
+    for item in sale.items.select_related("product", "packet"):
         if not item.product.is_active:
             raise BillingOperationError(
                 "items", f"{item.product_name} is no longer active."
             )
-        if item.unit_price != item.product.selling_price:
+        current_price = (
+            item.packet.price
+            if item.pricing_mode == SaleItem.PricingMode.PACKET and item.packet
+            else item.product.selling_price
+        )
+        if item.unit_price != current_price:
             raise BillingOperationError(
                 "items", f"{item.product_name} has a new price; review the bill."
             )
-        _validate_stock(
-            product=item.product, quantity=item.quantity, shop_id=user.shop_id
+        entry = demand_by_product.setdefault(
+            item.product_id, [item.product, Decimal("0.000")]
         )
+        entry[1] += item.stock_quantity
+    # Checked per product, not per line: a packet line and a loose line of the
+    # same product can each fit but jointly exceed the shared pool.
+    for product, demand in demand_by_product.values():
+        _validate_stock(product=product, quantity=demand, shop_id=user.shop_id)
     sale.status = Sale.Status.DRAFT
     sale.save(update_fields=["status", "updated_at"])
     _audit(user=user, event=AuditEvent.Event.BILL_RESUMED)
@@ -596,7 +725,7 @@ def complete_sale(
     items = list(
         SaleItem.objects.select_for_update()
         .filter(sale=sale)
-        .order_by("product_id")
+        .order_by("product_id", "id")
     )
     if not items:
         raise BillingOperationError(
@@ -625,16 +754,28 @@ def complete_sale(
         .order_by("product_id")
     )
     balance_by_product = {balance.product_id: balance for balance in balances}
-    stock_errors: list[str] = []
+    # Demand is summed per product before it is compared to the balance. One
+    # product can now occupy several lines (a packet line plus a loose line),
+    # and checking those individually would let a pair that each fit but
+    # jointly overdraw the shared pool through to deduction.
+    demand_by_product: dict = {}
+    names_by_product: dict = {}
     for item in items:
-        balance = balance_by_product.get(item.product_id)
+        demand_by_product[item.product_id] = (
+            demand_by_product.get(item.product_id, Decimal("0.000"))
+            + item.stock_quantity
+        )
+        names_by_product[item.product_id] = item.product_name
+    stock_errors: list[str] = []
+    for product_id, demand in demand_by_product.items():
+        balance = balance_by_product.get(product_id)
         if balance is None or (
-            not balance.allow_negative_stock
-            and item.quantity > balance.quantity_on_hand
+            not balance.allow_negative_stock and demand > balance.quantity_on_hand
         ):
             available = balance.quantity_on_hand if balance else Decimal("0.000")
             stock_errors.append(
-                f"{item.product_name}: requested {item.quantity}, available {available}."
+                f"{names_by_product[product_id]}: requested {demand}, "
+                f"available {available}."
             )
     if stock_errors:
         raise BillingOperationError(
@@ -652,14 +793,17 @@ def complete_sale(
 
     for item in items:
         balance = balance_by_product[item.product_id]
+        # One movement per line keeps packet and loose sales individually
+        # traceable. The running balance stays correct across two lines of the
+        # same product because they share this one locked balance object.
         quantity_before = balance.quantity_on_hand
-        quantity_after = quantity_before - item.quantity
+        quantity_after = quantity_before - item.stock_quantity
         movement = StockMovement.objects.create(
             shop_id=sale.shop_id,
             product_id=item.product_id,
             inventory_balance=balance,
             movement_type=StockMovement.Type.SALE,
-            quantity_delta=-item.quantity,
+            quantity_delta=-item.stock_quantity,
             quantity_before=quantity_before,
             quantity_after=quantity_after,
             reason=f"Completed sale {sale_number}",

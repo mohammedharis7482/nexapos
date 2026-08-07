@@ -26,6 +26,26 @@ export function isDecimalUnit(unit: ProductUnit): boolean {
   return DECIMAL_PRODUCT_UNITS.includes(unit);
 }
 
+export const PRICING_MODES = ["STANDARD", "MULTI"] as const;
+export type PricingMode = (typeof PRICING_MODES)[number];
+
+/** A fixed-size, fixed-price way to sell a MULTI-pricing product.
+ *  `size` is in the product's own unit: a 250 g packet of a KG product
+ *  is "0.250". */
+export interface ProductPacket {
+  id: string;
+  size: string;
+  price: string;
+  display_order: number;
+  is_active: boolean;
+}
+
+export interface ProductPacketInput {
+  size: string;
+  price: string;
+  display_order?: number;
+}
+
 export interface CategorySummary {
   id: string;
   name: string;
@@ -45,6 +65,8 @@ export interface Product {
   is_active: boolean;
   category: CategorySummary | null;
   image_url: string | null;
+  pricing_mode: PricingMode;
+  packets: ProductPacket[];
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +83,8 @@ export interface ProductInput {
   is_tax_inclusive: boolean;
   is_active: boolean;
   category_id: string | null;
+  pricing_mode: PricingMode;
+  packets?: ProductPacketInput[];
 }
 
 export interface ProductFilters {

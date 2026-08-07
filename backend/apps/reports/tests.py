@@ -135,6 +135,7 @@ class DashboardApiTests(APITestCase):
             sku=product.sku,
             unit=product.unit,
             quantity=Decimal(quantity),
+            stock_quantity=Decimal(quantity),
             unit_price=product.selling_price,
             tax_rate=Decimal("0.00"),
             is_tax_inclusive=False,
@@ -344,6 +345,7 @@ class ReportsFoundationApiTests(APITestCase):
         SaleItem.objects.create(
             sale=sale, product=product, product_name=product.name, sku=product.sku,
             unit=product.unit, quantity=Decimal(quantity),
+            stock_quantity=Decimal(quantity),
             unit_price=product.selling_price, tax_rate=Decimal("0.00"),
             is_tax_inclusive=False, tax_amount=Decimal("0.00"),
             line_subtotal=Decimal(total), line_total=Decimal(total),

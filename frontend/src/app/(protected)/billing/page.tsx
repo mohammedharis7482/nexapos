@@ -21,6 +21,7 @@ import { Badge, MoneyDisplay, PageHeader, QuantityDisplay } from "@/components/u
 import { Alert, EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
 import { Input, Select } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
+import { PricingPanel } from "@/components/billing/pricing-panel";
 import { ProductThumb } from "@/components/ui/product-thumb";
 import { useShortcuts, type ShortcutBinding } from "@/hooks/use-shortcuts";
 import { ApiError } from "@/lib/api-client";
@@ -29,7 +30,7 @@ import { billingService } from "@/services/billing.service";
 import { categoryService } from "@/services/category.service";
 import { inventoryService } from "@/services/inventory.service";
 import { shiftService } from "@/services/shift.service";
-import type { DraftSale } from "@/types/billing";
+import type { DraftSale, SalePricingMode } from "@/types/billing";
 import type { ProductCategory } from "@/types/category";
 import type { InventoryItem } from "@/types/inventory";
 import type { CompletedSale } from "@/types/sales";
@@ -58,13 +59,13 @@ const ProductResultCard = memo(function ProductResultCard({
 }: {
   item: InventoryItem;
   disabled: boolean;
-  onAdd: (productId: string) => void;
+  onAdd: (item: InventoryItem) => void;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
-      onClick={() => onAdd(item.product.id)}
+      onClick={() => onAdd(item)}
       className="group min-h-36 rounded-[var(--radius-card)] border border-border bg-surface p-4 text-left shadow-[var(--shadow-card)] transition-colors hover:border-blue-300 hover:bg-primary-soft/40 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <div className="flex items-start gap-3">
@@ -80,6 +81,11 @@ const ProductResultCard = memo(function ProductResultCard({
             <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
           </div>
           <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
+          {item.product.pricing_mode === "MULTI" ? (
+            <p className="mt-1 text-xs font-semibold text-primary">
+              Packet or loose
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="mt-5 flex items-end justify-between">
@@ -120,6 +126,7 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [busyItem, setBusyItem] = useState<string | null>(null);
+  const [pricingTarget, setPricingTarget] = useState<InventoryItem | null>(null);
   const [mobileView, setMobileView] = useState<"products" | "cart">("products");
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
@@ -218,7 +225,10 @@ export default function BillingPage() {
     };
   }, [search, category, searchProducts]);
 
-  const addProduct = useCallback(async (productId: string) => {
+  const addProduct = useCallback(async (
+    productId: string,
+    pricing?: { pricing_mode: SalePricingMode; packet_id?: string; quantity: string },
+  ) => {
     // Guards both the product-grid click path and the barcode-scan/Enter
     // path (submitSearch) with one check, since a fast double Enter or a
     // double scan could otherwise fire two concurrent add requests before
@@ -231,13 +241,19 @@ export default function BillingPage() {
     try {
       const response = await billingService.addItem(draft.id, {
         product_id: productId,
-        quantity: "1.000",
+        quantity: pricing?.quantity ?? "1.000",
+        ...(pricing
+          ? { pricing_mode: pricing.pricing_mode, packet_id: pricing.packet_id }
+          : {}),
       });
       setDraft(response.data);
-      const addedItem = response.data.items.find((item) => item.product.id === productId);
+      const addedItem = [...response.data.items]
+        .reverse()
+        .find((item) => item.product.id === productId);
       if (addedItem) setLastActiveItemId(addedItem.id);
       setSuccess("Product added to the draft.");
       setSearch("");
+      setPricingTarget(null);
       searchRef.current?.focus();
     } catch (addError) {
       setError(apiMessage(addError, "The product could not be added."));
@@ -246,6 +262,18 @@ export default function BillingPage() {
       addInFlightRef.current = false;
     }
   }, [draft]);
+
+  // A multi-pricing product needs a mode before it can be added, so the card
+  // opens the inline panel instead of adding straight away. Standard
+  // products keep their single-click path untouched.
+  const selectProduct = useCallback((item: InventoryItem) => {
+    if (item.product.pricing_mode === "MULTI") {
+      setPricingTarget(item);
+      setError(null);
+      return;
+    }
+    void addProduct(item.product.id);
+  }, [addProduct]);
 
   async function submitSearch() {
     const term = search.trim();
@@ -260,7 +288,7 @@ export default function BillingPage() {
         item.product.barcode?.toLowerCase() === term.toLowerCase()
         || item.product.sku.toLowerCase() === term.toLowerCase(),
     );
-    if (exact) await addProduct(exact.product.id);
+    if (exact) selectProduct(exact);
   }
 
   // Stable across renders unless `draft` itself changes (an actual draft
@@ -548,6 +576,21 @@ export default function BillingPage() {
             </form>
           </Card>
 
+          {pricingTarget ? (
+            <PricingPanel
+              // Remount on a different product so the panel reopens with its
+              // own defaults rather than the previous product's selection.
+              key={pricingTarget.product.id}
+              item={pricingTarget}
+              busy={busyItem !== null}
+              onAdd={(pricing) => void addProduct(pricingTarget.product.id, pricing)}
+              onCancel={() => {
+                setPricingTarget(null);
+                searchRef.current?.focus();
+              }}
+            />
+          ) : null}
+
           {searching ? (
             <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               <Skeleton className="h-36" /><Skeleton className="h-36" /><Skeleton className="h-36" />
@@ -561,7 +604,7 @@ export default function BillingPage() {
                   key={item.product.id}
                   item={item}
                   disabled={!availableForDraft(item) || busyItem !== null}
-                  onAdd={addProduct}
+                  onAdd={selectProduct}
                 />
               ))}
             </div>

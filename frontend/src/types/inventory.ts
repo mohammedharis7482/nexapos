@@ -1,5 +1,10 @@
 import type { PaginatedResponse } from "@/types/api";
-import type { CategorySummary, ProductUnit } from "@/types/product";
+import type {
+  CategorySummary,
+  PricingMode,
+  ProductPacket,
+  ProductUnit,
+} from "@/types/product";
 
 export const STOCK_STATUSES = [
   "NOT_INITIALIZED",
@@ -30,6 +35,9 @@ export interface InventoryProduct {
   category: CategorySummary | null;
   is_active: boolean;
   image_url: string | null;
+  pricing_mode: PricingMode;
+  /** Active packets only; withdrawn ones are withheld by the API. */
+  packets: ProductPacket[];
 }
 
 export interface InventoryItem {

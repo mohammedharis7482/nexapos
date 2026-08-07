@@ -280,6 +280,11 @@ class CashierShift(BaseModel):
 
 
 class SaleItem(BaseModel):
+    class PricingMode(models.TextChoices):
+        STANDARD = "STANDARD", "Standard"
+        PACKET = "PACKET", "Packet"
+        LOOSE = "LOOSE", "Loose"
+
     sale = models.ForeignKey(
         Sale,
         on_delete=models.PROTECT,
@@ -294,7 +299,36 @@ class SaleItem(BaseModel):
     sku = models.CharField(max_length=80)
     barcode = models.CharField(max_length=80, null=True, blank=True)
     unit = models.CharField(max_length=20)
+    pricing_mode = models.CharField(
+        max_length=10,
+        choices=PricingMode.choices,
+        default=PricingMode.STANDARD,
+    )
+    packet = models.ForeignKey(
+        "products.ProductPacket",
+        on_delete=models.PROTECT,
+        related_name="sale_items",
+        null=True,
+        blank=True,
+    )
+    # Snapshot of the packet's size at sale time, so a later edit to the
+    # packet definition cannot retroactively change what a past sale meant.
+    packet_size = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        null=True,
+        blank=True,
+    )
+    # `quantity` is what the customer is charged for: units for STANDARD and
+    # LOOSE lines, but a count of packets for PACKET lines - so the packet's
+    # fixed price is billed exactly rather than divided into a per-unit rate
+    # that may not be representable to two decimals.
     quantity = models.DecimalField(max_digits=15, decimal_places=3)
+    # `stock_quantity` is what inventory deducts, always in the product's own
+    # unit (quantity x packet_size for PACKET lines, equal to `quantity`
+    # otherwise). Reports sum this, never `quantity`, since packet counts and
+    # weights are not commensurable.
+    stock_quantity = models.DecimalField(max_digits=15, decimal_places=3)
     unit_price = models.DecimalField(max_digits=14, decimal_places=2)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2)
     is_tax_inclusive = models.BooleanField(default=False)
@@ -305,13 +339,34 @@ class SaleItem(BaseModel):
     class Meta:
         ordering = ["created_at", "id"]
         constraints = [
+            # One product can now legitimately appear on two lines - a packet
+            # line and a loose line are different things - so uniqueness moves
+            # from (sale, product) to the full pricing identity. Two partial
+            # constraints rather than one over a nullable column, because
+            # Postgres treats NULLs as distinct and would otherwise let a
+            # product accumulate unlimited duplicate loose lines.
             models.UniqueConstraint(
-                fields=["sale", "product"],
-                name="sales_item_sale_product_uniq",
+                fields=["sale", "product", "pricing_mode"],
+                condition=Q(packet__isnull=True),
+                name="sales_item_sale_product_mode_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=["sale", "product", "packet"],
+                condition=Q(packet__isnull=False),
+                name="sales_item_sale_product_packet_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(pricing_mode="PACKET", packet__isnull=False)
+                | (~Q(pricing_mode="PACKET") & Q(packet__isnull=True)),
+                name="sales_item_packet_matches_mode",
             ),
             models.CheckConstraint(
                 condition=Q(quantity__gt=0),
                 name="sales_item_quantity_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(stock_quantity__gt=0),
+                name="sales_item_stock_quantity_positive",
             ),
             models.CheckConstraint(
                 condition=Q(unit_price__gte=0),

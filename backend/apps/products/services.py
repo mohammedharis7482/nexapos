@@ -3,7 +3,7 @@ import uuid
 from django.db import transaction
 
 from .image_rules import PRODUCT_IMAGE_EXTENSIONS
-from .models import Product, ProductCategory
+from .models import Product, ProductCategory, ProductPacket
 
 
 def generate_product_sku(*, shop, reserved: set[str] | None = None) -> str:
@@ -40,14 +40,50 @@ def update_category(
     return category
 
 
+def _sync_packets(*, product: Product, packets: list[dict] | None) -> None:
+    """Replace a product's packet definitions with the supplied set.
+
+    Packets already referenced by a sale are deactivated rather than deleted:
+    SaleItem.packet is PROTECT, and a past sale must keep pointing at the
+    definition it was billed under. Deactivated packets stop appearing in
+    billing but stay resolvable for history.
+    """
+    if packets is None:
+        return
+    if product.pricing_mode == Product.PricingMode.STANDARD:
+        packets = []
+    keep_sizes = {packet["size"] for packet in packets}
+    for existing in product.packets.all():
+        if existing.size in keep_sizes:
+            continue
+        if existing.sale_items.exists():
+            if existing.is_active:
+                existing.is_active = False
+                existing.save(update_fields=["is_active", "updated_at"])
+        else:
+            existing.delete()
+    for index, packet in enumerate(packets):
+        ProductPacket.objects.update_or_create(
+            product=product,
+            size=packet["size"],
+            defaults={
+                "price": packet["price"],
+                "display_order": packet.get("display_order", index),
+                "is_active": packet.get("is_active", True),
+            },
+        )
+
+
 @transaction.atomic
 def create_product(*, shop, validated_data: dict) -> Product:
     from apps.saas.services import enforce_product_limit
 
     enforce_product_limit(shop)
+    packets = validated_data.pop("packets", None)
     product = Product(shop=shop, **validated_data)
     product.full_clean()
     product.save()
+    _sync_packets(product=product, packets=packets)
     return product
 
 
@@ -57,10 +93,16 @@ def update_product(*, product: Product, validated_data: dict) -> Product:
 
     if not product.is_active and validated_data.get("is_active") is True:
         enforce_product_limit(product.shop)
+    packets = validated_data.pop("packets", None)
     for field, value in validated_data.items():
         setattr(product, field, value)
     product.full_clean()
     product.save()
+    # Switching back to STANDARD clears the packet offer even when the caller
+    # sends no packets array, so a stale definition cannot linger.
+    if product.pricing_mode == Product.PricingMode.STANDARD and packets is None:
+        packets = []
+    _sync_packets(product=product, packets=packets)
     return product
 
 

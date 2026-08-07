@@ -18,9 +18,12 @@ def stock_status_for(balance: InventoryBalance | None) -> str:
 
 
 def inventory_products_for_user(user: User) -> QuerySet[Product]:
-    queryset = Product.objects.filter(shop=user.shop).select_related(
-        "category",
-        "inventory_balance",
+    queryset = (
+        Product.objects.filter(shop=user.shop)
+        .select_related("category", "inventory_balance")
+        # The billing grid renders every multi-pricing product's packet
+        # buttons, so packets must come along or each card costs a query.
+        .prefetch_related("packets")
     )
     if user.role == User.Role.CASHIER and not user.is_superuser:
         queryset = queryset.filter(is_active=True)

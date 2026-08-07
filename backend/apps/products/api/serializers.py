@@ -14,6 +14,7 @@ from apps.products.models import (
     ProductCategory,
     ProductImport,
     ProductImportRow,
+    ProductPacket,
 )
 
 
@@ -76,8 +77,26 @@ def product_image_url(product, request=None) -> str | None:
     return request.build_absolute_uri(url) if request else url
 
 
+class ProductPacketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPacket
+        fields = ("id", "size", "price", "display_order", "is_active")
+        read_only_fields = ("id",)
+
+    def validate_size(self, value: Decimal) -> Decimal:
+        if value <= 0:
+            raise serializers.ValidationError("Packet size must be greater than zero.")
+        return value
+
+    def validate_price(self, value: Decimal) -> Decimal:
+        if value < 0:
+            raise serializers.ValidationError("Packet price cannot be negative.")
+        return value
+
+
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySummarySerializer(read_only=True)
+    packets = ProductPacketSerializer(many=True, required=False)
     category_id = serializers.UUIDField(
         write_only=True,
         required=False,
@@ -99,6 +118,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "tax_rate",
             "is_tax_inclusive",
             "is_active",
+            "pricing_mode",
+            "packets",
             "category",
             "category_id",
             "image_url",
@@ -187,6 +208,34 @@ class ProductSerializer(serializers.ModelSerializer):
         category = attrs.pop("category_id", serializers.empty)
         if category is not serializers.empty:
             attrs["category"] = category
+
+        mode = attrs.get(
+            "pricing_mode",
+            self.instance.pricing_mode if self.instance else Product.PricingMode.STANDARD,
+        )
+        packets = attrs.get("packets")
+        if mode == Product.PricingMode.MULTI:
+            # A multi-pricing product with no packets would offer the cashier a
+            # Packet button with nothing behind it.
+            defined = packets if packets is not None else (
+                list(self.instance.packets.all()) if self.instance else []
+            )
+            if not defined:
+                raise serializers.ValidationError(
+                    {"packets": "Define at least one packet size."}
+                )
+            sizes = [
+                packet["size"] if isinstance(packet, dict) else packet.size
+                for packet in defined
+            ]
+            if len(sizes) != len(set(sizes)):
+                raise serializers.ValidationError(
+                    {"packets": "Each packet size may only be defined once."}
+                )
+        elif packets:
+            raise serializers.ValidationError(
+                {"packets": "Enable multi-pricing before defining packet sizes."}
+            )
         return attrs
 
 

@@ -65,6 +65,10 @@ class Product(BaseModel):
         TRAY = "TRAY", "Tray"
         TUBE = "TUBE", "Tube"
 
+    class PricingMode(models.TextChoices):
+        STANDARD = "STANDARD", "Standard"
+        MULTI = "MULTI", "Packet and loose"
+
     shop = models.ForeignKey(
         "shops.Shop",
         on_delete=models.PROTECT,
@@ -95,6 +99,15 @@ class Product(BaseModel):
     )
     is_tax_inclusive = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    # STANDARD is the pre-existing behaviour and stays the default, so
+    # products that never opt in are completely unaffected. MULTI means the
+    # product is sold either as a fixed packet (see ProductPacket) or as a
+    # loose amount priced per `unit`; both draw on the one InventoryBalance.
+    pricing_mode = models.CharField(
+        max_length=10,
+        choices=PricingMode.choices,
+        default=PricingMode.STANDARD,
+    )
     # Optional. Written only through the dedicated image endpoint, which
     # enforces content type and size; the field itself stays permissive so
     # existing create/update paths are unaffected. Mirrors Shop.logo.
@@ -150,6 +163,56 @@ class Product(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.sku})"
+
+
+class ProductPacket(BaseModel):
+    """A fixed-size, fixed-price way to sell a MULTI-pricing product.
+
+    `size` is expressed in the parent product's own `unit`, not a separate
+    base unit: a 250 g packet of a KG product is `0.250`. Quantities are
+    already Decimal(15,3) throughout inventory and billing, so this needs no
+    unit conversion and leaves existing balances untouched.
+
+    Stock is never tracked here. A packet is a pricing definition only - both
+    packet and loose sales deduct the product's single InventoryBalance, so
+    the two can never drift into disconnected numbers.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="packets",
+    )
+    size = models.DecimalField(max_digits=15, decimal_places=3)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    display_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["display_order", "size"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "size"],
+                name="products_packet_product_size_uniq",
+            ),
+            models.CheckConstraint(
+                condition=Q(size__gt=0),
+                name="products_packet_size_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(price__gte=0),
+                name="products_packet_price_nonnegative",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["product", "is_active", "display_order"],
+                name="prod_packet_product_order_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.product_id}: {self.size} @ {self.price}"
 
 
 class ProductImport(BaseModel):

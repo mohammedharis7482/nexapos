@@ -98,13 +98,34 @@ no stock and are revalidated on resume. Card success is confirmed externally.
 37. Adding or changing a draft line requires active, initialized, sufficient
     own-shop inventory. Drafts do not reserve stock, deduct balances, or create
     movements; availability is revalidated while locked during finalization.
-38. Re-adding a product increases its existing draft quantity. Zero quantity is
-    rejected; removing a line requires the explicit DELETE operation.
+38. Re-adding a product increases the quantity of the line with the same
+    pricing identity (product + mode + packet). A packet line and a loose line
+    of the same product are separate lines. Zero quantity is rejected; removing
+    a line requires the explicit DELETE operation.
+
+### Multi-pricing (packet and loose)
+
+38a. A product is STANDARD (default, unchanged) or MULTI. A MULTI product is
+     sold either as a fixed packet or as a loose amount, and must define at
+     least one packet.
+38b. Packet size is expressed in the product's own `unit` - a 250 g packet of a
+     KG product is `0.250`. There is no separate base unit and no conversion.
+38c. Packet and loose sales deduct the same single InventoryBalance, so stock
+     can never split into two disconnected numbers.
+38d. A line's `quantity` is what is charged - packets for a PACKET line, units
+     otherwise - and `stock_quantity` is what inventory deducts. A packet bills
+     its exact fixed price rather than a derived per-unit rate. Reports and
+     shift summaries sum `stock_quantity`; packet counts and weights are not
+     commensurable.
+38e. Packets are sold in whole numbers. A packet size already referenced by a
+     sale is deactivated rather than deleted, so completed sales keep resolving
+     the definition they were billed under.
 39. Cancellation retains line items and totals, records cancelling user/time,
     and is idempotent. Cancelled drafts cannot be edited.
 40. Completion runs in one database transaction and locks the sale and inventory
-    balances in deterministic product order. Insufficient stock rolls back the
-    entire checkout.
+    balances in deterministic product order. Demand is summed per product before
+    it is compared to the balance, since one product may occupy several lines.
+    Insufficient stock rolls back the entire checkout.
 41. `Payment.amount` is the amount allocated to revenue, never cash tendered.
     Allocations must exactly equal the sale total. Cash tender and change are
     retained on Sale; card records only an optional external-terminal reference.

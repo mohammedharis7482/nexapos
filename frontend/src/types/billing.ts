@@ -20,7 +20,13 @@ export interface SaleItem {
     unit: ProductUnit;
     image_url: string | null;
   };
+  pricing_mode: SalePricingMode;
+  /** The packet's size at sale time; null for standard and loose lines. */
+  packet_size: string | null;
+  /** Packets for a PACKET line, units otherwise. */
   quantity: string;
+  /** What inventory deducted, always in the product's own unit. */
+  stock_quantity: string;
   unit_price: string;
   tax_rate: string;
   is_tax_inclusive: boolean;
@@ -52,10 +58,15 @@ export interface DraftSale {
   shift: string | null;
 }
 
+export type SalePricingMode = "STANDARD" | "PACKET" | "LOOSE";
+
 export interface AddItemRequest {
   product_id?: string;
   barcode?: string;
   quantity: string;
+  /** Omitted for standard products, so barcode scans stay unchanged. */
+  pricing_mode?: SalePricingMode;
+  packet_id?: string;
 }
 
 export interface UpdateItemRequest {

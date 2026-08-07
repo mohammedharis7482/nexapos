@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { billingService } from "@/services/billing.service";
@@ -71,6 +71,8 @@ const inventoryItem: InventoryItem = {
     selling_price: "6.00",
     category: null,
     is_active: true,
+    pricing_mode: "STANDARD",
+    packets: [],
   },
   quantity_on_hand: "10.000",
   low_stock_threshold: "2.000",
@@ -218,6 +220,173 @@ describe("BillingPage", () => {
     expect(localStorage.getItem("nexapos.activeDraftId")).toBe("fresh-id");
   });
 
+  // Multi-pricing products need a mode chosen before they can be added, so
+  // the card opens an inline panel *above* the grid instead of adding
+  // straight away. The panel deliberately lives outside the grid: the grid's
+  // arrow-key navigation resolves cards by indexing its `button` elements, so
+  // a segmented control inside a card would shift every index.
+  describe("multi-pricing products", () => {
+    const multiItem: InventoryItem = {
+      ...inventoryItem,
+      product: {
+        ...inventoryItem.product,
+        id: "rice-id",
+        name: "Basmati Rice",
+        sku: "RICE-001",
+        barcode: "6291001",
+        unit: "KG",
+        selling_price: "12.00",
+        pricing_mode: "MULTI",
+        packets: [
+          { id: "p250", size: "0.250", price: "3.50", display_order: 0, is_active: true },
+          { id: "p1000", size: "1.000", price: "13.00", display_order: 1, is_active: true },
+        ],
+      },
+      quantity_on_hand: "5.000",
+    };
+
+    function withProducts(results: InventoryItem[]) {
+      inventory.list.mockResolvedValue({
+        success: true, message: "",
+        data: { count: results.length, next: null, previous: null, results },
+      });
+    }
+
+    it("opens the pricing panel instead of adding a multi-pricing product on click", async () => {
+      withProducts([multiItem]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Basmati Rice/ }));
+      expect(
+        await screen.findByRole("group", { name: /Choose how to sell Basmati Rice/ }),
+      ).toBeInTheDocument();
+      expect(billing.addItem).not.toHaveBeenCalled();
+    });
+
+    it("sends the chosen packet to the API", async () => {
+      withProducts([multiItem]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Basmati Rice/ }));
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+      fireEvent.click(screen.getByRole("button", { name: /1 kg/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to Bill" }));
+      await waitFor(() =>
+        expect(billing.addItem).toHaveBeenCalledWith("draft-id", {
+          product_id: "rice-id",
+          quantity: "1",
+          pricing_mode: "PACKET",
+          packet_id: "p1000",
+        }),
+      );
+    });
+
+    it("sends a loose weight to the API", async () => {
+      withProducts([multiItem]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Basmati Rice/ }));
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+      fireEvent.click(screen.getByRole("button", { name: "Loose" }));
+      fireEvent.change(screen.getByLabelText("Weight in kg"), { target: { value: "0.750" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add to Bill" }));
+      await waitFor(() =>
+        expect(billing.addItem).toHaveBeenCalledWith("draft-id", {
+          product_id: "rice-id",
+          quantity: "0.750",
+          pricing_mode: "LOOSE",
+          packet_id: undefined,
+        }),
+      );
+    });
+
+    it("still adds a standard product in one click, with no pricing fields", async () => {
+      withProducts([inventoryItem, multiItem]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Baladna Milk/ }));
+      await waitFor(() =>
+        expect(billing.addItem).toHaveBeenCalledWith("draft-id", {
+          product_id: "product-id",
+          quantity: "1.000",
+        }),
+      );
+      expect(screen.queryByRole("group", { name: /Choose how to sell/ })).toBeNull();
+    });
+
+    it("does not silently add a scanned multi-pricing product", async () => {
+      withProducts([multiItem]);
+      render(<BillingPage />);
+      const search = await screen.findByLabelText("Product or barcode search");
+      fireEvent.change(search, { target: { value: "6291001" } });
+      fireEvent.submit(search.closest("form")!);
+      expect(
+        await screen.findByRole("group", { name: /Choose how to sell/ }),
+      ).toBeInTheDocument();
+      expect(billing.addItem).not.toHaveBeenCalled();
+    });
+
+    it("closes the panel on Cancel without adding anything", async () => {
+      withProducts([multiItem]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Basmati Rice/ }));
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+      // Scoped to the panel: the page has its own "Cancel" (cancel draft).
+      const panel = screen.getByRole("group", { name: /Choose how to sell/ });
+      fireEvent.click(within(panel).getByRole("button", { name: "Cancel" }));
+      await waitFor(() =>
+        expect(screen.queryByRole("group", { name: /Choose how to sell/ })).toBeNull(),
+      );
+      expect(billing.addItem).not.toHaveBeenCalled();
+    });
+
+    it("keeps arrow-key grid navigation intact with the panel open", async () => {
+      // The regression this whole layout decision exists to prevent: the
+      // panel's own buttons must never join the grid's button list.
+      const second: InventoryItem = {
+        ...multiItem,
+        product: { ...multiItem.product, id: "sugar-id", name: "Sugar", sku: "SUGAR-1" },
+      };
+      const third: InventoryItem = {
+        ...inventoryItem,
+        product: { ...inventoryItem.product, id: "salt-id", name: "Salt", sku: "SALT-1" },
+      };
+      withProducts([multiItem, second, third]);
+      render(<BillingPage />);
+      const grid = (await screen.findByRole("button", { name: /Basmati Rice/ }))
+        .parentElement!;
+
+      const before = Array.from(grid.querySelectorAll<HTMLButtonElement>("button"));
+      expect(before).toHaveLength(3);
+
+      fireEvent.click(before[0]);
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+
+      // Same grid, same three cards - the panel added buttons to the page but
+      // none of them to the grid.
+      const after = Array.from(grid.querySelectorAll<HTMLButtonElement>("button"));
+      expect(after).toHaveLength(3);
+      expect(after.map((card) => card.textContent)).toEqual([
+        expect.stringContaining("Basmati Rice"),
+        expect.stringContaining("Sugar"),
+        expect.stringContaining("Salt"),
+      ]);
+
+      after[0].focus();
+      fireEvent.keyDown(after[0], { key: "ArrowRight" });
+      expect(after[1]).toHaveFocus();
+      fireEvent.keyDown(after[1], { key: "ArrowRight" });
+      expect(after[2]).toHaveFocus();
+      fireEvent.keyDown(after[2], { key: "ArrowLeft" });
+      expect(after[1]).toHaveFocus();
+    });
+
+    it("keeps the F-key shortcuts working while the panel is open", async () => {
+      withProducts([multiItem]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Basmati Rice/ }));
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+      fireEvent.keyDown(document, { key: "F4" });
+      expect(await screen.findByText("Cancel this draft?")).toBeInTheDocument();
+    });
+  });
+
   // Product cards gained an image (and a placeholder for products without
   // one). Both render inside the card button, so this guards the grid's
   // arrow-key navigation, which resolves cards by querying the grid for
@@ -327,7 +496,10 @@ describe("BillingPage", () => {
       items: [{
         id: "item-id",
         product: { id: "product-id", name: "Baladna Milk", sku: "MILK-001", barcode: "6281007023412", unit: "BOTTLE", image_url: null },
+        pricing_mode: "STANDARD",
+        packet_size: null,
         quantity: "1",
+        stock_quantity: "1",
         unit_price: "6.00",
         tax_rate: "5.00",
         is_tax_inclusive: false,
