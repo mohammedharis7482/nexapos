@@ -9,7 +9,7 @@ import { CategoryDialog } from "@/components/catalogue/category-dialog";
 import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, PageHeader } from "@/components/ui/display";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/feedback";
 import { SearchInput } from "@/components/ui/input";
 import { FilterToolbar } from "@/components/ui/layout";
 import { ApiError } from "@/lib/api-client";
@@ -60,7 +60,7 @@ export default function CategoriesPage() {
           <Button type="submit" variant="secondary">Search</Button>
         </form>
       </FilterToolbar>
-      {loading ? <div className="space-y-3"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div> : null}
+      {loading ? <div className="space-y-3"><CardSkeleton /><CardSkeleton /></div> : null}
       {error ? <ErrorState title="Categories unavailable" description={error} onRetry={() => void load()} /> : null}
       {!loading && !error && categories.length === 0 ? <EmptyState title="No categories found" description={search ? "Try a different search." : "Add a category to organize products."} /> : null}
       {!loading && !error && categories.length > 0 ? (

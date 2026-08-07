@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { ModuleNavigation, salesNavigation } from "@/components/layout/module-navigation";
 import { Card } from "@/components/ui/card";
 import { MoneyDisplay, PageHeader, PaymentBadge } from "@/components/ui/display";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { EmptyState, ErrorState } from "@/components/ui/feedback";
 import { DateInput, SearchInput, Select } from "@/components/ui/input";
 import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
+import { TableSkeleton } from "@/components/ui/table";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { salesService } from "@/services/sales.service";
@@ -127,7 +128,7 @@ export default function SalesPage() {
         </form>
       </FilterToolbar>
 
-      {state === "loading" ? <div className="space-y-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div> : null}
+      {state === "loading" ? <TableSkeleton columns={6} /> : null}
       {state === "error" ? <ErrorState title="Sales unavailable" description={error ?? ""} onRetry={() => void load()} /> : null}
       {state === "empty" ? <EmptyState title="No completed sales found" description="Completed payments will appear here." /> : null}
       {state === "ready" ? (

@@ -10,9 +10,10 @@ import { OpeningStockDialog } from "@/components/inventory/opening-stock-dialog"
 import { Button, IconButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge, MoneyDisplay, PageHeader } from "@/components/ui/display";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { EmptyState, ErrorState } from "@/components/ui/feedback";
 import { SearchInput, Select } from "@/components/ui/input";
 import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
+import { TableSkeleton } from "@/components/ui/table";
 import { ProductThumb } from "@/components/ui/product-thumb";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
@@ -121,7 +122,7 @@ export default function ProductsPage() {
         </form>
       </FilterToolbar>
 
-      {state === "loading" ? <div className="space-y-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div> : null}
+      {state === "loading" ? <TableSkeleton columns={owner ? 7 : 6} /> : null}
       {state === "error" ? <ErrorState title="Products unavailable" description={error ?? ""} onRetry={() => void loadProducts()} /> : null}
       {state === "empty" ? <EmptyState
         title={filters.search ? "No products found" : "Add your first product"}

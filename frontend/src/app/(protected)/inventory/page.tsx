@@ -8,9 +8,10 @@ import { StockStatusBadge } from "@/components/inventory/stock-status";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MetricCard, PageHeader, QuantityDisplay } from "@/components/ui/display";
-import { EmptyState, ErrorState, Skeleton } from "@/components/ui/feedback";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/feedback";
 import { SearchInput, Select } from "@/components/ui/input";
 import { FilterToolbar, Pagination, TableFrame } from "@/components/ui/layout";
+import { TableSkeleton } from "@/components/ui/table";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import { categoryService } from "@/services/category.service";
@@ -118,7 +119,7 @@ export default function InventoryPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {summaryCards.map(({ label, value, icon, tone }) => loading && !summary
-          ? <Skeleton key={label} className="h-28" />
+          ? <CardSkeleton key={label} />
           : <MetricCard key={label} label={label} value={value ?? 0} icon={icon} tone={tone} />)}
       </div>
 
@@ -179,9 +180,7 @@ export default function InventoryPage() {
 
       {state === "loading" ? (
         <div className="space-y-3">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <TableSkeleton columns={6} />
         </div>
       ) : null}
       {state === "error" ? (

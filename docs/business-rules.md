@@ -46,7 +46,8 @@ no stock and are revalidated on resume. Card success is confirmed externally.
     the transactional `bootstrap_shop` command; subsequent controlled creation
     belongs to a later approved workflow.
 17. Shop country, currency, and timezone are fixed to Qatar, QAR, and
-    `Asia/Qatar`; the default tax rate is between 0 and 100.
+    `Asia/Qatar`; the default tax rate is between 0 and 100. Catalogue
+    languages are the exception - both are owner-configurable (rule 22d).
 18. Category names and product SKUs are case-insensitively unique within a shop,
     but may be reused by another shop. A non-empty barcode is unique per shop.
 19. Product categories must belong to the product's shop. Prices cannot be
