@@ -21,6 +21,10 @@ Shipped since:
   so a cloud backend is a config change.
 - **Multi-pricing** - a product may be sold as a fixed-size, fixed-price packet
   or as a cashier-entered loose amount, both deducting one shared stock pool.
+- **Installable web app** - manifest, icon set, and standalone launch, so the
+  app can be added to an Android or iOS home screen. Installability only: no
+  offline caching, because a POS showing stale prices or stock is worse than
+  one that plainly reports no connection.
 - **Multi-language names** - a shop may set one secondary language (English,
   Arabic, Malayalam, Hindi, Urdu) and give products and categories an optional
   second name. Billing search matches either language; the second name shows on

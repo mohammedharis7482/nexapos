@@ -52,45 +52,47 @@ this fails loudly. Do not widen it without asking.
 
 Also still out of scope: reports, CSV exports, and the inventory ledger.
 
-## App-like feel
+## App-like feel - Shipped
 
-**Build last**, after the feature set is stable. Two separate pieces of work
-that ship together.
+Two pieces built together: PWA installability and a loading-state consistency
+pass.
 
 ### PWA installability
 
-Installability only. Nothing exists today - there is no manifest and no service
-worker anywhere in `frontend/`.
+`app/manifest.ts` (name, 192/512/maskable icons, `theme_color` #2563eb from
+`--brand-600`, `display: standalone`, `start_url: /billing`), `app/icon.png`
+(favicon) and `app/apple-icon.png` (180, what iOS home-screen installs use).
+`themeColor` lives on the `viewport` export, not `metadata`.
 
-In scope:
+**Deliberately out of scope, still: offline data caching.** No service worker,
+no cache layer, no offline page, no background sync. A POS displaying stale
+prices or an hours-old stock figure is worse than one that plainly says there
+is no connection - a cashier who cannot tell the difference will sell against
+numbers that do not exist. An installed session hits the network exactly like a
+browser session.
 
-- Web app manifest with name, icons, theme colour, and `display: standalone`.
-- Home-screen icon set for Android and iOS.
-- "Add to Home Screen" works on both.
-- Launches standalone, without browser chrome.
+`src/app/pwa.test.ts` enforces this: it fails if a service worker is
+registered, a `sw.js`/`workbox` file appears, the Cache Storage API is used, or
+a PWA/caching dependency is added. Revisit offline support only as its own
+scoped work, with an explicit answer for what a cashier sees and what happens
+to a bill written while disconnected.
 
-`next.config.ts` already sets security headers and the Turbopack root; the
-manifest slots in alongside.
+### Loading-state consistency
 
-**Deliberately out of scope in this pass: offline data caching.** No service
-worker caching strategy, no cached API responses, no offline page, no background
-sync. A POS displaying stale prices or a stock figure that is quietly hours old
-is worse than one that plainly says there is no connection - a cashier who
-cannot tell the difference will sell against numbers that do not exist.
+The design system names four loading components and says they should resemble
+final content. Fetch-gated table pages (products, sales, inventory) now use
+`TableSkeleton` instead of hand-rolled bar stacks at three different heights;
+metric cards and the category list use `CardSkeleton`.
 
-This is a decision, not a gap. If a service worker is added at all (for
-installability on browsers that require one), it must not cache API responses.
-Revisit offline support only as its own scoped piece of work, with an explicit
-answer for what a cashier sees and what happens to a bill written while
-disconnected.
+Billing is the reference standard and was not touched - its split-pane and
+product-grid skeletons already mirror its own final layout.
 
-### Interaction polish
+`src/app/loading-consistency.test.ts` keeps new fetch-gated table pages on the
+convention.
 
-- Consistent transitions across the app.
-- Consistent loading states - one skeleton/spinner convention rather than the
-  per-page variation that exists now.
-
-Both must follow `design-system-v2.md`, which caps motion: "minimal,
-interruptible motion" and "operational speed before novelty". Polish must not
-slow a cashier down, and billing-screen keyboard navigation must stay
-regression-tested.
+**No new transitions were added.** The design system caps motion ("minimal,
+interruptible motion", "operational speed before novelty") and `globals.css`
+already collapses transitions under `prefers-reduced-motion`. Existing
+`transition-colors` on interactive elements is already consistent. Anything
+further would add perceptible delay to adding to cart or completing a sale,
+which the spec forbids - so motion was deliberately left alone.
