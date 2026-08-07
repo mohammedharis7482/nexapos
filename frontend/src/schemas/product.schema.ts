@@ -12,6 +12,7 @@ const taxRate = z
 
 export const productSchema = z.object({
   name: z.string().trim().min(1, "Product name is required.").max(200),
+  secondary_name: z.string().trim().max(200),
   description: z.string().trim(),
   sku: z.string().trim().min(1, "SKU is required.").max(80),
   barcode: z.string().trim().max(80),

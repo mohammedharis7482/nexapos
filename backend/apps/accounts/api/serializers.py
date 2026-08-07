@@ -10,6 +10,7 @@ class ShopSessionSerializer(serializers.Serializer):
     name = serializers.CharField(read_only=True)
     currency = serializers.CharField(read_only=True)
     timezone = serializers.CharField(read_only=True)
+    secondary_language = serializers.CharField(read_only=True, allow_blank=True)
     status = serializers.CharField(read_only=True)
     onboarding_completed = serializers.BooleanField(read_only=True)
 

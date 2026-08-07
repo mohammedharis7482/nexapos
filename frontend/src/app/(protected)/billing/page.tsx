@@ -26,6 +26,7 @@ import { ProductThumb } from "@/components/ui/product-thumb";
 import { useShortcuts, type ShortcutBinding } from "@/hooks/use-shortcuts";
 import { ApiError } from "@/lib/api-client";
 import { computeGridNavigationIndex, type ArrowKey } from "@/lib/grid-navigation";
+import { secondaryNameDir } from "@/lib/rtl";
 import { billingService } from "@/services/billing.service";
 import { categoryService } from "@/services/category.service";
 import { inventoryService } from "@/services/inventory.service";
@@ -80,6 +81,14 @@ const ProductResultCard = memo(function ProductResultCard({
             <h2 className="font-semibold">{item.product.name}</h2>
             <span className="shrink-0 font-bold text-primary"><MoneyDisplay value={item.product.selling_price} /></span>
           </div>
+          {item.product.secondary_name ? (
+            <p
+              className="mt-0.5 text-sm text-foreground-secondary"
+              dir={secondaryNameDir(item.product.secondary_name)}
+            >
+              {item.product.secondary_name}
+            </p>
+          ) : null}
           <p className="mt-1 text-xs text-text-muted">{item.product.sku}</p>
           {item.product.pricing_mode === "MULTI" ? (
             <p className="mt-1 text-xs font-semibold text-primary">

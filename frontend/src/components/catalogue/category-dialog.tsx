@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/feedback";
 import { Checkbox, FormField, Input, Textarea } from "@/components/ui/input";
 import { Dialog } from "@/components/ui/overlay";
+import { SecondaryNameField } from "@/components/catalogue/secondary-name-field";
 import { ApiError } from "@/lib/api-client";
 import {
   categorySchema,
@@ -15,16 +16,20 @@ import {
 } from "@/schemas/category.schema";
 import { categoryService } from "@/services/category.service";
 import type { ProductCategory } from "@/types/category";
+import type { ShopLanguage } from "@/types/shop";
 
 export function CategoryDialog({
   open,
   onOpenChange,
   category,
+  secondaryLanguage = "",
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   category: ProductCategory | null;
+  /** Shop-level; blank hides the second-name field entirely. */
+  secondaryLanguage?: ShopLanguage | "";
   onSaved: () => void;
 }) {
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -38,6 +43,7 @@ export function CategoryDialog({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
+      secondary_name: "",
       description: "",
       display_order: 0,
       is_active: true,
@@ -49,18 +55,21 @@ export function CategoryDialog({
       category
         ? {
             name: category.name,
+            secondary_name: category.secondary_name,
             description: category.description,
             display_order: category.display_order,
             is_active: category.is_active,
           }
         : {
             name: "",
+            secondary_name: "",
             description: "",
             display_order: 0,
             is_active: true,
           },
     );
   }, [category, open, reset]);
+
 
   const submit = handleSubmit(async (values) => {
     setGeneralError(null);
@@ -120,6 +129,13 @@ export function CategoryDialog({
             {...register("name")}
           />
         </FormField>
+        <SecondaryNameField
+          id="category-secondary-name"
+          registration={register("secondary_name")}
+          secondaryLanguage={secondaryLanguage}
+          error={errors.secondary_name?.message}
+          disabled={isSubmitting}
+        />
         <FormField label="Description" htmlFor="category-description" error={errors.description?.message}>
           <Textarea id="category-description" {...register("description")} />
         </FormField>

@@ -13,7 +13,7 @@ from apps.products.models import Product, ProductCategory, ProductPacket
 class InventoryCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductCategory
-        fields = ("id", "name")
+        fields = ("id", "name", "secondary_name")
 
 
 class InventoryPacketSerializer(serializers.ModelSerializer):
@@ -35,6 +35,7 @@ class InventoryProductSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "secondary_name",
             "sku",
             "barcode",
             "unit",

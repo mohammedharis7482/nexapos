@@ -8,6 +8,20 @@ from common.models import BaseModel
 
 
 class Shop(BaseModel):
+    class Language(models.TextChoices):
+        """The supported set, defined once and shared by both language fields.
+
+        Applies to product and category names only - app UI chrome stays
+        English. Deliberately independent of `country`, which is free text and
+        cannot be mapped to a language reliably.
+        """
+
+        ENGLISH = "ENGLISH", "English"
+        ARABIC = "ARABIC", "Arabic"
+        MALAYALAM = "MALAYALAM", "Malayalam"
+        HINDI = "HINDI", "Hindi"
+        URDU = "URDU", "Urdu"
+
     class Status(models.TextChoices):
         PENDING_VERIFICATION = "PENDING_VERIFICATION", "Pending verification"
         ONBOARDING = "ONBOARDING", "Onboarding"
@@ -26,6 +40,18 @@ class Shop(BaseModel):
     email = models.EmailField(blank=True)
     currency = models.CharField(max_length=3, default="QAR")
     timezone = models.CharField(max_length=64, default="Asia/Qatar")
+    primary_language = models.CharField(
+        max_length=12,
+        choices=Language.choices,
+        default=Language.ENGLISH,
+    )
+    # Blank means the shop has not opted into second-language names at all,
+    # in which case every surface behaves exactly as it did before.
+    secondary_language = models.CharField(
+        max_length=12,
+        choices=Language.choices,
+        blank=True,
+    )
     tax_registration_number = models.CharField(max_length=50, blank=True)
     default_tax_rate = models.DecimalField(
         max_digits=5,

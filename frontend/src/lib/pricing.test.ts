@@ -7,6 +7,7 @@ function line(overrides: Partial<SaleItem> = {}): SaleItem {
   return {
     id: "item-id",
     product: {
+      secondary_name: "",
       id: "product-id",
       name: "Basmati Rice",
       sku: "RICE-001",

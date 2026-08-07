@@ -16,6 +16,8 @@ describe("catalogue schemas", () => {
       country: "Qatar",
       currency: "QAR",
       timezone: "Asia/Qatar",
+      primary_language: "ENGLISH",
+      secondary_language: "",
       tax_registration_number: "",
       default_tax_rate: "0.00",
       receipt_footer: "",
@@ -39,6 +41,7 @@ describe("catalogue schemas", () => {
 
   it("preserves decimal prices as validated strings", () => {
     const parsed = productSchema.parse({
+      secondary_name: "",
       name: "Milk",
       description: "",
       sku: "MILK-001",

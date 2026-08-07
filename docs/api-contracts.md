@@ -369,6 +369,22 @@ Product lists accept `search`, `category`, `unit`, `is_active`, `ordering`,
 descending). Category responses contain only `id` and `name`; product responses
 do not expose a shop identifier or inventory state.
 
+### Second-language names
+
+`Shop` exposes `primary_language` (default `ENGLISH`) and `secondary_language`
+(`""` when unset), both from `ENGLISH`, `ARABIC`, `MALAYALAM`, `HINDI`, `URDU`.
+`secondary_language` is also included on the session shop payload from
+`GET /api/v1/auth/me/`, so catalogue forms can label the field without a second
+request.
+
+Products and categories carry a writable `secondary_name`, `""` when unset.
+Product search (`/api/v1/products/`) and billing search (`/api/v1/inventory/`)
+match it alongside `name`, `sku`, and `barcode`.
+
+Sale items expose `product.secondary_name`, snapshotted at sale time next to
+`product.name` - a reprint shows the name as sold, even after the product is
+renamed or the shop changes its secondary language.
+
 ### Product image
 
 - `POST /api/v1/products/{uuid}/image/` - owner-only, `multipart/form-data`,

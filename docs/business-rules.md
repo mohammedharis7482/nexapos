@@ -71,6 +71,22 @@ no stock and are revalidated on resume. Card success is confirmed externally.
      client-supplied content type, so a renamed file is rejected on content.
 22c. One image per product. Replacing deletes the previous file; the stored name
      is normalised to `<product-id>.<ext>` under `product-images/`.
+
+### Second-language names
+
+22d. A shop has `primary_language` (default English) and an optional
+     `secondary_language`, both from one shared list: English, Arabic,
+     Malayalam, Hindi, Urdu. They are independent of `country`, which stays
+     free text and is never used to infer a language.
+22e. Products and categories carry an optional `secondary_name`. Blank behaves
+     exactly as before the feature existed - every surface falls back to the
+     primary name.
+22f. Billing and catalogue search match either language. The second name also
+     appears on billing cards, cart lines, and as an optional receipt line.
+22g. Second-language text is the only right-to-left surface. Layout, navigation,
+     tables, reports and the document direction stay left-to-right; see
+     `planned-features.md` for the full scope boundary.
+
 23. Product quantity is deliberately absent. Stock is an inventory-ledger
     concern and is stored in `InventoryBalance`, never on Product.
 24. A product may exist without inventory. Opening stock explicitly creates its
@@ -99,9 +115,9 @@ no stock and are revalidated on resume. Card success is confirmed externally.
     billing APIs.
 33. OWNER may manage any draft in their shop. CASHIER may manage only drafts
     created by that cashier. Both roles are constrained to their own shop.
-34. Draft line items snapshot product name, SKU, barcode, unit, selling price,
-    tax rate, and tax-inclusion state. Later catalogue changes do not rewrite an
-    existing line.
+34. Draft line items snapshot product name, second-language name, SKU, barcode,
+    unit, selling price, tax rate, and tax-inclusion state. Later catalogue
+    changes do not rewrite an existing line.
 35. Billing quantities use three decimal places. QAR amounts use two decimals
     with `ROUND_HALF_UP`; all calculations use Decimal and run on the server.
 36. Tax-exclusive lines calculate tax on quantity × price. Tax-inclusive lines

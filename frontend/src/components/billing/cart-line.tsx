@@ -8,6 +8,7 @@ import { MoneyDisplay } from "@/components/ui/display";
 import { Input } from "@/components/ui/input";
 import { ProductThumb } from "@/components/ui/product-thumb";
 import { saleItemModeLabel } from "@/lib/pricing";
+import { secondaryNameDir } from "@/lib/rtl";
 import { billingQuantity } from "@/schemas/billing.schema";
 import type { SaleItem } from "@/types/billing";
 import { isDecimalUnit } from "@/types/product";
@@ -92,6 +93,14 @@ export const CartLine = memo(function CartLine({
           <ProductThumb src={item.product.image_url} alt={item.product.name} size="sm" />
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold">{item.product.name}</h3>
+            {item.product.secondary_name ? (
+              <p
+                className="truncate text-xs text-foreground-secondary"
+                dir={secondaryNameDir(item.product.secondary_name)}
+              >
+                {item.product.secondary_name}
+              </p>
+            ) : null}
             {/* Reads the line's own snapshot, so the cart and receipt stay
                 unambiguous even if the packet is later withdrawn. */}
             {modeLabel ? (

@@ -7,6 +7,7 @@ import { PricingPanel } from "./pricing-panel";
 
 const rice: InventoryItem = {
   product: {
+    secondary_name: "",
     id: "rice-id",
     name: "Basmati Rice",
     sku: "RICE-001",

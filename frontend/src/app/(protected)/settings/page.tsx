@@ -8,11 +8,12 @@ import { useForm } from "react-hook-form";
 import { settingsAccessMode } from "@/components/catalogue/access";
 import { ModuleNavigation, settingsNavigation } from "@/components/layout/module-navigation";
 import { ShopIdDisplay } from "@/components/shops/shop-id-display";
+import { SHOP_LANGUAGES, SHOP_LANGUAGE_LABELS } from "@/types/shop";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/display";
 import { Alert, ErrorState, Skeleton } from "@/components/ui/feedback";
-import { FormField, Input, PercentageInput, Textarea } from "@/components/ui/input";
+import { FormField, Input, PercentageInput, Select, Textarea } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
 import { useAuth } from "@/providers/auth-provider";
 import {
@@ -151,6 +152,19 @@ export default function SettingsPage() {
             </FormField>
             <FormField label="Timezone" htmlFor="shop-timezone" error={errors.timezone?.message}>
               <Input id="shop-timezone" readOnly aria-readonly="true" {...register("timezone")} />
+            </FormField>
+            <FormField
+              label="Second product language"
+              htmlFor="shop-secondary-language"
+              hint="Adds an optional second name to products and categories, shown in billing search and on receipts."
+              error={errors.secondary_language?.message}
+            >
+              <Select id="shop-secondary-language" disabled={disabled} {...register("secondary_language")}>
+                <option value="">None</option>
+                {SHOP_LANGUAGES.map((language) => (
+                  <option key={language} value={language}>{SHOP_LANGUAGE_LABELS[language]}</option>
+                ))}
+              </Select>
             </FormField>
             <FormField label="Tax registration number" htmlFor="shop-trn" error={errors.tax_registration_number?.message}>
               <Input id="shop-trn" disabled={disabled} {...register("tax_registration_number")} />

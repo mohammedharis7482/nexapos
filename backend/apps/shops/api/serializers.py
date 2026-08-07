@@ -19,6 +19,8 @@ class ShopSettingsSerializer(serializers.ModelSerializer):
             "country",
             "currency",
             "timezone",
+            "primary_language",
+            "secondary_language",
             "tax_registration_number",
             "default_tax_rate",
             "receipt_footer",

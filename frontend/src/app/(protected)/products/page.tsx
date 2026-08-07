@@ -178,6 +178,7 @@ export default function ProductsPage() {
         onOpenChange={setDialogOpen}
         product={editing}
         categories={categories}
+        secondaryLanguage={user?.shop.secondary_language ?? ""}
         onSaved={(savedProduct, addStock) => {
           void loadProducts();
           void loadCategories();

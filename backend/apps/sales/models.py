@@ -296,6 +296,10 @@ class SaleItem(BaseModel):
         related_name="sale_items",
     )
     product_name = models.CharField(max_length=200)
+    # Snapshotted with product_name (rule 34), not read live: a reprinted
+    # receipt must show the second name as it was sold, even after the
+    # product is renamed or the shop changes its secondary language.
+    secondary_product_name = models.CharField(max_length=200, blank=True)
     sku = models.CharField(max_length=80)
     barcode = models.CharField(max_length=80, null=True, blank=True)
     unit = models.CharField(max_length=20)

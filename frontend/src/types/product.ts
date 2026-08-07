@@ -49,11 +49,14 @@ export interface ProductPacketInput {
 export interface CategorySummary {
   id: string;
   name: string;
+  secondary_name: string;
 }
 
 export interface Product {
   id: string;
   name: string;
+  /** Optional second-language name; empty means fall back to `name`. */
+  secondary_name: string;
   description: string;
   sku: string;
   barcode: string | null;
@@ -73,6 +76,7 @@ export interface Product {
 
 export interface ProductInput {
   name: string;
+  secondary_name: string;
   description: string;
   sku: string;
   barcode: string;

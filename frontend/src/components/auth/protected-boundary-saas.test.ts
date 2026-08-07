@@ -12,6 +12,7 @@ function user(overrides: Partial<AuthenticatedUser> = {}): AuthenticatedUser {
     role: "OWNER",
     is_primary_owner: true,
     shop: {
+      secondary_language: "",
       id: "shop",
       name: "Shop",
       currency: "QAR",
