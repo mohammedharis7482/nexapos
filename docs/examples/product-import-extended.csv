@@ -1,0 +1,4 @@
+Product Name,Category,Unit,SKU,Barcode,Description,Purchase Price (QAR),Selling Price (QAR),Tax Rate,Opening Quantity,Low Stock Threshold,Status,Secondary Name,Image URL,Packet Sizes
+Basmati Rice,Grains,Kg,RICE-BAS-01,,Aged Indian basmati,9.00,12.00,Tax Exempt,40.000,5.000,Active,أرز بسمتي,https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Basmati_Rice.jpg/320px-Basmati_Rice.jpg,0.25@3.50;1@13.00;5@60.00
+Almarai Fresh Milk 1L,Dairy,Bottle,MILK-ALM-1L,0628100702341,"Fresh, full-fat milk",5.00,6.00,Tax Exempt,24.000,5.000,Active,حليب المراعي ١ لتر,,6@33.00
+White Sugar,Grocery,Kg,SUGAR-W-01,,Refined white sugar,3.00,4.25,0,60.000,10.000,Active,سكر أبيض,,

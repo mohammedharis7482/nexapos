@@ -388,6 +388,104 @@ describe("BillingPage", () => {
     });
   });
 
+  // Every feature at once on one card: image, second name, and multi-pricing.
+  // Each was regression-tested alone; this is the combination.
+  describe("all features on one card", () => {
+    const loaded = (index: number): InventoryItem => ({
+      ...inventoryItem,
+      product: {
+        ...inventoryItem.product,
+        id: `product-${index}`,
+        name: `Product ${index}`,
+        secondary_name: `\u0645\u0646\u062a\u062c ${index}`,
+        sku: `SKU-${index}`,
+        barcode: `barcode-${index}`,
+        unit: "KG",
+        image_url: `http://localhost/media/p${index}.jpg`,
+        pricing_mode: "MULTI",
+        packets: [
+          { id: `p250-${index}`, size: "0.250", price: "3.50", display_order: 0, is_active: true },
+          { id: `p1000-${index}`, size: "1.000", price: "13.00", display_order: 1, is_active: true },
+        ],
+      },
+    });
+
+    function withProducts(results: InventoryItem[]) {
+      inventory.list.mockResolvedValue({
+        success: true, message: "",
+        data: { count: results.length, next: null, previous: null, results },
+      });
+    }
+
+    it("renders image, second name, and the multi-pricing hint together", async () => {
+      withProducts([loaded(0)]);
+      render(<BillingPage />);
+      const card = await screen.findByRole("button", { name: /Product 0/ });
+      expect(card.querySelector("img")).toHaveAttribute("src", "http://localhost/media/p0.jpg");
+      expect(card).toHaveTextContent("\u0645\u0646\u062a\u062c 0");
+      expect(card).toHaveTextContent("Packet or loose");
+    });
+
+    it("keeps arrow-key navigation intact with all three features present", async () => {
+      withProducts([loaded(0), loaded(1), loaded(2)]);
+      render(<BillingPage />);
+      const grid = (await screen.findByRole("button", { name: /Product 0/ })).parentElement!;
+      const cards = Array.from(grid.querySelectorAll<HTMLButtonElement>("button"));
+      // The image is a <div>/<img>, the second name a <p>, the hint a <p> -
+      // still exactly one focusable element per product.
+      expect(cards).toHaveLength(3);
+
+      cards[0].focus();
+      fireEvent.keyDown(cards[0], { key: "ArrowRight" });
+      expect(cards[1]).toHaveFocus();
+      fireEvent.keyDown(cards[1], { key: "ArrowRight" });
+      expect(cards[2]).toHaveFocus();
+      fireEvent.keyDown(cards[2], { key: "ArrowLeft" });
+      expect(cards[1]).toHaveFocus();
+    });
+
+    it("still opens the pricing panel, and the panel adds no grid buttons", async () => {
+      withProducts([loaded(0), loaded(1)]);
+      render(<BillingPage />);
+      const first = await screen.findByRole("button", { name: /Product 0/ });
+      const grid = first.parentElement!;
+      fireEvent.click(first);
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+      expect(grid.querySelectorAll("button")).toHaveLength(2);
+    });
+
+    it("holds the RTL boundary: dir only on the second name, even with an image", async () => {
+      withProducts([loaded(0)]);
+      render(<BillingPage />);
+      const card = await screen.findByRole("button", { name: /Product 0/ });
+      const directed = Array.from(card.querySelectorAll("[dir]"));
+      expect(directed).toHaveLength(1);
+      expect(directed[0]).toHaveTextContent("\u0645\u0646\u062a\u062c 0");
+      // Not the image, not the card, not the grid, not the document.
+      expect(card.querySelector("img")).not.toHaveAttribute("dir");
+      expect(card).not.toHaveAttribute("dir");
+      expect(card.parentElement).not.toHaveAttribute("dir");
+      expect(document.documentElement).not.toHaveAttribute("dir");
+    });
+
+    it("adds a packet from a fully-featured product end to end", async () => {
+      withProducts([loaded(0)]);
+      render(<BillingPage />);
+      fireEvent.click(await screen.findByRole("button", { name: /Product 0/ }));
+      await screen.findByRole("group", { name: /Choose how to sell/ });
+      fireEvent.click(screen.getByRole("button", { name: /1 kg/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Add to Bill" }));
+      await waitFor(() =>
+        expect(billing.addItem).toHaveBeenCalledWith("draft-id", {
+          product_id: "product-0",
+          quantity: "1",
+          pricing_mode: "PACKET",
+          packet_id: "p1000-0",
+        }),
+      );
+    });
+  });
+
   // Second-language names add text to the cards. The grid's arrow-key
   // navigation resolves cards by indexing its `button` elements, so this
   // re-checks that invariant now that cards render more than before, and

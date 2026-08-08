@@ -1,5 +1,6 @@
 "use client";
 
+import { saleItemQuantityLabel } from "@/lib/pricing";
 import { secondaryNameDir } from "@/lib/rtl";
 import type { ReceiptData } from "@/types/sales";
 
@@ -31,7 +32,14 @@ export function Receipt({ data }: { data: ReceiptData }) {
                 {item.product.secondary_name}
               </p>
             ) : null}
-            <div className="flex justify-between"><span>{item.quantity} {item.product.unit} × {item.unit_price}</span><span>{item.line_total}</span></div>
+            {/* A packet line counts packets, not units - printing
+                `quantity` against product.unit would claim two 250 g packets
+                were 2 kg. saleItemQuantityLabel states what was actually
+                sold. */}
+            <div className="flex justify-between">
+              <span>{saleItemQuantityLabel(item)} × {item.unit_price}</span>
+              <span>{item.line_total}</span>
+            </div>
           </div>
         ))}
       </div>

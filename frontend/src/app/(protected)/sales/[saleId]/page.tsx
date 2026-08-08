@@ -6,9 +6,11 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Card } from "@/components/ui/card";
-import { Badge, MoneyDisplay, PageHeader, PaymentBadge, QuantityDisplay } from "@/components/ui/display";
+import { Badge, MoneyDisplay, PageHeader, PaymentBadge } from "@/components/ui/display";
 import { ErrorState, Skeleton } from "@/components/ui/feedback";
 import { ApiError } from "@/lib/api-client";
+import { saleItemPriceUnit, saleItemQuantityLabel } from "@/lib/pricing";
+import { secondaryNameDir } from "@/lib/rtl";
 import { salesService } from "@/services/sales.service";
 import type { CompletedSale } from "@/types/sales";
 
@@ -56,7 +58,17 @@ export default function SaleDetailPage() {
           <div className="divide-y divide-border">
             {sale.items.map((item) => (
               <article key={item.id} className="flex items-start justify-between gap-4 p-5">
-                <div><h3 className="font-semibold">{item.product.name}</h3><p className="mt-1 text-xs text-text-muted">{item.product.sku} · <QuantityDisplay value={item.quantity} unit={item.product.unit} /> × <MoneyDisplay value={item.unit_price} /></p></div>
+                <div>
+                  <h3 className="font-semibold">{item.product.name}</h3>
+                  {item.product.secondary_name ? (
+                    <p className="mt-0.5 text-xs text-foreground-secondary" dir={secondaryNameDir(item.product.secondary_name)}>
+                      {item.product.secondary_name}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-xs text-text-muted">
+                    {item.product.sku} · {saleItemQuantityLabel(item)} × <MoneyDisplay value={item.unit_price} />/{saleItemPriceUnit(item)}
+                  </p>
+                </div>
                 <p className="font-bold"><MoneyDisplay value={item.line_total} /></p>
               </article>
             ))}

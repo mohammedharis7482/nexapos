@@ -25,6 +25,11 @@ Shipped since:
   app can be added to an Android or iOS home screen. Installability only: no
   offline caching, because a POS showing stale prices or stock is worse than
   one that plainly reports no connection.
+- **Extended CSV import** - the bulk import contract now also carries a
+  product's second name, an image link, and packet pricing, so a shop can bring
+  in a full catalogue in one file. Linked images are fetched server-side under
+  SSRF controls and after the import transaction commits; a bad link is a
+  warning, not a lost row.
 - **Multi-language names** - a shop may set one secondary language (English,
   Arabic, Malayalam, Hindi, Urdu) and give products and categories an optional
   second name. Billing search matches either language; the second name shows on

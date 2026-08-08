@@ -275,6 +275,15 @@ export default function ProductImportPage() {
               CSV only, UTF-8, maximum 5 MB and 10,000 product rows. Keep the
               template column names unchanged.
             </p>
+            <p className="mt-2 text-sm text-foreground-muted">
+              Secondary Name, Image URL and Packet Sizes are optional — leave
+              them out and the file still imports. Packet Sizes takes
+              size@price pairs in the product&apos;s own unit, separated by
+              semicolons (<code>0.25@3.50;1@13.00</code>), and switches that
+              product to multi-pricing. Images are downloaded from the link
+              after you confirm; one that cannot be fetched is a warning, not
+              a failed row.
+            </p>
           </div>
         </div>
 

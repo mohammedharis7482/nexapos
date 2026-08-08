@@ -8,6 +8,7 @@ from pathlib import Path
 from time import monotonic
 from typing import Any
 
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
@@ -21,7 +22,13 @@ from .import_contract import (
     UNIT_VALUE_TO_DISPLAY,
     resolve_headers,
 )
-from .models import Product, ProductCategory, ProductImport, ProductImportRow
+from .image_fetch import ImageFetchError, fetch_product_image, screen_image_url
+from .models import (
+    Product,
+    ProductCategory,
+    ProductImport,
+    ProductImportRow,
+)
 from .services import (
     create_category,
     create_product,
@@ -59,6 +66,13 @@ class ProductImportError(Exception):
 
 
 def csv_template() -> str:
+    """The downloadable starter file: headers plus two example rows.
+
+    Two rows, not one, because packet sizes are stated in the product's own
+    unit. A single Bottle example could only ever show whole-bottle packs,
+    leaving the fractional syntax a shop needs for weighed goods undemonstrated
+    - and a "0.25 bottle" packet would be nonsense.
+    """
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(PRODUCT_IMPORT_HEADERS)
@@ -76,6 +90,28 @@ def csv_template() -> str:
             "24.000",
             "5.000",
             "Active",
+            "حليب المثال 1 لتر",
+            "https://example.com/images/milk.jpg",
+            "6@33.00",
+        )
+    )
+    writer.writerow(
+        (
+            "Example Rice",
+            "Grains",
+            "Kg",
+            "",
+            "",
+            "Example weighed product; replace or remove this row.",
+            "9.00",
+            "12.00",
+            "Tax Exempt",
+            "40.000",
+            "5.000",
+            "Active",
+            "أرز المثال",
+            "https://example.com/images/rice.jpg",
+            "0.25@3.50;1@13.00",
         )
     )
     return output.getvalue()
@@ -168,6 +204,121 @@ def _decimal_value(
             ),
         )
     return f"{parsed:.{decimal_places}f}", None
+
+
+PACKET_PAIR_SEPARATOR = ";"
+PACKET_SIZE_PRICE_SEPARATOR = "@"
+# Mirrors ProductPacket.size / .price exactly - Decimal(15,3) and Decimal(12,2).
+PACKET_SIZE_MAX_DIGITS = 15
+PACKET_SIZE_DECIMAL_PLACES = 3
+PACKET_PRICE_MAX_DIGITS = 12
+PACKET_PRICE_DECIMAL_PLACES = 2
+
+
+def _packet_values(value: str, row_number: int) -> tuple[list[dict] | None, list[dict]]:
+    """Parse "0.25@3.50;1@13.00" into packet definitions.
+
+    Sizes are in the product's own unit, matching how packets are stored.
+    A non-empty value implies multi-pricing for the row; there is no separate
+    toggle column. Malformed input is a row error naming the exact pair that
+    failed, never a silent skip - a dropped packet would quietly change what a
+    shop can sell.
+    """
+    cleaned = _clean(value)
+    if not cleaned:
+        return None, []
+
+    errors: list[dict] = []
+    packets: list[dict] = []
+    seen_sizes: set[Decimal] = set()
+
+    for position, chunk in enumerate(cleaned.split(PACKET_PAIR_SEPARATOR), start=1):
+        pair = chunk.strip()
+        if not pair:
+            errors.append(
+                _issue(
+                    row_number=row_number,
+                    column="Packet Sizes",
+                    value=value,
+                    error_code="PACKET_EMPTY_PAIR",
+                    human_message=(
+                        f"Packet {position} is empty in '{cleaned}'."
+                    ),
+                    suggested_fix=(
+                        "Remove the extra ';' or complete the pair, "
+                        "for example 0.25@3.50."
+                    ),
+                )
+            )
+            continue
+        if pair.count(PACKET_SIZE_PRICE_SEPARATOR) != 1:
+            errors.append(
+                _issue(
+                    row_number=row_number,
+                    column="Packet Sizes",
+                    value=value,
+                    error_code="PACKET_MALFORMED_PAIR",
+                    human_message=(
+                        f"Packet '{pair}' must be one size@price pair."
+                    ),
+                    suggested_fix="Use size@price, for example 0.25@3.50.",
+                )
+            )
+            continue
+
+        raw_size, raw_price = (part.strip() for part in pair.split(PACKET_SIZE_PRICE_SEPARATOR))
+        size, size_error = _decimal_value(
+            raw_size,
+            row_number=row_number,
+            column=f"Packet Sizes (size in '{pair}')",
+            required=True,
+            max_digits=PACKET_SIZE_MAX_DIGITS,
+            decimal_places=PACKET_SIZE_DECIMAL_PLACES,
+        )
+        price, price_error = _decimal_value(
+            raw_price,
+            row_number=row_number,
+            column=f"Packet Sizes (price in '{pair}')",
+            required=True,
+            max_digits=PACKET_PRICE_MAX_DIGITS,
+            decimal_places=PACKET_PRICE_DECIMAL_PLACES,
+        )
+        if size_error:
+            errors.append(size_error)
+        if price_error:
+            errors.append(price_error)
+        if size_error or price_error:
+            continue
+        if Decimal(size) <= 0:
+            errors.append(
+                _issue(
+                    row_number=row_number,
+                    column="Packet Sizes",
+                    value=value,
+                    error_code="PACKET_SIZE_NOT_POSITIVE",
+                    human_message=f"Packet '{pair}' must have a size greater than zero.",
+                    suggested_fix="Use a positive size, for example 0.25@3.50.",
+                )
+            )
+            continue
+        if Decimal(size) in seen_sizes:
+            errors.append(
+                _issue(
+                    row_number=row_number,
+                    column="Packet Sizes",
+                    value=value,
+                    error_code="PACKET_DUPLICATE_SIZE",
+                    human_message=f"Packet size {size} is defined more than once.",
+                    suggested_fix="Give each packet in a row a distinct size.",
+                )
+            )
+            continue
+        seen_sizes.add(Decimal(size))
+        packets.append({"size": size, "price": price, "display_order": len(packets)})
+
+    if errors:
+        return None, errors
+    return packets, []
 
 
 def _status_value(value: str, row_number: int) -> tuple[bool | None, dict | None]:
@@ -413,6 +564,64 @@ def validate_product_import(
         normalized["name"] = name
         normalized["description"] = _clean(raw["Description"])
 
+        # The optional columns use raw.get(): `raw` only carries headers the
+        # file actually supplied, so a CSV predating these columns has no key
+        # here at all.
+        has_secondary_column = "Secondary Name" in raw
+        secondary_name = _clean(raw.get("Secondary Name", ""))
+        if len(secondary_name) > 200:
+            errors.append(
+                _issue(
+                    row_number=row_number,
+                    column="Secondary Name",
+                    value=secondary_name,
+                    error_code="VALUE_TOO_LONG",
+                    human_message="Secondary Name cannot exceed 200 characters.",
+                )
+            )
+        # None means "column absent - leave whatever the product already has".
+        normalized["secondary_name"] = secondary_name if has_secondary_column else None
+
+        if "Packet Sizes" in raw:
+            packets, packet_errors = _packet_values(raw["Packet Sizes"], row_number)
+            errors.extend(packet_errors)
+            normalized["packets"] = packets or []
+            # A non-empty Packet Sizes value is the toggle; there is no
+            # separate column. An unparseable value already errored above, so
+            # it never silently downgrades the product to STANDARD.
+            normalized["pricing_mode"] = (
+                Product.PricingMode.MULTI if packets else Product.PricingMode.STANDARD
+            )
+        else:
+            normalized["packets"] = None
+            normalized["pricing_mode"] = None
+
+        # Only deterministic vetting here - scheme, DNS, and private-address
+        # screening. No bytes are transferred at validation time; the download
+        # happens after confirmation, once a product exists to attach it to.
+        # A rejected URL is a warning so the rest of the row still imports.
+        image_url = _clean(raw.get("Image URL", ""))
+        normalized["image_url"] = ""
+        if image_url:
+            try:
+                screen_image_url(image_url)
+                normalized["image_url"] = image_url
+            except ImageFetchError as exc:
+                warnings.append(
+                    _issue(
+                        row_number=row_number,
+                        column="Image URL",
+                        value=image_url,
+                        error_code=exc.code,
+                        human_message=exc.message,
+                        suggested_fix=(
+                            "The product will import without an image. "
+                            "Use a public https image link, or upload the "
+                            "image from the product form."
+                        ),
+                    )
+                )
+
         category = _clean(raw["Category"])
         if len(category) > 120:
             errors.append(
@@ -656,7 +865,7 @@ def validate_product_import(
 
 
 def _product_values(data: dict[str, Any], category: ProductCategory | None) -> dict:
-    return {
+    values: dict[str, Any] = {
         "name": data["name"],
         "description": data["description"],
         "category": category,
@@ -668,6 +877,17 @@ def _product_values(data: dict[str, Any], category: ProductCategory | None) -> d
         "tax_rate": Decimal(data["tax_rate"]),
         "is_active": data["is_active"],
     }
+    # Absent optional columns are omitted rather than sent as blanks, so a
+    # re-import through an older template never wipes a product's second name
+    # or packet offer.
+    if data.get("secondary_name") is not None:
+        values["secondary_name"] = data["secondary_name"]
+    if data.get("pricing_mode") is not None:
+        values["pricing_mode"] = data["pricing_mode"]
+        # create_product/update_product hand this to _sync_packets, so packets
+        # are created in the same transaction as the product.
+        values["packets"] = data.get("packets") or []
+    return values
 
 
 def confirm_product_import(
@@ -770,6 +990,9 @@ def confirm_product_import(
                 "inventory_initialized": 0,
                 "opening_movements_created": 0,
             }
+            # Rows whose Image URL survived validation screening, paired with
+            # the product they produced. Downloading happens after commit.
+            image_targets: list[tuple[ProductImportRow, Product]] = []
             for batch in _chunks(rows):
                 for row in batch:
                     data = row.normalized_data
@@ -808,6 +1031,9 @@ def confirm_product_import(
                         if product.barcode:
                             by_barcode[product.barcode] = product
 
+                    if data.get("image_url"):
+                        image_targets.append((row, product))
+
                     opening_stock = data["opening_stock"]
                     if (
                         opening_stock is not None
@@ -837,7 +1063,6 @@ def confirm_product_import(
                     "updated_at",
                 ]
             )
-            return locked
     except ProductImportError:
         raise
     except Exception as exc:
@@ -852,6 +1077,74 @@ def confirm_product_import(
             "The import failed and all catalogue changes were rolled back.",
             code="IMPORT_TRANSACTION_FAILED",
         ) from exc
+
+    _attach_imported_images(image_targets)
+    return locked
+
+
+def _attach_imported_images(targets: list[tuple[ProductImportRow, "Product"]]) -> None:
+    """Download linked images after the catalogue transaction has committed.
+
+    Deliberately outside the transaction. Network I/O inside it would hold row
+    locks for the length of every download, and a slow host could stall an
+    import that has already succeeded. Running after commit also gives the
+    behaviour the contract asks for: a failed image never rolls back a product
+    that imported fine.
+
+    Every failure is recorded on the row's warnings so it stays visible in the
+    import detail, and never raises.
+    """
+    if not targets:
+        return
+    from .services import set_product_image
+
+    for row, product in targets:
+        url = row.normalized_data.get("image_url", "")
+        try:
+            fetched = fetch_product_image(url)
+            set_product_image(
+                product=product,
+                image=ContentFile(fetched.content, name=fetched.filename),
+                extension=fetched.extension,
+            )
+        except ImageFetchError as exc:
+            _record_image_warning(row, url, code=exc.code, message=exc.message)
+        except Exception:  # noqa: BLE001 - an image must never fail an import
+            _record_image_warning(
+                row,
+                url,
+                code="IMAGE_ATTACH_FAILED",
+                message="The image could not be saved.",
+            )
+
+    # Recount once rather than nudging the counter per row, so the summary
+    # stays consistent with the rows actually carrying warnings.
+    import_id = targets[0][0].product_import_id
+    ProductImport.objects.filter(pk=import_id).update(
+        warning_rows=ProductImportRow.objects.filter(
+            product_import_id=import_id
+        ).exclude(warnings=[]).count()
+    )
+
+
+def _record_image_warning(
+    row: ProductImportRow, url: str, *, code: str, message: str
+) -> None:
+    row.warnings = [
+        *row.warnings,
+        _issue(
+            row_number=row.row_number,
+            column="Image URL",
+            value=url,
+            error_code=code,
+            human_message=message,
+            suggested_fix=(
+                "The product imported without an image. Upload one from the "
+                "product form, or fix the link and re-import."
+            ),
+        ),
+    ]
+    row.save(update_fields=["warnings", "updated_at"])
 
 
 def _csv_safe(value: Any) -> str:

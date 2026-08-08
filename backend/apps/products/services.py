@@ -107,18 +107,24 @@ def update_product(*, product: Product, validated_data: dict) -> Product:
 
 
 @transaction.atomic
-def set_product_image(*, product: Product, image) -> Product:
+def set_product_image(*, product: Product, image, extension: str | None = None) -> Product:
     """Replace a product's image, deleting the previous file.
 
     The old file is removed via the storage API (`field.delete`), never by
     touching the filesystem, so this stays correct under a cloud backend.
+
+    `extension` is for callers that already know the format from the bytes.
+    Uploads come through a form-validated ImageField, which decorates the file
+    with `.image`; a plain ContentFile (the CSV import's fetched image) has no
+    such attribute, so it passes the extension it detected instead.
     """
     # Capture the name as a plain string first: product.image is a FieldFile
     # that .save() mutates in place, so holding the object would compare a
     # name against itself and silently orphan the old file.
     previous_name = product.image.name or ""
     storage = product.image.storage
-    normalized_name = f"{product.pk}.{PRODUCT_IMAGE_EXTENSIONS[image.image.format]}"
+    extension = extension or PRODUCT_IMAGE_EXTENSIONS[image.image.format]
+    normalized_name = f"{product.pk}.{extension}"
     product.image.save(normalized_name, image, save=False)
     product.save(update_fields=["image", "updated_at"])
     if previous_name and previous_name != product.image.name:
