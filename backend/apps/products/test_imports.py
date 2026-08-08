@@ -30,6 +30,11 @@ def row(**overrides) -> dict[str, str]:
         "SKU": "MILK-IMPORT-1",
         "Barcode": "",
         "Description": "",
+        # The optional columns default to present-but-blank, which is what a
+        # shop filling in the downloaded template actually produces.
+        "Secondary Name": "",
+        "Image URL": "",
+        "Packet Sizes": "",
         "Purchase Price (QAR)": "5.00",
         "Selling Price (QAR)": "6.00",
         "Tax Rate": "Tax Exempt",
@@ -61,7 +66,13 @@ def csv_file(
     return SimpleUploadedFile(name, content, content_type="text/csv")
 
 
-class ProductImportApiTests(TestCase):
+class ProductImportTestCase(TestCase):
+    """Shop/user fixture and request helpers shared by every import test.
+
+    Split out so suites for later columns (see test_import_extensions.py)
+    drive the same validate/confirm flow instead of a parallel harness.
+    """
+
     @classmethod
     def setUpTestData(cls):
         cls.shop = Shop.objects.create(
@@ -122,6 +133,8 @@ class ProductImportApiTests(TestCase):
             f"{reverse('products_api:product-import-detail', args=[import_id])}{query}"
         ).json()["data"]
 
+
+class ProductImportApiTests(ProductImportTestCase):
     def test_downloaded_template_headers_are_canonical_and_validate_immediately(self):
         self.login(self.owner)
         template = self.client.get(

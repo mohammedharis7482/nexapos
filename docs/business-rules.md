@@ -244,9 +244,22 @@ No branches, subscriptions, or SaaS billing rules are part of this foundation.
   overwrites an already initialized inventory balance.
 - Blank opening stock leaves inventory uninitialized. An explicit zero creates
   an initialized out-of-stock balance.
-- The template and parser use one canonical twelve-column CSV contract.
-  Validation records expire after 24 hours and never create catalogue or
-  inventory data.
+- The template and parser use one canonical fifteen-column CSV contract: twelve
+  required columns plus optional `Secondary Name`, `Image URL`, and `Packet
+  Sizes`. A file omitting an optional column leaves that field untouched; the
+  column present and blank clears it. Validation records expire after 24 hours
+  and never create catalogue or inventory data.
+- A non-empty `Packet Sizes` cell (`size@price` pairs separated by semicolons,
+  sizes in the product's own unit) switches that product to multi-pricing and
+  sets its packet order. Malformed syntax is a blocking row error naming the
+  failing pair, never a silent downgrade to standard pricing.
+- `Image URL` is fetched server-side under SSRF controls: http/https only,
+  private, loopback, link-local and cloud-metadata addresses refused before
+  connecting, re-checked from the live socket, capped redirects, and the same
+  5 MB / JPEG-PNG-WEBP limits as manual upload, decided by decoding the bytes.
+  Screening happens at validation with no transfer; the download happens after
+  the import transaction commits. Any image failure is a row warning, so the
+  product still imports without a picture.
 - `Tax Exempt` maps to a zero Product tax rate. Human-readable unit names map
   through the single backend unit map; barcodes remain exact strings.
 - Blocking errors prevent the whole import. Warnings are informational.

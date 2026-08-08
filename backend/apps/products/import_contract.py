@@ -39,6 +39,28 @@ PRODUCT_IMPORT_COLUMNS = (
         aliases=("low_stock_threshold", "Low Stock Alert"),
     ),
     ProductImportColumn("Status", "status"),
+    # The three below are the first optional columns. `required=False` means
+    # resolve_headers does not demand them, so CSVs written before they
+    # existed keep importing unchanged. Row parsing must read them with
+    # .get(), since `raw` only carries headers the file actually supplied.
+    ProductImportColumn(
+        "Secondary Name",
+        "secondary_name",
+        required=False,
+        aliases=("secondary_name", "Second Name"),
+    ),
+    ProductImportColumn(
+        "Image URL",
+        "image_url",
+        required=False,
+        aliases=("image_url", "Image"),
+    ),
+    ProductImportColumn(
+        "Packet Sizes",
+        "packet_sizes",
+        required=False,
+        aliases=("packet_sizes", "Packets"),
+    ),
 )
 PRODUCT_IMPORT_HEADERS = tuple(column.header for column in PRODUCT_IMPORT_COLUMNS)
 

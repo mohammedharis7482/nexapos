@@ -354,6 +354,14 @@ All endpoints require Owner access. Confirm is rejected if any validation row
 has errors. See [product-import.md](product-import.md) for column and transaction
 rules.
 
+The CSV carries twelve required columns plus optional `Secondary Name`,
+`Image URL`, and `Packet Sizes`; files without the optional three still validate.
+Upload screens each `Image URL` (scheme, DNS, private/link-local/metadata
+address) without transferring anything, reporting rejects as row warnings.
+Confirm downloads the accepted URLs after its transaction commits, so a fetch
+failure appears as a row warning on the detail endpoint and the summary's
+`warning_rows` rather than failing the import.
+
 The upload response exposes `validation_id`, filename, total/valid/invalid and
 warning rows, categories to create, duplicate counts, `can_import`, expiry,
 history metadata, and a paginated row preview. Each issue contains row number,
